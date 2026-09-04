@@ -40,10 +40,16 @@ class FakeConnection:
         self.data_source_id = data_source_id
         self.successful_import = successful_import
         self.statements: list[str] = []
+        # Nombre de commits deja effectues au moment de chaque requete, index par index :
+        # c'est ce qui permet d'observer si une requete tombe dans la transaction courante.
+        self.commits_before: list[int] = []
         self.commits = 0
 
     def execute(self, statement: str, parameters: Any = None) -> _Result:
         self.statements.append(statement)
+        self.commits_before.append(self.commits)
+        if "refresh_cadastre_spatial_reference" in statement:
+            return _Result((332, 1_333_327, 1_333_327))
         # Du plus spécifique au plus général : la requête de complétude cadastrale
         # contient elle aussi `FROM meta.import_run`, elle doit donc être reconnue
         # avant la barrière générique d'import réussi.
@@ -62,6 +68,16 @@ class FakeConnection:
     @property
     def layer_gate_was_queried(self) -> bool:
         return any("release_assets AS (" in statement for statement in self.statements)
+
+    def index_of(self, needle: str) -> int:
+        for index, statement in enumerate(self.statements):
+            if needle in statement:
+                return index
+        raise AssertionError(f"aucune requete ne contient {needle!r}")
+
+    @property
+    def propagation_was_queried(self) -> bool:
+        return any("refresh_cadastre_spatial_reference" in s for s in self.statements)
 
 
 def catalog_for(connection: FakeConnection) -> DatasetCatalog:
@@ -128,3 +144,78 @@ def test_an_unknown_release_is_never_accepted_silently() -> None:
         catalog_for(connection).set_acceptance("DS-05@1970-01-01", "accepted")
 
     assert connection.commits == 0
+
+
+def test_publishing_a_cadastre_release_propagates_the_spatial_reference() -> None:
+    """Publier DS-01 doit aligner les identités canoniques, pas seulement le pointeur.
+
+    `reference.refresh_cadastre_spatial_reference` n'avait aucun appelant applicatif :
+    déplacer `meta.active_dataset_release` laissait `reference.parcel`,
+    `reference.area` et `reference.property_unit` sur la release précédente jusqu'à
+    ce qu'un opérateur pense à lancer la fonction à la main.
+    """
+    connection = FakeConnection(data_source_id="DS-01")
+
+    counts = catalog_for(connection).publish(
+        "DS-01@2026-06-01", "35", actor="bruno@manty.eu", reason="verdict B1"
+    )
+
+    assert connection.propagation_was_queried
+    assert counts is not None
+    assert (counts.area_count, counts.parcel_count, counts.property_unit_count) == (
+        332,
+        1_333_327,
+        1_333_327,
+    )
+
+
+def test_propagation_runs_inside_the_publication_transaction_as_pipeline_rw() -> None:
+    """Deux propriétés indissociables de la correction.
+
+    La fonction lit `meta.active_dataset_release`, donc elle doit suivre le
+    déplacement du pointeur ; et elle doit rester dans la même transaction, sinon un
+    échec de propagation laisserait une release active dont le référentiel canonique
+    décrit une autre release. `EXECUTE` n'étant accordé qu'à `pipeline_rw`, l'appel
+    doit aussi tomber entre le `SET LOCAL ROLE` et le `RESET ROLE`.
+    """
+    connection = FakeConnection(data_source_id="DS-01")
+
+    catalog_for(connection).publish(
+        "DS-01@2026-06-01", "35", actor="bruno@manty.eu", reason="verdict B1"
+    )
+
+    propagation = connection.index_of("refresh_cadastre_spatial_reference")
+    assert connection.index_of("SET LOCAL ROLE pipeline_rw") < propagation
+    assert connection.index_of("publish_dataset_release") < propagation
+    assert propagation < connection.index_of("RESET ROLE")
+    assert connection.commits_before[propagation] == 0
+    assert connection.commits == 1
+
+
+def test_publishing_a_non_cadastre_release_propagates_nothing() -> None:
+    """La fonction ne connaît que le cadastre : elle lit `DS-01` en dur et alimente les
+    identités parcellaires. Publier DS-05 ne doit rien y déclencher."""
+    connection = FakeConnection(data_source_id="DS-05")
+
+    counts = catalog_for(connection).publish(
+        "DS-05@2026-06-17", "35", actor="bruno@manty.eu", reason="verdict B1"
+    )
+
+    assert not connection.propagation_was_queried
+    assert counts is None
+
+
+def test_a_rollback_publication_realigns_the_spatial_reference_too() -> None:
+    """Un retour arrière déplace le pointeur autant qu'une publication : le référentiel
+    doit suivre dans les deux sens, sans quoi il décrirait la release retirée."""
+    connection = FakeConnection(data_source_id="DS-01")
+
+    catalog_for(connection).publish(
+        "DS-01@2026-05-01",
+        "35",
+        actor="bruno@manty.eu",
+        reason="retour arrière",
+        action="rollback",
+    )
+
+    assert connection.propagation_was_queried

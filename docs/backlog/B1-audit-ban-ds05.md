@@ -150,13 +150,15 @@ dans `meta.active_dataset_release` et absent de `meta.analysis_dataset_release`.
 ### Limites et suites
 
 - Les paliers de confiance restent non calibrés. B4 est le préalable au passage en `accepted`.
-- `reference.refresh_cadastre_spatial_reference` n'a aucun appelant applicatif : publier DS-01 ne
-  peuple pas le référentiel spatial, l'appel reste manuel. À reprendre.
+- `reference.refresh_cadastre_spatial_reference` n'avait aucun appelant applicatif : publier DS-01
+  ne peuplait pas le référentiel spatial, l'appel restait manuel. Repris et corrigé par
+  [BUG-04](./BUG-04-propagation-referentiel-spatial.md).
 - Le manifeste `contracts/datasets/DS-01/releases/2026-06-01-35.json` porte encore
   `"sha256": null` sur ses trois couches alors que les valeurs sont mesurées et consignées. Un
   réimport DS-01 n'est donc pas épinglé. Hors périmètre B1, appartient à v0.2.
 - Deux fichiers de tests préexistants n'étaient pas conformes à `ruff format` : `make check` était
-  rouge avant cette intervention. Reformatés ici pour atteindre la DoD.
+  rouge avant cette intervention. Le défaut étant antérieur et étranger à ce ticket, il est
+  reformaté dans un commit séparé.
 - Les relations `rejected` ne remontent pas dans l'API : `ACTIVE_MATCH_PREDICATE` exige un
   identifiant source actif des deux côtés, qu'une parcelle inexistante n'a pas. Conséquence
   assumée — le rejet vit dans l'audit, pas dans l'explorateur.

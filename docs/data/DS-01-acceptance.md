@@ -101,8 +101,22 @@ Les décisions possibles restent :
 
 La release a été enregistrée en mode `accepted` puis activée pour le département 35 par
 `local-admin`, avec la raison « Validation locale complète DS-01 ». Cette activation ne concerne
-que la base Docker locale. La publication ne modifie pas les lignes : elle déplace atomiquement le
-pointeur `meta.active_dataset_release`.
+que la base Docker locale.
+
+La publication ne réécrit aucune ligne source : elle déplace atomiquement le pointeur
+`meta.active_dataset_release`. Elle **aligne en revanche les identités canoniques** sur la release
+devenue active — `reference.area`, `reference.parcel`, `reference.property_unit`,
+`reference.property_unit_member` et `meta.entity_source_identifier` — par un upsert exécuté dans
+la même transaction que le déplacement du pointeur. Il n'existe donc pas d'état où le pointeur
+désigne une release que le référentiel canonique ne décrit pas.
+
+Cet alignement dépendait jusqu'au 4 septembre 2026 d'un appel manuel à
+`reference.refresh_cadastre_spatial_reference`, sans appelant applicatif — voir
+[BUG-04](../backlog/BUG-04-propagation-referentiel-spatial.md). Deux conséquences pratiques :
+publier DS-01 rejoue 1,33 M upserts et n'est plus instantané — 2 min 11 s mesurées sur le 35 —
+et `cadastre_release.py publish`
+imprime désormais les volumes propagés, ce qui rend la propagation vérifiable au lieu d'être
+supposée.
 
 ## Reste à exécuter
 

@@ -29,6 +29,15 @@ class RawAssetRecord:
     sha256: str
 
 
+@dataclass(frozen=True)
+class SpatialReferenceCounts:
+    """Volumes canoniques observes apres propagation d'une release DS-01 publiee."""
+
+    area_count: int
+    parcel_count: int
+    property_unit_count: int
+
+
 class DatasetCatalog:
     def __init__(self, connection: Connection[Any]) -> None:
         self.connection = connection
@@ -384,6 +393,24 @@ class DatasetCatalog:
         self.connection.execute("RESET ROLE")
         self.connection.commit()
 
+    def _propagate_cadastre_spatial_reference(self, department_code: str) -> SpatialReferenceCounts:
+        """Aligner les identites canoniques sur la release DS-01 desormais active.
+
+        La fonction lit `meta.active_dataset_release` : elle doit donc etre appelee
+        apres le deplacement du pointeur, et dans la meme transaction.
+        """
+        row = self.connection.execute(
+            "SELECT * FROM reference.refresh_cadastre_spatial_reference(%s)",
+            (department_code,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("Spatial reference propagation returned no counts")
+        return SpatialReferenceCounts(
+            area_count=int(row[0]),
+            parcel_count=int(row[1]),
+            property_unit_count=int(row[2]),
+        )
+
     def publish(
         self,
         release_id: str,
@@ -392,7 +419,7 @@ class DatasetCatalog:
         actor: str,
         reason: str,
         action: str = "publish",
-    ) -> None:
+    ) -> SpatialReferenceCounts | None:
         # La source vient de la release, jamais d'un litteral : `meta.publish_dataset_release`
         # cherche la release par (id, data_source_id) en SELECT STRICT, si bien qu'un
         # 'DS-01' code en dur rendait toute release non cadastrale impubliable.
@@ -402,8 +429,18 @@ class DatasetCatalog:
             "SELECT meta.publish_dataset_release(%s, %s, 'department', %s, %s, %s, %s)",
             (data_source_id, release_id, department_code, actor, reason, action),
         )
+        # Deplacer le pointeur DS-01 sans propager laissait les identites canoniques sur
+        # la release precedente, l'alignement dependant d'un appel manuel a
+        # `reference.refresh_cadastre_spatial_reference`. La propagation appartient a la
+        # publication : meme transaction, donc aucune fenetre ou le pointeur avance seul.
+        counts = (
+            self._propagate_cadastre_spatial_reference(department_code)
+            if data_source_id == "DS-01"
+            else None
+        )
         self.connection.execute("RESET ROLE")
         self.connection.commit()
+        return counts
 
     def rollback_unpublished(self, release_id: str, *, actor: str, reason: str) -> None:
         self.connection.execute("SET LOCAL ROLE pipeline_rw")

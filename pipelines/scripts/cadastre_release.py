@@ -1,7 +1,12 @@
-"""Inspect, accept, publish or roll back a DS-01 release explicitly."""
+"""Inspect, accept, publish or roll back one dataset release explicitly.
+
+La source est lue sur la release, jamais supposee : le script sert DS-01 comme DS-05.
+Publier une release DS-01 propage aussi le referentiel spatial canonique (BUG-04).
+"""
 
 import argparse
 import json
+from dataclasses import asdict
 from typing import Any
 
 import psycopg
@@ -59,7 +64,7 @@ def main() -> None:
             catalog.set_acceptance(arguments.release_id, arguments.mode)
             result = {"release_id": arguments.release_id, "acceptance": arguments.mode}
         elif arguments.command == "publish":
-            catalog.publish(
+            counts = catalog.publish(
                 arguments.release_id,
                 arguments.department,
                 actor=arguments.actor,
@@ -70,6 +75,8 @@ def main() -> None:
                 "release_id": arguments.release_id,
                 "department": arguments.department,
                 "action": arguments.action,
+                # Absent hors DS-01 : aucune autre source ne fonde les identites canoniques.
+                "spatial_reference": asdict(counts) if counts is not None else None,
             }
         else:
             catalog.rollback_unpublished(
