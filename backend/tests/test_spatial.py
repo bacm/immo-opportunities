@@ -54,6 +54,7 @@ def test_search_addresses(monkeypatch: Any) -> None:
                 "department_code": "35",
                 "longitude": -1.67,
                 "latitude": 48.11,
+                "position_status": "available",
             }
         ],
     )
@@ -75,6 +76,7 @@ def test_address_context_exposes_explainable_matches(monkeypatch: Any) -> None:
                 "department_code": "35",
                 "longitude": -1.67,
                 "latitude": 48.11,
+                "position_status": "available",
             },
             "matches": [match_record()],
         },
@@ -108,3 +110,32 @@ def test_unknown_match(monkeypatch: Any) -> None:
     response = TestClient(app).get("/api/v1/spatial/matches/999")
 
     assert response.status_code == 404
+
+
+def test_address_without_position_is_returned_unlocated_with_a_motive(monkeypatch: Any) -> None:
+    """Un identifiant BAN réutilisé avec des positions contradictoires garde son identité et
+    perd son point. L'adresse reste cherchable, sans coordonnée inventée ni zéro de
+    substitution, et le motif de l'absence est visible (FR-007)."""
+    monkeypatch.setattr(
+        "immo.api.routes.spatial.search_addresses",
+        lambda query, commune_code, limit: [
+            {
+                "id": "address:ban:BAN-AMBIGUOUS",
+                "display_label": "2 rue Exemple 35000 Rennes",
+                "commune_code": "35238",
+                "department_code": "35",
+                "longitude": None,
+                "latitude": None,
+                "position_status": "ambiguous_position",
+            }
+        ],
+    )
+
+    response = TestClient(app).get("/api/v1/spatial/addresses?query=exemple")
+
+    assert response.status_code == 200
+    payload = response.json()[0]
+    assert payload["display_label"] == "2 rue Exemple 35000 Rennes"
+    assert payload["longitude"] is None
+    assert payload["latitude"] is None
+    assert payload["position_status"] == "ambiguous_position"

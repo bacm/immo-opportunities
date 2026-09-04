@@ -603,9 +603,11 @@ export interface components {
             /** Id */
             id: string;
             /** Latitude */
-            latitude: number;
+            latitude: number | null;
             /** Longitude */
-            longitude: number;
+            longitude: number | null;
+            /** Position Status */
+            position_status: string;
         };
         /** AreaResponse */
         AreaResponse: {

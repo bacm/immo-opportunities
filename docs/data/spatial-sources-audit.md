@@ -12,7 +12,7 @@ acceptables faute de manifeste réel importé et contrôlé.
 | DS-02 RNB | `2026-08-01`, département 35 | oui | oui | contrôles automatiques produits, revue manuelle requise |
 | DS-03 BDNB Open | à sélectionner | non | non | contrat seulement, non publiable |
 | DS-04 BD TOPO | à sélectionner | non | non | contrat seulement, non publiable |
-| DS-05 BAN | `2026-06-17`, département 35 | oui | en cours d'audit | conflits d'identifiants bloquants à revoir |
+| DS-05 BAN | `2026-06-17`, département 35 | oui | en cours d'audit | règle d'acceptation corrigée, import réel à exécuter |
 
 Une URL `latest` ne constitue jamais une release. Le manifeste versionné doit contenir l'URL
 résolue, la taille et le SHA-256 avant qu'un import puisse être accepté.
@@ -69,10 +69,20 @@ Les bâtiments légers et la voirie restent donc des valeurs manquantes, jamais 
 - `cad_parcelles` est traité comme une relation source expérimentale et vérifié contre la géométrie
   de la parcelle Cadastre active.
 
-Le fichier comporte 437 441 identifiants distincts. L'audit brut a détecté 8 répétitions exactes,
-dédupliquées sans perte de l'archive, et 217 identifiants réutilisés avec des contenus différents.
-Toutes les lignes de ces identifiants conflictuels sont placées en quarantaine : aucune variante
-n'est choisie arbitrairement et le contrôle bloque l'acceptation de la release.
+Le fichier comporte 437 679 lignes normalisées pour 437 441 identifiants distincts. L'audit brut a
+détecté 8 identifiants répétés à l'identique, soit 8 lignes en excès dédupliquées sans perte de
+l'archive, et 217 identifiants réutilisés avec des contenus différents, portés par 447 lignes dont
+230 en excès.
+
+Aucun de ces 217 conflits ne porte sur l'identité de l'adresse : `numero`, `rep`, `nom_voie`,
+`code_postal`, `code_insee` et `nom_commune` restent stables entre les variantes. 216 divergent par
+leur position, avec un écart médian de 47,8 m et un maximum de 3 128,5 m.
+
+Depuis le 4 septembre 2026, ces conflits ne bloquent donc plus la release : l'identité est
+conservée et seul l'attribut contradictoire devient manquant avec un motif. Une divergence portant
+sur l'identité elle-même reste, elle, bloquante. Voir
+[le rapport de quarantaine par attribut](./ban-attribute-quarantine-35.md) et le détail des 217
+identifiants dans [`ban-conflicting-identifiers-35.csv`](./ban-conflicting-identifiers-35.csv).
 
 ## Garanties transversales
 

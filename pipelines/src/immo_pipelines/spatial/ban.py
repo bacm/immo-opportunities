@@ -22,6 +22,19 @@ BAN_REQUIRED_COLUMNS = frozenset(
     }
 )
 
+# Champs qui constituent l'identité d'une adresse. Deux enregistrements partageant un
+# identifiant BAN mais divergeant sur l'un de ces champs sont irréconciliables : l'un des
+# deux est faux et rien ne permet de choisir. Une divergence portant sur un autre champ
+# rend seulement cet attribut inutilisable, l'identité restant certaine.
+BAN_IDENTITY_FIELDS = (
+    "numero",
+    "rep",
+    "nom_voie",
+    "code_postal",
+    "code_insee",
+    "nom_commune",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class BanRecord:
@@ -43,6 +56,7 @@ class BanRecord:
     cadastral_ids: tuple[str, ...]
     properties: dict[str, str]
     record_checksum: str
+    identity_checksum: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +92,11 @@ def _certified(value: str) -> bool | None:
 def _checksum(row: dict[str, str]) -> str:
     canonical = json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _identity_checksum(row: dict[str, str]) -> str:
+    identity = {field: row.get(field, "").strip() for field in BAN_IDENTITY_FIELDS}
+    return _checksum(identity)
 
 
 def iter_ban_records(path: Path) -> Iterator[BanRecord | BanQuarantine]:
@@ -150,4 +169,5 @@ def iter_ban_records(path: Path) -> Iterator[BanRecord | BanQuarantine]:
                 cadastral_ids=cadastral_ids,
                 properties=row,
                 record_checksum=_checksum(row),
+                identity_checksum=_identity_checksum(row),
             )

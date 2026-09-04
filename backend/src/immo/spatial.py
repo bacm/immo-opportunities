@@ -12,8 +12,12 @@ class AddressSearchRecord(TypedDict):
     display_label: str
     commune_code: str
     department_code: str
-    longitude: float
-    latitude: float
+    # Une adresse dont la position source est contradictoire garde son identité et perd son
+    # point : les coordonnées sont absentes, jamais choisies arbitrairement. `position_status`
+    # porte le motif afin que l'absence soit distinguable d'un zéro ou d'un non applicable.
+    longitude: float | None
+    latitude: float | None
+    position_status: str
 
 
 class SourceIdentifierRecord(TypedDict):
@@ -56,6 +60,13 @@ class EntityMatchRecord(TypedDict):
 class AddressContextRecord(TypedDict):
     address: AddressSearchRecord
     matches: list[EntityMatchRecord]
+
+
+def _optional_coordinate(value: object) -> float | None:
+    """Une coordonnée absente reste absente : jamais convertie en zéro."""
+    if value is None:
+        return None
+    return float(cast(Decimal | float, value))
 
 
 def _json_object(value: object) -> dict[str, Any]:
@@ -191,7 +202,16 @@ def search_addresses(
         """
         SELECT id, display_label, commune_code, department_code,
                ST_X(ST_Transform(geom, 4326)) AS longitude,
-               ST_Y(ST_Transform(geom, 4326)) AS latitude
+               ST_Y(ST_Transform(geom, 4326)) AS latitude,
+               COALESCE(
+                   (SELECT quarantine.reason_code
+                      FROM meta.attribute_quarantine AS quarantine
+                     WHERE quarantine.entity_type = 'address'
+                       AND quarantine.entity_id = address.id
+                       AND quarantine.attribute = 'geom'
+                     LIMIT 1),
+                   CASE WHEN address.geom IS NULL THEN 'unknown_position' ELSE 'available' END
+               ) AS position_status
           FROM reference.address AS address
          WHERE normalized_label % unaccent(lower(:query))
            AND (:commune_code IS NULL OR commune_code = :commune_code)
@@ -222,8 +242,9 @@ def search_addresses(
                 "display_label": str(row["display_label"]),
                 "commune_code": str(row["commune_code"]),
                 "department_code": str(row["department_code"]),
-                "longitude": float(cast(Decimal | float, row["longitude"])),
-                "latitude": float(cast(Decimal | float, row["latitude"])),
+                "longitude": _optional_coordinate(row["longitude"]),
+                "latitude": _optional_coordinate(row["latitude"]),
+                "position_status": str(row["position_status"]),
             }
             for row in rows
         ]
@@ -234,7 +255,16 @@ def find_address_context(address_id: str) -> AddressContextRecord | None:
         """
         SELECT id, display_label, commune_code, department_code,
                ST_X(ST_Transform(geom, 4326)) AS longitude,
-               ST_Y(ST_Transform(geom, 4326)) AS latitude
+               ST_Y(ST_Transform(geom, 4326)) AS latitude,
+               COALESCE(
+                   (SELECT quarantine.reason_code
+                      FROM meta.attribute_quarantine AS quarantine
+                     WHERE quarantine.entity_type = 'address'
+                       AND quarantine.entity_id = address.id
+                       AND quarantine.attribute = 'geom'
+                     LIMIT 1),
+                   CASE WHEN address.geom IS NULL THEN 'unknown_position' ELSE 'available' END
+               ) AS position_status
           FROM reference.address AS address
          WHERE id = :address_id
            AND EXISTS (
@@ -280,8 +310,9 @@ def find_address_context(address_id: str) -> AddressContextRecord | None:
             "display_label": str(address["display_label"]),
             "commune_code": str(address["commune_code"]),
             "department_code": str(address["department_code"]),
-            "longitude": float(cast(Decimal | float, address["longitude"])),
-            "latitude": float(cast(Decimal | float, address["latitude"])),
+            "longitude": _optional_coordinate(address["longitude"]),
+            "latitude": _optional_coordinate(address["latitude"]),
+            "position_status": str(address["position_status"]),
         }
         return {
             "address": address_record,

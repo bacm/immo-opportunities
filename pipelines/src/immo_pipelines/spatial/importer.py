@@ -2,11 +2,29 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from psycopg import Connection
+from psycopg import Connection, sql
 from psycopg.types.json import Jsonb
 
 from immo_pipelines.spatial.ban import BanQuarantine, iter_ban_records
 from immo_pipelines.spatial.rnb import RnbQuarantine, iter_rnb_records
+
+# Attributs non identitaires d'une adresse BAN. Lorsqu'un identifiant est réutilisé avec des
+# valeurs contradictoires sur l'un d'eux, l'identité reste certaine et seul l'attribut devient
+# inutilisable : il est retenu, motivé, et jamais moyenné ni choisi arbitrairement.
+# (colonne de stage, attribut canonique, motif)
+BAN_QUARANTINABLE_ATTRIBUTES: tuple[tuple[str, str, str], ...] = (
+    ("geometry_wkt", "geom", "ambiguous_position"),
+    ("cadastral_ids", "cadastral_ids", "ambiguous_attribute"),
+    ("position_type", "position_type", "ambiguous_attribute"),
+    ("source_position", "source_position", "ambiguous_attribute"),
+    ("municipality_certified", "is_municipality_certified", "ambiguous_attribute"),
+    ("fantoir_id", "fantoir_id", "ambiguous_attribute"),
+)
+
+# Sentinelle de comparaison : `count(DISTINCT colonne)` ignore les NULL, ce qui masquerait une
+# divergence entre une valeur présente et une valeur absente. Aucune donnée BAN ne peut valoir
+# cette chaîne.
+_NULL_SENTINEL = "__null__"
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +90,7 @@ class BanImporter:
                 commune_code, commune_name, display_label, normalized_label,
                 position_type, source_position, municipality_certified,
                 geometry_wkt, cadastral_ids, properties, record_checksum,
-                reason_code, reason_detail
+                identity_checksum, reason_code, reason_detail
             ) FROM STDIN
             """
         ) as copy:
@@ -101,6 +119,7 @@ class BanImporter:
                             Jsonb([]),
                             Jsonb(record.source_properties),
                             None,
+                            None,
                             record.reason_code,
                             record.reason_detail,
                         )
@@ -127,23 +146,31 @@ class BanImporter:
                             Jsonb(record.cadastral_ids),
                             Jsonb(record.properties),
                             record.record_checksum,
+                            record.identity_checksum,
                             None,
                             None,
                         )
                     )
-        conflicting_row = self.connection.execute(
+        # La couche d'observation doit rester fidèle à ce que la source a dit, même lorsque
+        # l'attribut canonique est retenu plus bas.
+        self.connection.execute("UPDATE ban_stage SET source_geometry_wkt = geometry_wkt")
+
+        # Un identifiant réutilisé avec des identités contradictoires est irréconciliable :
+        # l'une des deux est fausse et rien ne permet de choisir. L'enregistrement entier part
+        # en quarantaine et la release est bloquée.
+        conflicting_identity_row = self.connection.execute(
             """
             WITH conflicting_ids AS (
                 SELECT ban_id
                   FROM ban_stage
                  WHERE NOT is_quarantined
                  GROUP BY ban_id
-                HAVING count(DISTINCT record_checksum) > 1
+                HAVING count(DISTINCT identity_checksum) > 1
             ), quarantined AS (
                 UPDATE ban_stage AS stage
                    SET is_quarantined = true,
-                       reason_code = 'conflicting_ban_identifier',
-                       reason_detail = 'BAN identifier occurs with contradictory source records'
+                       reason_code = 'conflicting_ban_identity',
+                       reason_detail = 'BAN identifier occurs with contradictory address identities'
                   FROM conflicting_ids
                  WHERE stage.ban_id = conflicting_ids.ban_id
                    AND NOT stage.is_quarantined
@@ -152,9 +179,60 @@ class BanImporter:
             SELECT count(*), count(DISTINCT ban_id) FROM quarantined
             """
         ).fetchone()
-        conflicting_row_count = int(conflicting_row[0]) if conflicting_row else 0
-        conflicting_identifier_count = int(conflicting_row[1]) if conflicting_row else 0
+        conflicting_row_count = int(conflicting_identity_row[0]) if conflicting_identity_row else 0
+        conflicting_identity_count = (
+            int(conflicting_identity_row[1]) if conflicting_identity_row else 0
+        )
         quarantine_count += conflicting_row_count
+
+        # Identité stable, attribut contradictoire : l'adresse est conservée et seul l'attribut
+        # devient manquant avec un motif. Il est retiré de *toutes* les variantes de
+        # l'identifiant, si bien que la déduplication qui suit ne choisit plus rien
+        # arbitrairement — les variantes restantes sont identiques.
+        ambiguous_attribute_counts: dict[str, int] = {}
+        for column, attribute, reason_code in BAN_QUARANTINABLE_ATTRIBUTES:
+            statement = sql.SQL(
+                """
+                WITH repeated AS (
+                    SELECT ban_id
+                      FROM ban_stage
+                     WHERE NOT is_quarantined
+                     GROUP BY ban_id
+                    HAVING count(DISTINCT record_checksum) > 1
+                ), divergent AS (
+                    SELECT stage.ban_id
+                      FROM ban_stage AS stage
+                      JOIN repeated USING (ban_id)
+                     WHERE NOT stage.is_quarantined
+                     GROUP BY stage.ban_id
+                    HAVING count(DISTINCT COALESCE(stage.{column}::text, %(sentinel)s)) > 1
+                ), marked AS (
+                    UPDATE ban_stage AS stage
+                       SET {column} = NULL,
+                           quarantined_attributes = stage.quarantined_attributes
+                               || jsonb_build_array(jsonb_build_object(
+                                      'attribute', %(attribute)s,
+                                      'reason_code', %(reason_code)s
+                                  ))
+                      FROM divergent
+                     WHERE stage.ban_id = divergent.ban_id
+                    RETURNING stage.ban_id
+                )
+                SELECT count(DISTINCT ban_id) FROM marked
+                """
+            ).format(column=sql.Identifier(column))
+            marked_row = self.connection.execute(
+                statement,
+                {
+                    "sentinel": _NULL_SENTINEL,
+                    "attribute": attribute,
+                    "reason_code": reason_code,
+                },
+            ).fetchone()
+            count = int(marked_row[0]) if marked_row else 0
+            if count:
+                ambiguous_attribute_counts[attribute] = count
+        ambiguous_attribute_identifier_count = self._distinct_ambiguous_identifiers()
         self._publish_stage(
             release_id=release_id,
             department_code=department_code,
@@ -201,12 +279,26 @@ class BanImporter:
                  CASE WHEN %(deduplicated_count)s = 0 THEN 'info' ELSE 'warning' END,
                  false, %(deduplicated_count)s, 0,
                  jsonb_build_object('policy', 'retain one canonical record; preserve raw asset')),
-                (%(release_id)s, %(import_run_id)s, 'conflicting_ban_identifier', '1',
+                (%(release_id)s, %(import_run_id)s, 'conflicting_ban_identity', '1',
                  'department', %(department_code)s, 'addresses',
-                 CASE WHEN %(conflicting_identifier_count)s = 0 THEN 'passed' ELSE 'failed' END,
-                 CASE WHEN %(conflicting_identifier_count)s = 0 THEN 'info' ELSE 'error' END,
-                 true, %(conflicting_identifier_count)s, 0,
-                 jsonb_build_object('quarantined_rows', %(conflicting_row_count)s::bigint))
+                 CASE WHEN %(conflicting_identity_count)s = 0 THEN 'passed' ELSE 'failed' END,
+                 CASE WHEN %(conflicting_identity_count)s = 0 THEN 'info' ELSE 'error' END,
+                 true, %(conflicting_identity_count)s, 0,
+                 jsonb_build_object(
+                     'quarantined_rows', %(conflicting_row_count)s::bigint,
+                     'policy', 'contradictory address identities cannot be reconciled'
+                 )),
+                (%(release_id)s, %(import_run_id)s, 'ambiguous_ban_attribute', '1',
+                 'department', %(department_code)s, 'addresses',
+                 CASE WHEN %(ambiguous_attribute_identifier_count)s = 0
+                      THEN 'passed' ELSE 'warning' END,
+                 CASE WHEN %(ambiguous_attribute_identifier_count)s = 0
+                      THEN 'info' ELSE 'warning' END,
+                 false, %(ambiguous_attribute_identifier_count)s, 0,
+                 jsonb_build_object(
+                     'by_attribute', %(ambiguous_attribute_counts)s::jsonb,
+                     'policy', 'identity retained; contradictory attribute withheld with a motive'
+                 ))
             """,
             {
                 "release_id": release_id,
@@ -216,8 +308,10 @@ class BanImporter:
                 "normalized_count": normalized_count,
                 "quarantine_count": quarantine_count,
                 "deduplicated_count": deduplicated_count,
-                "conflicting_identifier_count": conflicting_identifier_count,
+                "conflicting_identity_count": conflicting_identity_count,
                 "conflicting_row_count": conflicting_row_count,
+                "ambiguous_attribute_identifier_count": ambiguous_attribute_identifier_count,
+                "ambiguous_attribute_counts": Jsonb(ambiguous_attribute_counts),
             },
         )
         self.connection.execute(
@@ -246,6 +340,17 @@ class BanImporter:
             skipped_as_idempotent=False,
         )
 
+    def _distinct_ambiguous_identifiers(self) -> int:
+        row = self.connection.execute(
+            """
+            SELECT count(DISTINCT ban_id)
+              FROM ban_stage
+             WHERE NOT is_quarantined
+               AND jsonb_array_length(quarantined_attributes) > 0
+            """
+        ).fetchone()
+        return int(row[0]) if row else 0
+
     def _create_stage(self) -> None:
         self.connection.execute(
             """
@@ -266,9 +371,12 @@ class BanImporter:
                 source_position text,
                 municipality_certified boolean,
                 geometry_wkt text,
-                cadastral_ids jsonb NOT NULL,
+                source_geometry_wkt text,
+                cadastral_ids jsonb,
                 properties jsonb NOT NULL,
                 record_checksum char(64),
+                identity_checksum char(64),
+                quarantined_attributes jsonb NOT NULL DEFAULT '[]'::jsonb,
                 reason_code text,
                 reason_detail text
             ) ON COMMIT DROP
@@ -298,7 +406,7 @@ class BanImporter:
             )
             SELECT %(release_id)s, %(raw_asset_id)s, 'address', 'address:ban:' || ban_id,
                    'ban_address', ban_id, source_row_number,
-                   ST_GeomFromText(geometry_wkt, 2154), properties, record_checksum
+                   ST_GeomFromText(source_geometry_wkt, 2154), properties, record_checksum
               FROM ban_stage WHERE NOT is_quarantined
             ON CONFLICT (release_id, source_entity_type, source_identifier, record_checksum)
             DO NOTHING
@@ -369,6 +477,32 @@ class BanImporter:
         )
         self.connection.execute(
             """
+            INSERT INTO meta.attribute_quarantine (
+                release_id, import_run_id, entity_type, entity_id,
+                attribute, reason_code, reason_detail, evidence
+            )
+            SELECT %(release_id)s, %(import_run_id)s, 'address',
+                   'address:ban:' || stage.ban_id,
+                   item->>'attribute', item->>'reason_code',
+                   'BAN identifier reused with contradictory values for this attribute',
+                   jsonb_build_object(
+                       'variant_count', count(*),
+                       'source_row_numbers',
+                       jsonb_agg(stage.source_row_number ORDER BY stage.source_row_number)
+                   )
+              FROM ban_stage AS stage
+              CROSS JOIN LATERAL jsonb_array_elements(stage.quarantined_attributes) AS item
+             WHERE NOT stage.is_quarantined
+             GROUP BY stage.ban_id, item->>'attribute', item->>'reason_code'
+            ON CONFLICT ON CONSTRAINT attribute_quarantine_identity DO UPDATE SET
+                import_run_id = EXCLUDED.import_run_id,
+                reason_code = EXCLUDED.reason_code,
+                evidence = EXCLUDED.evidence
+            """,
+            parameters,
+        )
+        self.connection.execute(
+            """
             WITH candidates AS MATERIALIZED (
                 SELECT stage.ban_id, parcel.id AS parcel_id,
                        ST_Covers(geometry.geom, address.geom) AS point_covered,
@@ -382,6 +516,7 @@ class BanImporter:
                       SELECT ST_GeomFromText(stage.geometry_wkt, 2154) AS geom
                   ) AS address
                  WHERE NOT stage.is_quarantined
+                   AND stage.geometry_wkt IS NOT NULL
             )
             INSERT INTO meta.entity_match (
                 candidate_group_key, left_entity_type, left_entity_id,

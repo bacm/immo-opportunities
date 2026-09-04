@@ -23,11 +23,12 @@ OPS_RUN = docker run --rm \
 
 .PHONY: help config validate dev-secrets dev up rebuild down logs ops-build \
 	inventory ansible-syntax bootstrap deploy smoke check python-check web-check \
-	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import mvt-benchmark e2e
+	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import mvt-benchmark e2e backlog backlog-check
 
 help:
 	@echo "make dev-secrets                  Generate disposable local secrets"
 	@echo "make dev                          Start local infrastructure"
+	@echo "make backlog                      Regenerate the backlog tracking table"
 	@echo "make rebuild                      Rebuild and recreate all containers"
 	@echo "make validate                     Validate Compose and Ansible syntax"
 	@echo "make check                        Run application quality checks"
@@ -167,5 +168,11 @@ smoke:
 
 validate: config ansible-syntax
 	./scripts/check-secrets-encrypted
+
+backlog:
+	./scripts/backlog-status
+
+backlog-check:
+	./scripts/backlog-status --check
 
 check: python-check web-check openapi-check config

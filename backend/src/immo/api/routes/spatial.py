@@ -14,8 +14,11 @@ class AddressSearchResponse(BaseModel):
     display_label: str
     commune_code: str
     department_code: str
-    longitude: float
-    latitude: float
+    # Absentes lorsque la position de l'adresse est retenue faute de valeur source fiable.
+    # `position_status` porte alors le motif : l'inconnu reste distinct d'un zéro (FR-007).
+    longitude: float | None
+    latitude: float | None
+    position_status: str
 
 
 class SourceIdentifierResponse(BaseModel):

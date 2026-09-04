@@ -151,6 +151,11 @@ def search_entities(query: str, *, department_code: str, limit: int) -> list[Sea
                    similarity(address.normalized_label, unaccent(lower(:query)))
               FROM reference.address AS address
              WHERE address.department_code = :department_code
+               -- Cette recherche renvoie un contrat de recentrage (centre + emprise) : une
+               -- adresse dont la position est retenue ne peut pas le satisfaire. Elle reste
+               -- exposée par la recherche d'adresse dédiée avec son `position_status`.
+               -- Limitation assumée, levée par C1 qui rend centre et emprise optionnels.
+               AND address.geom IS NOT NULL
                AND address.normalized_label % unaccent(lower(:query))
                AND EXISTS (
                    SELECT 1

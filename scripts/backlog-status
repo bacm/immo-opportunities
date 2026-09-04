@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Régénère le tableau de suivi du backlog depuis les en-têtes des tickets.
+
+L'état d'un ticket est saisi à un seul endroit : la ligne `**État :**` de son
+fichier. La disponibilité (`Prêt` / `En attente`) est *dérivée* du graphe de
+dépendances et n'est jamais saisie à la main.
+
+Usage :
+    scripts/backlog-status            régénère docs/backlog/README.md
+    scripts/backlog-status --check    échoue si le README est périmé (CI)
+"""
+
+import re
+import sys
+from pathlib import Path
+
+BACKLOG = Path(__file__).resolve().parents[1] / "docs" / "backlog"
+README = BACKLOG / "README.md"
+SKIP = {"README.md", "NICE-backlog.md"}
+STATES = {"À faire", "En cours", "Terminé", "Abandonné"}
+BEGIN, END = "<!-- BEGIN:tickets -->", "<!-- END:tickets -->"
+ID_RE = re.compile(r"\b(BUG-\d+|[A-G]\d[ab]?)\b")
+
+SECTIONS = [
+    ("A", "A — Clôture process", lambda i: i.startswith("A")),
+    ("B", "B — v0.3 Référentiel spatial 35", lambda i: i.startswith("B") and not i.startswith("BUG")),
+    ("BUG", "Bugs et dette technique", lambda i: i.startswith("BUG")),
+    ("C", "C — v0.4 Carte réelle", lambda i: i.startswith("C")),
+    ("D", "D — v0.5 Données métier 35", lambda i: i.startswith("D")),
+    ("E", "E — v0.6 Scoring", lambda i: i.startswith("E")),
+    ("F", "F — v0.7 Activation", lambda i: i.startswith("F")),
+    ("G", "G — v0.8 Pilote Bretagne", lambda i: i.startswith("G")),
+]
+
+
+def ticket_id(name: str) -> str:
+    parts = name.split("-")
+    return f"{parts[0]}-{parts[1]}" if parts[0] == "BUG" else parts[0]
+
+
+def field(text: str, label: str) -> str | None:
+    m = re.search(rf"\*\*{label} :\*\*\s*([^\n·]*)", text)
+    return m.group(1).strip() if m else None
+
+
+def load() -> dict:
+    tickets = {}
+    for path in sorted(BACKLOG.glob("*.md")):
+        if path.name in SKIP:
+            continue
+        text = path.read_text(encoding="utf-8")
+        tid = ticket_id(path.name)
+        title = re.search(r"^# \S+ — (.+)$", text, flags=re.M)
+        raw_deps = field(text, "Dépend de") or ""
+        tickets[tid] = {
+            "id": tid,
+            "file": path.name,
+            "title": title.group(1).strip() if title else path.stem,
+            "version": field(text, "Version") or "—",
+            "size": field(text, "Taille") or "—",
+            "state": field(text, "État") or "",
+            "deps": list(dict.fromkeys(d for d in ID_RE.findall(raw_deps) if d != tid)),
+        }
+    return tickets
+
+
+def check_integrity(tickets: dict) -> list[str]:
+    errors = []
+    for t in tickets.values():
+        if t["state"] not in STATES:
+            errors.append(f"{t['id']} : état « {t['state']} » hors nomenclature {sorted(STATES)}")
+        for dep in t["deps"]:
+            if dep not in tickets:
+                errors.append(f"{t['id']} : dépendance inconnue {dep}")
+    # cycles
+    seen, stack = set(), set()
+
+    def visit(tid, path):
+        if tid in stack:
+            errors.append(f"cycle de dépendances : {' → '.join(path + [tid])}")
+            return
+        if tid in seen or tid not in tickets:
+            return
+        stack.add(tid)
+        for dep in tickets[tid]["deps"]:
+            visit(dep, path + [tid])
+        stack.discard(tid)
+        seen.add(tid)
+
+    for tid in tickets:
+        visit(tid, [])
+    return errors
+
+
+def availability(t: dict, tickets: dict) -> str:
+    if t["state"] in ("Terminé", "Abandonné"):
+        return "—"
+    if t["state"] == "En cours":
+        return "en cours"
+    blocking = [d for d in t["deps"] if tickets.get(d, {}).get("state") != "Terminé"]
+    return "**prêt**" if not blocking else "attend " + ", ".join(blocking)
+
+
+def render(tickets: dict) -> str:
+    out = [BEGIN, ""]
+    for _, heading, match in SECTIONS:
+        rows = [t for tid, t in sorted(tickets.items()) if match(tid)]
+        if not rows:
+            continue
+        out += [f"### {heading}", "", "| ID | Titre | Version | Dépend de | Taille | État | Disponibilité |",
+                "|---|---|---|---|---|---|---|"]
+        for t in rows:
+            deps = ", ".join(t["deps"]) or "—"
+            out.append(
+                f"| [{t['id']}](./{t['file']}) | {t['title']} | {t['version']} | "
+                f"{deps} | {t['size']} | {t['state']} | {availability(t, tickets)} |"
+            )
+        out.append("")
+    ready = sorted(t["id"] for t in tickets.values() if availability(t, tickets) == "**prêt**")
+    done = sum(1 for t in tickets.values() if t["state"] == "Terminé")
+    out += [f"**{done}/{len(tickets)} terminés.** Prêts à démarrer : "
+            + (", ".join(ready) if ready else "aucun") + ".", "", END]
+    return "\n".join(out)
+
+
+def main() -> int:
+    tickets = load()
+    errors = check_integrity(tickets)
+    if errors:
+        print("Backlog incohérent :", file=sys.stderr)
+        for e in errors:
+            print(f"  - {e}", file=sys.stderr)
+        return 1
+
+    text = README.read_text(encoding="utf-8")
+    if BEGIN not in text or END not in text:
+        print(f"Marqueurs {BEGIN} / {END} absents de {README}", file=sys.stderr)
+        return 1
+    new = text[: text.index(BEGIN)] + render(tickets) + text[text.index(END) + len(END) :]
+
+    if "--check" in sys.argv:
+        if new != text:
+            print("docs/backlog/README.md est périmé — lancer `make backlog`", file=sys.stderr)
+            return 1
+        print(f"Backlog à jour ({len(tickets)} tickets).")
+        return 0
+
+    README.write_text(new, encoding="utf-8")
+    print(f"Backlog régénéré ({len(tickets)} tickets).")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -40,12 +40,30 @@
             "type": "string"
           },
           "latitude": {
-            "title": "Latitude",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
           },
           "longitude": {
-            "title": "Longitude",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "position_status": {
+            "title": "Position Status",
+            "type": "string"
           }
         },
         "required": [
@@ -54,7 +72,8 @@
           "commune_code",
           "department_code",
           "longitude",
-          "latitude"
+          "latitude",
+          "position_status"
         ],
         "title": "AddressSearchResponse",
         "type": "object"
