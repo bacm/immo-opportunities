@@ -80,8 +80,8 @@ class BanImporter:
             (import_run_id, release_id, department_code, idempotency_key, raw_asset_id),
         )
         self._create_stage()
-        source_count = 0
-        quarantine_count = 0
+        source_row_count = 0
+        quarantined_row_count = 0
         with self.connection.cursor().copy(
             """
             COPY ban_stage (
@@ -95,9 +95,9 @@ class BanImporter:
             """
         ) as copy:
             for record in iter_ban_records(source_path):
-                source_count += 1
+                source_row_count += 1
                 if isinstance(record, BanQuarantine):
-                    quarantine_count += 1
+                    quarantined_row_count += 1
                     copy.write_row(
                         (
                             True,
@@ -179,11 +179,26 @@ class BanImporter:
             SELECT count(*), count(DISTINCT ban_id) FROM quarantined
             """
         ).fetchone()
-        conflicting_row_count = int(conflicting_identity_row[0]) if conflicting_identity_row else 0
-        conflicting_identity_count = (
+        conflicting_identity_row_count = (
+            int(conflicting_identity_row[0]) if conflicting_identity_row else 0
+        )
+        conflicting_identity_identifier_count = (
             int(conflicting_identity_row[1]) if conflicting_identity_row else 0
         )
-        quarantine_count += conflicting_row_count
+        quarantined_row_count += conflicting_identity_row_count
+
+        # Doublons réellement présents dans la source, mesurés avant le retrait des attributs
+        # contradictoires. Après ce retrait, les variantes d'un identifiant ambigu deviennent
+        # identiques : les compter ici ferait passer pour des doublons de la source des lignes
+        # que seule notre propre décision a rendues indiscernables.
+        exact_duplicate_row = self.connection.execute(
+            """
+            SELECT count(*) - count(DISTINCT (ban_id, record_checksum))
+              FROM ban_stage
+             WHERE NOT is_quarantined
+            """
+        ).fetchone()
+        exact_duplicate_excess_row_count = int(exact_duplicate_row[0]) if exact_duplicate_row else 0
 
         # Identité stable, attribut contradictoire : l'adresse est conservée et seul l'attribut
         # devient manquant avec un motif. Il est retiré de *toutes* les variantes de
@@ -239,10 +254,10 @@ class BanImporter:
             raw_asset_id=raw_asset_id,
             import_run_id=import_run_id,
         )
-        normalized_count_row = self.connection.execute(
+        normalized_row_count_row = self.connection.execute(
             "SELECT count(DISTINCT ban_id) FROM ban_stage WHERE NOT is_quarantined"
         ).fetchone()
-        normalized_count = int(normalized_count_row[0]) if normalized_count_row else 0
+        normalized_row_count = int(normalized_row_count_row[0]) if normalized_row_count_row else 0
         deduplicated_row = self.connection.execute(
             """
             SELECT count(*) - count(DISTINCT ban_id)
@@ -250,7 +265,7 @@ class BanImporter:
              WHERE NOT is_quarantined
             """
         ).fetchone()
-        deduplicated_count = int(deduplicated_row[0]) if deduplicated_row else 0
+        deduplicated_row_count = int(deduplicated_row[0]) if deduplicated_row else 0
         self.connection.execute(
             """
             INSERT INTO meta.data_quality_check (
@@ -260,32 +275,36 @@ class BanImporter:
             ) VALUES
                 (%(release_id)s, %(import_run_id)s, 'source_vs_normalized_count', '1',
                  'department', %(department_code)s, 'addresses',
-                 CASE WHEN %(source_count)s = %(normalized_count)s + %(quarantine_count)s
-                                                + %(deduplicated_count)s
+                 CASE WHEN %(accounted_row_count)s = %(source_row_count)s
                       THEN 'passed' ELSE 'failed' END,
-                 CASE WHEN %(source_count)s = %(normalized_count)s + %(quarantine_count)s
-                                                + %(deduplicated_count)s
+                 CASE WHEN %(accounted_row_count)s = %(source_row_count)s
                       THEN 'info' ELSE 'error' END,
-                 true, %(normalized_count)s + %(quarantine_count)s + %(deduplicated_count)s,
-                 %(source_count)s,
+                 true, %(accounted_row_count)s, %(source_row_count)s,
                  jsonb_build_object(
-                     'normalized', %(normalized_count)s::bigint,
-                     'quarantined', %(quarantine_count)s::bigint,
-                     'deduplicated', %(deduplicated_count)s::bigint
+                     'normalized', %(normalized_row_count)s::bigint,
+                     'quarantined', %(quarantined_row_count)s::bigint,
+                     'deduplicated', %(deduplicated_row_count)s::bigint
                  )),
                 (%(release_id)s, %(import_run_id)s, 'exact_duplicate_ban_record', '1',
                  'department', %(department_code)s, 'addresses',
-                 CASE WHEN %(deduplicated_count)s = 0 THEN 'passed' ELSE 'warning' END,
-                 CASE WHEN %(deduplicated_count)s = 0 THEN 'info' ELSE 'warning' END,
-                 false, %(deduplicated_count)s, 0,
-                 jsonb_build_object('policy', 'retain one canonical record; preserve raw asset')),
+                 CASE WHEN %(exact_duplicate_excess_row_count)s = 0
+                      THEN 'passed' ELSE 'warning' END,
+                 CASE WHEN %(exact_duplicate_excess_row_count)s = 0
+                      THEN 'info' ELSE 'warning' END,
+                 false, %(exact_duplicate_excess_row_count)s, 0,
+                 jsonb_build_object(
+                     'excess_rows_dropped_by_deduplication', %(deduplicated_row_count)s::bigint,
+                     'policy', 'retain one canonical record; preserve raw asset'
+                 )),
                 (%(release_id)s, %(import_run_id)s, 'conflicting_ban_identity', '1',
                  'department', %(department_code)s, 'addresses',
-                 CASE WHEN %(conflicting_identity_count)s = 0 THEN 'passed' ELSE 'failed' END,
-                 CASE WHEN %(conflicting_identity_count)s = 0 THEN 'info' ELSE 'error' END,
-                 true, %(conflicting_identity_count)s, 0,
+                 CASE WHEN %(conflicting_identity_identifier_count)s = 0
+                      THEN 'passed' ELSE 'failed' END,
+                 CASE WHEN %(conflicting_identity_identifier_count)s = 0
+                      THEN 'info' ELSE 'error' END,
+                 true, %(conflicting_identity_identifier_count)s, 0,
                  jsonb_build_object(
-                     'quarantined_rows', %(conflicting_row_count)s::bigint,
+                     'quarantined_rows', %(conflicting_identity_row_count)s::bigint,
                      'policy', 'contradictory address identities cannot be reconciled'
                  )),
                 (%(release_id)s, %(import_run_id)s, 'ambiguous_ban_attribute', '1',
@@ -297,6 +316,9 @@ class BanImporter:
                  false, %(ambiguous_attribute_identifier_count)s, 0,
                  jsonb_build_object(
                      'by_attribute', %(ambiguous_attribute_counts)s::jsonb,
+                     'excess_rows_collapsed_by_withholding',
+                         %(deduplicated_row_count)s::bigint
+                             - %(exact_duplicate_excess_row_count)s::bigint,
                      'policy', 'identity retained; contradictory attribute withheld with a motive'
                  ))
             """,
@@ -304,12 +326,16 @@ class BanImporter:
                 "release_id": release_id,
                 "import_run_id": import_run_id,
                 "department_code": department_code,
-                "source_count": source_count,
-                "normalized_count": normalized_count,
-                "quarantine_count": quarantine_count,
-                "deduplicated_count": deduplicated_count,
-                "conflicting_identity_count": conflicting_identity_count,
-                "conflicting_row_count": conflicting_row_count,
+                "source_row_count": source_row_count,
+                "accounted_row_count": (
+                    normalized_row_count + quarantined_row_count + deduplicated_row_count
+                ),
+                "normalized_row_count": normalized_row_count,
+                "quarantined_row_count": quarantined_row_count,
+                "deduplicated_row_count": deduplicated_row_count,
+                "conflicting_identity_identifier_count": conflicting_identity_identifier_count,
+                "conflicting_identity_row_count": conflicting_identity_row_count,
+                "exact_duplicate_excess_row_count": exact_duplicate_excess_row_count,
                 "ambiguous_attribute_identifier_count": ambiguous_attribute_identifier_count,
                 "ambiguous_attribute_counts": Jsonb(ambiguous_attribute_counts),
             },
@@ -323,10 +349,10 @@ class BanImporter:
              WHERE id = %s
             """,
             (
-                source_count,
-                normalized_count,
-                quarantine_count,
-                deduplicated_count,
+                source_row_count,
+                normalized_row_count,
+                quarantined_row_count,
+                deduplicated_row_count,
                 import_run_id,
             ),
         )
@@ -334,9 +360,9 @@ class BanImporter:
         self.connection.commit()
         return SpatialImportOutcome(
             import_run_id=import_run_id,
-            source_rows=source_count,
-            normalized_rows=normalized_count,
-            quarantined_rows=quarantine_count,
+            source_rows=source_row_count,
+            normalized_rows=normalized_row_count,
+            quarantined_rows=quarantined_row_count,
             skipped_as_idempotent=False,
         )
 
@@ -721,8 +747,8 @@ class RnbImporter:
             (import_run_id, release_id, department_code, idempotency_key, raw_asset_id),
         )
         self._create_stage()
-        source_count = 0
-        quarantine_count = 0
+        source_row_count = 0
+        quarantined_row_count = 0
         with self.connection.cursor().copy(
             """
             COPY rnb_stage (
@@ -733,9 +759,9 @@ class RnbImporter:
             """
         ) as copy:
             for record in iter_rnb_records(source_path):
-                source_count += 1
+                source_row_count += 1
                 if isinstance(record, RnbQuarantine):
-                    quarantine_count += 1
+                    quarantined_row_count += 1
                     copy.write_row(
                         (
                             True,
@@ -781,10 +807,10 @@ class RnbImporter:
             raw_asset_id=raw_asset_id,
             import_run_id=import_run_id,
         )
-        normalized_count_row = self.connection.execute(
+        normalized_row_count_row = self.connection.execute(
             "SELECT count(*) FROM rnb_stage WHERE NOT is_quarantined"
         ).fetchone()
-        normalized_count = int(normalized_count_row[0]) if normalized_count_row else 0
+        normalized_row_count = int(normalized_row_count_row[0]) if normalized_row_count_row else 0
         duplicate_row = self.connection.execute(
             """
             SELECT count(*) FROM (
@@ -814,15 +840,15 @@ class RnbImporter:
                 release_id,
                 import_run_id,
                 department_code,
-                source_count,
-                normalized_count,
-                quarantine_count,
-                source_count,
-                normalized_count,
-                quarantine_count,
-                normalized_count,
-                quarantine_count,
-                source_count,
+                source_row_count,
+                normalized_row_count,
+                quarantined_row_count,
+                source_row_count,
+                normalized_row_count,
+                quarantined_row_count,
+                normalized_row_count,
+                quarantined_row_count,
+                source_row_count,
                 release_id,
                 import_run_id,
                 department_code,
@@ -839,15 +865,15 @@ class RnbImporter:
                 quarantined_row_count = %s
              WHERE id = %s
             """,
-            (source_count, normalized_count, quarantine_count, import_run_id),
+            (source_row_count, normalized_row_count, quarantined_row_count, import_run_id),
         )
         self.connection.execute("RESET ROLE")
         self.connection.commit()
         return SpatialImportOutcome(
             import_run_id=import_run_id,
-            source_rows=source_count,
-            normalized_rows=normalized_count,
-            quarantined_rows=quarantine_count,
+            source_rows=source_row_count,
+            normalized_rows=normalized_row_count,
+            quarantined_rows=quarantined_row_count,
             skipped_as_idempotent=False,
         )
 

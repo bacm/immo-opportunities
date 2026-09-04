@@ -23,7 +23,7 @@ OPS_RUN = docker run --rm \
 
 .PHONY: help config validate dev-secrets dev up rebuild down logs ops-build \
 	inventory ansible-syntax bootstrap deploy smoke check python-check web-check \
-	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import mvt-benchmark e2e backlog backlog-check
+	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import ban-census mvt-benchmark e2e backlog backlog-check
 
 help:
 	@echo "make dev-secrets                  Generate disposable local secrets"
@@ -37,6 +37,7 @@ help:
 	@echo "make cadastre-fixture             Verify DS-01 on local PostGIS and MinIO"
 	@echo "make rnb-import DEPARTMENT=35     Archive/import one pinned DS-02 Brittany partition"
 	@echo "make ban-import DEPARTMENT=35     Archive/import one pinned DS-05 Brittany partition"
+	@echo "make ban-census ARCHIVE=path      Recount a pinned DS-05 archive, no database"
 	@echo "make mvt-benchmark                Measure cold/hot p95 for local MVT routes"
 	@echo "make e2e                          Run the local real-map Playwright flow"
 	@echo "make inventory ENV=production     Render inventory from VPS_* variables"
@@ -94,6 +95,11 @@ ban-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/import_ban_release.py 2026-06-17 --department $(DEPARTMENT)
+
+ban-census:
+	test -n "$(ARCHIVE)"
+	uv run --package immo-pipelines python pipelines/scripts/ban_census.py 2026-06-17 \
+		--department $(DEPARTMENT) --archive $(ARCHIVE)
 
 python-check:
 	uv run --package immo-backend ruff check backend pipelines

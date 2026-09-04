@@ -70,7 +70,7 @@ dérivée du graphe de dépendances.
 
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
-| [BUG-01](./BUG-01-chiffres-audit-ban.md) | Volumétries BAN erronées dans le rapport spatial 35 | v0.3 | — | S | À faire | **prêt** |
+| [BUG-01](./BUG-01-chiffres-audit-ban.md) | Volumétries BAN erronées dans le rapport spatial 35 | v0.3 | — | S | Terminé | — |
 | [BUG-02](./BUG-02-scripts-import-hors-dagster.md) | Les imports réels passent par des scripts one-shot, pas par Dagster | dette transverse | — | L | À faire | **prêt** |
 | [BUG-03](./BUG-03-quarantaine-par-attribut.md) | Le modèle de quarantaine ne connaît que l'enregistrement, pas l'attribut | v0.3 | — | M | Terminé | — |
 
@@ -125,7 +125,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**2/37 terminés.** Prêts à démarrer : A1, B1, B2a, B2b, BUG-01, BUG-02, G6, G7.
+**3/37 terminés.** Prêts à démarrer : A1, B1, B2a, B2b, BUG-02, G6, G7.
 
 <!-- END:tickets -->
 

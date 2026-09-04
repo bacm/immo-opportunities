@@ -2,11 +2,15 @@ import csv
 import gzip
 from pathlib import Path
 
+import pytest
+
 from immo_pipelines.spatial.ban import (
     BAN_IDENTITY_FIELDS,
     BAN_REQUIRED_COLUMNS,
+    BanCensus,
     BanQuarantine,
     BanRecord,
+    census_ban_archive,
     iter_ban_records,
     normalize_address_label,
 )
@@ -141,3 +145,82 @@ def test_identity_checksum_ignores_every_quarantinable_attribute() -> None:
     for column, _attribute, _reason in BAN_QUARANTINABLE_ATTRIBUTES:
         for source_field in source_columns[column]:
             assert source_field not in BAN_IDENTITY_FIELDS
+
+
+def mixed_archive(path: Path) -> Path:
+    """Archive contenant une fois chaque cas que le décompte doit savoir séparer."""
+    rows = [
+        ban_row(),
+        ban_row(),  # doublon exact
+        ban_row() | {"id": "35238_0001_00002"},
+        ban_row() | {"id": "35238_0001_00002", "x": "351999.5"},  # position contradictoire
+        ban_row() | {"id": "35238_0001_00003"},
+        ban_row() | {"id": "35238_0001_00003", "nom_voie": "Rue de l'Hiver"},  # identité rompue
+        ban_row() | {"id": "35238_0001_00004"},
+        ban_row() | {"id": "35238_0001_00005"},
+        ban_row() | {"id": "35238_0001_00006", "x": "not-a-number"},  # illisible
+    ]
+    write_ban_archive(path, rows)
+    return path
+
+
+def test_census_separates_rows_concerned_from_rows_in_excess(tmp_path: Path) -> None:
+    """BUG-01 : le rapport confondait « lignes concernées » et « lignes en excès ».
+    Les deux unités sont figées ici sur une archive où elles diffèrent."""
+    census = census_ban_archive(mixed_archive(tmp_path / "ban.csv.gz"))
+
+    assert census.source_rows == 9
+    assert census.parse_quarantined_rows == 1
+    assert census.identified_rows == 8
+    assert census.identifiers == 5
+    assert census.communes == 1
+
+    # un identifiant conflictuel concerne deux lignes et n'en met qu'une en excès
+    assert census.conflicting_identity_identifiers == 1
+    assert census.conflicting_identity_rows == 2
+
+    assert census.ambiguous_attribute_identifiers == 1
+    assert census.ambiguous_attribute_rows == 2
+    assert census.ambiguous_attribute_communes == 1
+
+    assert census.exact_duplicate_identifiers == 1
+    assert census.exact_duplicate_rows == 2
+    assert census.exact_duplicate_excess_rows == 1
+    assert census.attribute_collapse_excess_rows == 1
+    assert census.deduplicated_excess_rows == 2
+
+
+def test_census_predicts_import_counters_that_cannot_be_swapped(tmp_path: Path) -> None:
+    """Les trois compteurs de `meta.import_run` sont figés à des valeurs distinctes :
+    intervertir quarantaine et déduplication fait échouer le test."""
+    census = census_ban_archive(mixed_archive(tmp_path / "ban.csv.gz"))
+
+    assert census.expected_normalized_rows == 4
+    assert census.expected_quarantined_rows == 3
+    assert census.expected_deduplicated_rows == 2
+    assert (
+        census.expected_normalized_rows
+        + census.expected_quarantined_rows
+        + census.expected_deduplicated_rows
+        == census.source_rows
+    )
+
+
+def test_census_refuses_counters_that_lose_source_rows() -> None:
+    """L'invariant de conservation est un garde-fou exécuté, pas une phrase de rapport."""
+    with pytest.raises(ValueError, match="does not conserve source rows"):
+        BanCensus(
+            source_rows=9,
+            parse_quarantined_rows=1,
+            identified_rows=7,  # une ligne lue mais rattachée à aucun identifiant
+            identifiers=5,
+            communes=1,
+            conflicting_identity_identifiers=1,
+            conflicting_identity_rows=2,
+            ambiguous_attribute_identifiers=1,
+            ambiguous_attribute_rows=2,
+            ambiguous_attribute_communes=1,
+            exact_duplicate_identifiers=1,
+            exact_duplicate_rows=2,
+            exact_duplicate_excess_rows=1,
+        )

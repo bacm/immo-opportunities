@@ -171,3 +171,227 @@ def iter_ban_records(path: Path) -> Iterator[BanRecord | BanQuarantine]:
                 record_checksum=_checksum(row),
                 identity_checksum=_identity_checksum(row),
             )
+
+
+# Deux unités cohabitent dans tout décompte BAN et leur confusion a déjà produit un rapport
+# faux (BUG-01) : le nombre de **lignes concernées** par un cas et le nombre de **lignes en
+# excès** qu'il produit. Un identifiant présent deux fois concerne deux lignes et n'en produit
+# qu'une en excès. Les noms de ce module portent l'unité, jamais le cas seul.
+@dataclass(frozen=True, slots=True)
+class BanCensus:
+    """Décompte d'une archive BAN, sans base de données et sans décision d'import.
+
+    Les classes d'identifiants sont mesurées dans l'ordre où l'import les traite : les
+    identités contradictoires partent en quarantaine avant que la déduplication ne voie
+    quoi que ce soit, donc `exact_duplicate_*` ne porte que sur les identifiants conservés.
+    """
+
+    source_rows: int
+    parse_quarantined_rows: int
+    identified_rows: int
+    identifiers: int
+    communes: int
+    conflicting_identity_identifiers: int
+    conflicting_identity_rows: int
+    ambiguous_attribute_identifiers: int
+    ambiguous_attribute_rows: int
+    ambiguous_attribute_communes: int
+    exact_duplicate_identifiers: int
+    exact_duplicate_rows: int
+    exact_duplicate_excess_rows: int
+
+    def __post_init__(self) -> None:
+        if (
+            min(
+                self.source_rows,
+                self.parse_quarantined_rows,
+                self.identified_rows,
+                self.identifiers,
+                self.communes,
+                self.conflicting_identity_identifiers,
+                self.ambiguous_attribute_identifiers,
+                self.exact_duplicate_identifiers,
+            )
+            < 0
+        ):
+            raise ValueError("BAN census counters cannot be negative")
+        for rows, identifiers, label in (
+            (
+                self.conflicting_identity_rows,
+                self.conflicting_identity_identifiers,
+                "conflicting identity",
+            ),
+            (
+                self.ambiguous_attribute_rows,
+                self.ambiguous_attribute_identifiers,
+                "ambiguous attribute",
+            ),
+            (self.exact_duplicate_rows, self.exact_duplicate_identifiers, "exact duplicate"),
+        ):
+            if rows < identifiers:
+                raise ValueError(f"BAN census reports fewer {label} rows than identifiers")
+        if self.identified_rows < self.identifiers:
+            raise ValueError("BAN census reports fewer identified rows than identifiers")
+        if self.exact_duplicate_excess_rows > self.deduplicated_excess_rows:
+            raise ValueError(
+                "BAN census reports more exact duplicate rows than rows dropped by deduplication"
+            )
+        # `source_rows` est compté à la lecture, `identified_rows` est sommé identifiant par
+        # identifiant : leur rapprochement est une vraie mesure de conservation, pas une
+        # égalité vraie par construction.
+        accounted = self.parse_quarantined_rows + self.identified_rows
+        if accounted != self.source_rows:
+            raise ValueError(
+                f"BAN census does not conserve source rows: {accounted} accounted for, "
+                f"{self.source_rows} read"
+            )
+
+    @property
+    def retained_identifiers(self) -> int:
+        """Identifiants qui survivent à la quarantaine d'identité."""
+        return self.identifiers - self.conflicting_identity_identifiers
+
+    @property
+    def retained_rows(self) -> int:
+        """Lignes qui atteignent la déduplication."""
+        return self.identified_rows - self.conflicting_identity_rows
+
+    @property
+    def deduplicated_excess_rows(self) -> int:
+        """Lignes en excès supprimées par la déduplication, toutes causes confondues."""
+        return self.retained_rows - self.retained_identifiers
+
+    @property
+    def attribute_collapse_excess_rows(self) -> int:
+        """Lignes devenues identiques après retrait d'un attribut contradictoire.
+
+        Elles ne sont pas des doublons de la source : elles le deviennent parce que la
+        divergence qui les distinguait a été retirée avec un motif.
+        """
+        return self.deduplicated_excess_rows - self.exact_duplicate_excess_rows
+
+    @property
+    def ambiguous_attribute_row_share(self) -> float:
+        if not self.source_rows:
+            return 0.0
+        return self.ambiguous_attribute_rows / self.source_rows
+
+    @property
+    def expected_normalized_rows(self) -> int:
+        return self.retained_identifiers
+
+    @property
+    def expected_quarantined_rows(self) -> int:
+        return self.parse_quarantined_rows + self.conflicting_identity_rows
+
+    @property
+    def expected_deduplicated_rows(self) -> int:
+        return self.deduplicated_excess_rows
+
+    def summary(self) -> dict[str, int | float]:
+        """Toutes les grandeurs citables, mesurées ou dérivées, sous leur nom publié."""
+        return {
+            "source_rows": self.source_rows,
+            "parse_quarantined_rows": self.parse_quarantined_rows,
+            "identified_rows": self.identified_rows,
+            "identifiers": self.identifiers,
+            "communes": self.communes,
+            "conflicting_identity_identifiers": self.conflicting_identity_identifiers,
+            "conflicting_identity_rows": self.conflicting_identity_rows,
+            "ambiguous_attribute_identifiers": self.ambiguous_attribute_identifiers,
+            "ambiguous_attribute_rows": self.ambiguous_attribute_rows,
+            "ambiguous_attribute_communes": self.ambiguous_attribute_communes,
+            "ambiguous_attribute_row_share": round(self.ambiguous_attribute_row_share, 5),
+            "exact_duplicate_identifiers": self.exact_duplicate_identifiers,
+            "exact_duplicate_rows": self.exact_duplicate_rows,
+            "exact_duplicate_excess_rows": self.exact_duplicate_excess_rows,
+            "attribute_collapse_excess_rows": self.attribute_collapse_excess_rows,
+            "deduplicated_excess_rows": self.deduplicated_excess_rows,
+            "expected_normalized_rows": self.expected_normalized_rows,
+            "expected_quarantined_rows": self.expected_quarantined_rows,
+            "expected_deduplicated_rows": self.expected_deduplicated_rows,
+        }
+
+
+@dataclass(slots=True)
+class _IdentifierTally:
+    commune_code: str
+    identity_checksum: bytes
+    record_checksums: set[bytes]
+    rows: int = 1
+    divergent_identity: bool = False
+
+
+def census_ban_archive(path: Path) -> BanCensus:
+    """Compte les lignes d'une archive BAN telles que l'import les classera.
+
+    Aucune connexion n'est requise : c'est la commande qui rend les chiffres d'un rapport
+    d'audit reproductibles depuis la seule archive checksumée.
+    """
+    tallies: dict[str, _IdentifierTally] = {}
+    source_rows = 0
+    parse_quarantined_rows = 0
+    for record in iter_ban_records(path):
+        source_rows += 1
+        if isinstance(record, BanQuarantine):
+            parse_quarantined_rows += 1
+            continue
+        record_checksum = bytes.fromhex(record.record_checksum)
+        identity_checksum = bytes.fromhex(record.identity_checksum)
+        tally = tallies.get(record.ban_id)
+        if tally is None:
+            # Seule la divergence d'identité importe (> 1 suffit), alors que le nombre exact
+            # de variantes d'enregistrement sépare un doublon exact d'un attribut ambigu.
+            tallies[record.ban_id] = _IdentifierTally(
+                commune_code=record.commune_code,
+                identity_checksum=identity_checksum,
+                record_checksums={record_checksum},
+            )
+            continue
+        tally.rows += 1
+        tally.record_checksums.add(record_checksum)
+        if identity_checksum != tally.identity_checksum:
+            tally.divergent_identity = True
+
+    identified_rows = 0
+    communes: set[str] = set()
+    ambiguous_communes: set[str] = set()
+    conflicting_identity_identifiers = 0
+    conflicting_identity_rows = 0
+    ambiguous_attribute_identifiers = 0
+    ambiguous_attribute_rows = 0
+    exact_duplicate_identifiers = 0
+    exact_duplicate_rows = 0
+    exact_duplicate_excess_rows = 0
+    for tally in tallies.values():
+        identified_rows += tally.rows
+        communes.add(tally.commune_code)
+        if tally.divergent_identity:
+            conflicting_identity_identifiers += 1
+            conflicting_identity_rows += tally.rows
+            continue
+        if len(tally.record_checksums) > 1:
+            ambiguous_attribute_identifiers += 1
+            ambiguous_attribute_rows += tally.rows
+            ambiguous_communes.add(tally.commune_code)
+        excess = tally.rows - len(tally.record_checksums)
+        if excess:
+            exact_duplicate_identifiers += 1
+            exact_duplicate_rows += tally.rows
+            exact_duplicate_excess_rows += excess
+
+    return BanCensus(
+        source_rows=source_rows,
+        parse_quarantined_rows=parse_quarantined_rows,
+        identified_rows=identified_rows,
+        identifiers=len(tallies),
+        communes=len(communes),
+        conflicting_identity_identifiers=conflicting_identity_identifiers,
+        conflicting_identity_rows=conflicting_identity_rows,
+        ambiguous_attribute_identifiers=ambiguous_attribute_identifiers,
+        ambiguous_attribute_rows=ambiguous_attribute_rows,
+        ambiguous_attribute_communes=len(ambiguous_communes),
+        exact_duplicate_identifiers=exact_duplicate_identifiers,
+        exact_duplicate_rows=exact_duplicate_rows,
+        exact_duplicate_excess_rows=exact_duplicate_excess_rows,
+    )
