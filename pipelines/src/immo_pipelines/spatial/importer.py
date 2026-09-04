@@ -5,7 +5,11 @@ from typing import Any
 from psycopg import Connection, sql
 from psycopg.types.json import Jsonb
 
-from immo_pipelines.spatial.ban import BanQuarantine, iter_ban_records
+from immo_pipelines.spatial.ban import (
+    BAN_TRANSFORMATION_VERSION,
+    BanQuarantine,
+    iter_ban_records,
+)
 from immo_pipelines.spatial.rnb import RnbQuarantine, iter_rnb_records
 
 # Attributs non identitaires d'une adresse BAN. Lorsqu'un identifiant est réutilisé avec des
@@ -226,8 +230,8 @@ class BanImporter:
                        SET {column} = NULL,
                            quarantined_attributes = stage.quarantined_attributes
                                || jsonb_build_array(jsonb_build_object(
-                                      'attribute', %(attribute)s,
-                                      'reason_code', %(reason_code)s
+                                      'attribute', %(attribute)s::text,
+                                      'reason_code', %(reason_code)s::text
                                   ))
                       FROM divergent
                      WHERE stage.ban_id = divergent.ban_id
@@ -248,7 +252,10 @@ class BanImporter:
             if count:
                 ambiguous_attribute_counts[attribute] = count
         ambiguous_attribute_identifier_count = self._distinct_ambiguous_identifiers()
-        self._publish_stage(
+        (
+            unresolved_reference_relation_count,
+            unresolved_reference_address_count,
+        ) = self._publish_stage_and_count_rejections(
             release_id=release_id,
             department_code=department_code,
             raw_asset_id=raw_asset_id,
@@ -320,6 +327,17 @@ class BanImporter:
                          %(deduplicated_row_count)s::bigint
                              - %(exact_duplicate_excess_row_count)s::bigint,
                      'policy', 'identity retained; contradictory attribute withheld with a motive'
+                 )),
+                (%(release_id)s, %(import_run_id)s, 'unresolved_cadastral_reference', '1',
+                 'department', %(department_code)s, 'addresses',
+                 CASE WHEN %(unresolved_reference_relation_count)s = 0
+                      THEN 'passed' ELSE 'warning' END,
+                 CASE WHEN %(unresolved_reference_relation_count)s = 0
+                      THEN 'info' ELSE 'warning' END,
+                 false, %(unresolved_reference_relation_count)s, 0,
+                 jsonb_build_object(
+                     'addresses_concerned', %(unresolved_reference_address_count)s::bigint,
+                     'policy', 'relation rejected with a motive; never silently dropped'
                  ))
             """,
             {
@@ -338,6 +356,8 @@ class BanImporter:
                 "exact_duplicate_excess_row_count": exact_duplicate_excess_row_count,
                 "ambiguous_attribute_identifier_count": ambiguous_attribute_identifier_count,
                 "ambiguous_attribute_counts": Jsonb(ambiguous_attribute_counts),
+                "unresolved_reference_relation_count": unresolved_reference_relation_count,
+                "unresolved_reference_address_count": unresolved_reference_address_count,
             },
         )
         self.connection.execute(
@@ -365,6 +385,40 @@ class BanImporter:
             quarantined_rows=quarantined_row_count,
             skipped_as_idempotent=False,
         )
+
+    def _publish_stage_and_count_rejections(
+        self,
+        *,
+        release_id: str,
+        department_code: str,
+        raw_asset_id: int,
+        import_run_id: str,
+    ) -> tuple[int, int]:
+        """Publier le stage, puis compter les relations `cad_parcelles` rejetees.
+
+        Une reference cadastrale absente du referentiel actif produit une relation
+        `rejected` motivee plutot qu'aucune ligne. Sans ce comptage, la perte resterait
+        invisible dans le rapport d'import : c'est le compteur qui rend le rejet opposable.
+        Renvoie (relations rejetees, adresses concernees).
+        """
+        self._publish_stage(
+            release_id=release_id,
+            department_code=department_code,
+            raw_asset_id=raw_asset_id,
+            import_run_id=import_run_id,
+        )
+        row = self.connection.execute(
+            """
+            SELECT count(*), count(DISTINCT left_entity_id)
+              FROM meta.entity_match
+             WHERE algorithm_code = 'ban-cad-parcelles'
+               AND algorithm_version = '1'
+               AND decision = 'rejected'
+               AND release_ids ? %s
+            """,
+            (release_id,),
+        ).fetchone()
+        return (int(row[0]), int(row[1])) if row else (0, 0)
 
     def _distinct_ambiguous_identifiers(self) -> int:
         row = self.connection.execute(
@@ -422,6 +476,7 @@ class BanImporter:
             "department_code": department_code,
             "raw_asset_id": raw_asset_id,
             "import_run_id": import_run_id,
+            "transformation_version": BAN_TRANSFORMATION_VERSION,
         }
         self.connection.execute(
             """
@@ -530,14 +585,21 @@ class BanImporter:
         self.connection.execute(
             """
             WITH candidates AS MATERIALIZED (
-                SELECT stage.ban_id, parcel.id AS parcel_id,
+                SELECT stage.ban_id, cadastral_id.value AS cadastral_id,
+                       coalesce(
+                           parcel.id, 'parcel:cadastre:' || cadastral_id.value
+                       ) AS parcel_id,
+                       CASE WHEN parcel.id IS NULL THEN 'unresolved_cadastral_reference'
+                            WHEN geometry.geom IS NULL THEN 'unpublished_parcel_geometry'
+                            ELSE 'resolved' END AS resolution,
                        ST_Covers(geometry.geom, address.geom) AS point_covered,
                        ST_DWithin(geometry.geom, address.geom, 10) AS within_ten_meters
                   FROM ban_stage AS stage
                   CROSS JOIN LATERAL
-                       jsonb_array_elements_text(stage.cadastral_ids) AS cadastral_id
-                  JOIN reference.parcel AS parcel ON parcel.cadastral_id = cadastral_id
-                  JOIN reference.parcel_geometry AS geometry ON geometry.id = parcel.id
+                       jsonb_array_elements_text(stage.cadastral_ids) AS cadastral_id(value)
+                  LEFT JOIN reference.parcel AS parcel
+                         ON parcel.cadastral_id = cadastral_id.value
+                  LEFT JOIN reference.parcel_geometry AS geometry ON geometry.id = parcel.id
                   CROSS JOIN LATERAL (
                       SELECT ST_GeomFromText(stage.geometry_wkt, 2154) AS geom
                   ) AS address
@@ -554,15 +616,28 @@ class BanImporter:
                    'address', 'address:ban:' || candidate.ban_id,
                    'parcel', candidate.parcel_id,
                    'source_relation', 'ban-cad-parcelles', '1',
-                   CASE WHEN candidate.point_covered THEN 0.99
+                   CASE WHEN candidate.resolution <> 'resolved' THEN 0
+                        WHEN candidate.point_covered THEN 0.99
                         WHEN candidate.within_ten_meters THEN 0.95
                         ELSE 0.8 END,
-                   CASE WHEN candidate.within_ten_meters
-                        THEN 'certain' ELSE 'ambiguous' END,
+                   CASE WHEN candidate.resolution <> 'resolved' THEN 'rejected'
+                        WHEN candidate.within_ten_meters THEN 'certain'
+                        ELSE 'ambiguous' END,
                    true,
-                   NOT candidate.within_ten_meters,
-                   'BAN experimental cad_parcelles relation checked against active parcel geometry',
+                   candidate.resolution = 'resolved' AND NOT candidate.within_ten_meters,
+                   CASE candidate.resolution
+                        WHEN 'unresolved_cadastral_reference'
+                             THEN 'BAN cad_parcelles names a cadastral parcel that the active'
+                                  ' referential does not contain'
+                        WHEN 'unpublished_parcel_geometry'
+                             THEN 'BAN cad_parcelles names a parcel whose geometry belongs to no'
+                                  ' published cadastral release'
+                        ELSE 'BAN experimental cad_parcelles relation checked against active'
+                             ' parcel geometry'
+                        END,
                    jsonb_build_object(
+                       'resolution', candidate.resolution,
+                       'source_cadastral_id', candidate.cadastral_id,
                        'point_covered', candidate.point_covered,
                        'within_ten_meters', candidate.within_ten_meters,
                        'source_relation_experimental', true
@@ -634,7 +709,7 @@ class BanImporter:
             )
             SELECT %(release_id)s, %(import_run_id)s, %(raw_asset_id)s, 'addresses',
                    ban_id, source_row_number, reason_code, reason_detail,
-                   properties, false, 'ban-csv-normalize@1'
+                   properties, false, %(transformation_version)s::text
               FROM ban_stage WHERE is_quarantined
             """,
             parameters,

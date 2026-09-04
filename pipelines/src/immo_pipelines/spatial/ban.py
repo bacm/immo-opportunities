@@ -76,6 +76,34 @@ def normalize_address_label(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", ascii_value).strip()
 
 
+# Un identifiant de parcelle (IDU) compte 14 caracteres : commune INSEE (5), prefixe de
+# section (3), section (2), numero (4). BAN publie une partie de ses `cad_parcelles` sur
+# 15 caracteres, l'ordinal de commune etant complete a quatre chiffres : l'adresse
+# `35001_0167` porte `350001000AE0125` la ou l'IDU cadastral est `35001000AE0125`.
+# Compares tels quels, ces identifiants ne resolvent contre aucune parcelle : sur le 35,
+# 158 866 relations declarees sur 325 934 disparaissaient ainsi. Retirer le zero de
+# padding en fait resoudre 158 066, soit 99,5 % — un taux qu'une transformation fausse
+# n'atteint pas contre le cadastre reel.
+#
+# Toute autre longueur est laissee intacte : elle doit rester visible en relation rejetee
+# avec son motif, jamais devinee.
+# Version de la transformation appliquee a une ligne BAN. Elle change des que la sortie
+# change : @2 normalise l'ordinal de commune des `cad_parcelles`, ce que @1 ne faisait pas.
+# La cle d'idempotence la porte, sans quoi un reimport apres changement de code rendrait
+# l'ancien resultat en se croyant a jour.
+BAN_TRANSFORMATION_VERSION = "ban-csv-normalize@2"
+
+_BAN_PADDED_CADASTRAL_ID_LENGTH = 15
+_CADASTRAL_ID_LENGTH = 14
+
+
+def normalize_cadastral_id(value: str) -> str:
+    """Ramener un `cad_parcelles` BAN a la forme canonique de l'IDU cadastral."""
+    if len(value) == _BAN_PADDED_CADASTRAL_ID_LENGTH and value[2] == "0" and value[:2].isdigit():
+        return value[:2] + value[3:]
+    return value
+
+
 def _optional(value: str) -> str | None:
     stripped = value.strip()
     return stripped or None
@@ -146,7 +174,7 @@ def iter_ban_records(path: Path) -> Iterator[BanRecord | BanQuarantine]:
                 if item
             )
             cadastral_ids = tuple(
-                identifier.strip()
+                normalize_cadastral_id(identifier.strip())
                 for identifier in row.get("cad_parcelles", "").split("|")
                 if identifier.strip()
             )
@@ -199,6 +227,9 @@ class BanCensus:
     exact_duplicate_identifiers: int
     exact_duplicate_rows: int
     exact_duplicate_excess_rows: int
+    cadastral_reference_occurrences: int
+    padded_cadastral_reference_occurrences: int
+    malformed_cadastral_reference_occurrences: int
 
     def __post_init__(self) -> None:
         if (
@@ -211,6 +242,9 @@ class BanCensus:
                 self.conflicting_identity_identifiers,
                 self.ambiguous_attribute_identifiers,
                 self.exact_duplicate_identifiers,
+                self.cadastral_reference_occurrences,
+                self.padded_cadastral_reference_occurrences,
+                self.malformed_cadastral_reference_occurrences,
             )
             < 0
         ):
@@ -310,6 +344,11 @@ class BanCensus:
             "expected_normalized_rows": self.expected_normalized_rows,
             "expected_quarantined_rows": self.expected_quarantined_rows,
             "expected_deduplicated_rows": self.expected_deduplicated_rows,
+            "cadastral_reference_occurrences": self.cadastral_reference_occurrences,
+            "padded_cadastral_reference_occurrences": (self.padded_cadastral_reference_occurrences),
+            "malformed_cadastral_reference_occurrences": (
+                self.malformed_cadastral_reference_occurrences
+            ),
         }
 
 
@@ -331,11 +370,26 @@ def census_ban_archive(path: Path) -> BanCensus:
     tallies: dict[str, _IdentifierTally] = {}
     source_rows = 0
     parse_quarantined_rows = 0
+    cadastral_reference_occurrences = 0
+    padded_cadastral_reference_occurrences = 0
+    malformed_cadastral_reference_occurrences = 0
     for record in iter_ban_records(path):
         source_rows += 1
         if isinstance(record, BanQuarantine):
             parse_quarantined_rows += 1
             continue
+        raw_references = [
+            item.strip()
+            for item in record.properties.get("cad_parcelles", "").split("|")
+            if item.strip()
+        ]
+        cadastral_reference_occurrences += len(raw_references)
+        padded_cadastral_reference_occurrences += sum(
+            1 for item in raw_references if normalize_cadastral_id(item) != item
+        )
+        malformed_cadastral_reference_occurrences += sum(
+            1 for item in record.cadastral_ids if len(item) != _CADASTRAL_ID_LENGTH
+        )
         record_checksum = bytes.fromhex(record.record_checksum)
         identity_checksum = bytes.fromhex(record.identity_checksum)
         tally = tallies.get(record.ban_id)
@@ -394,4 +448,7 @@ def census_ban_archive(path: Path) -> BanCensus:
         exact_duplicate_identifiers=exact_duplicate_identifiers,
         exact_duplicate_rows=exact_duplicate_rows,
         exact_duplicate_excess_rows=exact_duplicate_excess_rows,
+        cadastral_reference_occurrences=cadastral_reference_occurrences,
+        padded_cadastral_reference_occurrences=padded_cadastral_reference_occurrences,
+        malformed_cadastral_reference_occurrences=malformed_cadastral_reference_occurrences,
     )

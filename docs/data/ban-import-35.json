@@ -1,0 +1,67 @@
+{
+    "acceptance": "display_only",
+    "department": "35",
+    "import_run": {
+        "id": "ban:2026-06-17:35:ban-csv-normalize@2",
+        "status": "succeeded",
+        "source_rows": 437679,
+        "normalized_rows": 437441,
+        "quarantined_rows": 0,
+        "deduplicated_rows": 238
+    },
+    "release_id": "DS-05@2026-06-17",
+    "archive_sha256": "22160b6d570c1ca557fd5eb60e99f4d83a80be715422fce5a828f3d847ccc3d0",
+    "quality_checks": {
+        "ambiguous_ban_attribute": {
+            "status": "warning",
+            "observed": 217,
+            "blocks_publication": false
+        },
+        "conflicting_ban_identity": {
+            "status": "passed",
+            "observed": 0,
+            "blocks_publication": true
+        },
+        "exact_duplicate_ban_record": {
+            "status": "warning",
+            "observed": 8,
+            "blocks_publication": false
+        },
+        "source_vs_normalized_count": {
+            "status": "passed",
+            "observed": 437679,
+            "blocks_publication": true
+        },
+        "unresolved_cadastral_reference": {
+            "status": "warning",
+            "observed": 3760,
+            "blocks_publication": false
+        }
+    },
+    "cadastre_release": "DS-01@2026-06-01",
+    "publication_mode": "display_only",
+    "in_analysis_scope": false,
+    "commune_metrics_total": {
+        "certain": 248209,
+        "communes": 332,
+        "rejected": 2685,
+        "ambiguous": 1759,
+        "unmatched": 184788
+    },
+    "transformation_version": "ban-csv-normalize@2",
+    "address_parcel_relations": {
+        "certain": {
+            "addresses": 248209,
+            "relations": 272695
+        },
+        "rejected": {
+            "addresses": 3302,
+            "relations": 3760
+        },
+        "ambiguous": {
+            "addresses": 23762,
+            "relations": 49479
+        }
+    },
+    "addresses_without_position": 216
+}

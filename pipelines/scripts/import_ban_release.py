@@ -13,6 +13,7 @@ from immo_pipelines.cadastre.archive import MinioObjectStore, archive_asset, dow
 from immo_pipelines.cadastre.catalog import DatasetCatalog, RawAssetRegistration
 from immo_pipelines.cadastre.contract import sha256_file
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.spatial.ban import BAN_TRANSFORMATION_VERSION
 from immo_pipelines.spatial.importer import BanImporter
 
 
@@ -110,12 +111,20 @@ def main() -> int:
 
             importer = BanImporter(connection)
             outcome = importer.import_archive(
-                import_run_id=f"ban:{arguments.release}:{arguments.department}",
+                # Deux transformations differentes sont deux imports differents :
+                # partager l'identifiant de run les rendrait indiscernables et ferait
+                # collisionner la cle primaire de meta.import_run au reimport.
+                import_run_id=(
+                    f"ban:{arguments.release}:{arguments.department}:{BAN_TRANSFORMATION_VERSION}"
+                ),
                 release_id=release_id,
                 department_code=arguments.department,
                 raw_asset_id=raw_asset_id,
                 source_path=local_path,
-                idempotency_key=f"{release_id}:{arguments.department}:addresses:{actual_sha}",
+                idempotency_key=(
+                    f"{release_id}:{arguments.department}:addresses:"
+                    f"{actual_sha}:{BAN_TRANSFORMATION_VERSION}"
+                ),
             )
             importer.refresh_match_metrics(release_id, arguments.department)
     print(json.dumps(asdict(outcome), sort_keys=True))

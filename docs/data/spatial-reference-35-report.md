@@ -1,7 +1,8 @@
 # Rapport du référentiel spatial — département 35
 
 **Date :** 5 août 2026, section « Audit BAN » recomptée le 4 septembre 2026  
-**État :** provisoire — RNB chargé, audit BAN en cours, BDNB et BD TOPO non chargées.
+**État :** provisoire — RNB chargé, BAN audité et accepté en `display_only`, BDNB et BD TOPO non
+chargées.
 
 ## Périmètre canonique
 
@@ -102,11 +103,79 @@ Contrôles d'appariement :
 - une adresse dont la position a été retirée ne fonde aucune relation spatiale, mais conserve sa
   relation RNB, qui repose sur l'identité et non sur la géométrie.
 
-Les compteurs ci-dessus sont ceux que l'import **doit** produire ; ils n'ont pas encore été
-confrontés à ceux réellement persistés dans `meta.import_run`, aucun import complet n'ayant été
-exécuté sous le modèle de quarantaine par attribut. Ce rapprochement, la distribution
-`certain / ambiguous / rejected / unmatched` et le verdict d'acceptation relèvent de B1. La
-release reste inactive d'ici là : l'API ne peut pas exposer ces adresses par accident.
+### Import réel — 4 septembre 2026
+
+Les compteurs prédits ci-dessus ont été confrontés à ceux persistés par un import complet sur base
+propre, cadastre `DS-01@2026-06-01` publié comme référentiel actif. Ils concordent exactement :
+437 679 lignes lues, 437 441 normalisées, 0 en quarantaine, 238 dédupliquées. Le décompte prédit
+bien ce que l'import produit — la limite laissée ouverte par BUG-01 est levée.
+
+`cad_parcelles` demandait une normalisation préalable. BAN publie une partie de ces identifiants
+sur 15 caractères, l'ordinal de commune étant complété à quatre chiffres : l'adresse `35001_0167`
+porte `350001000AE0125` là où l'IDU cadastral s'écrit `35001000AE0125`. Sur les 326 161 références
+déclarées, 158 866 portaient ce padding. Comparées telles quelles, elles ne résolvaient contre
+aucune parcelle et disparaissaient sans trace, la jointure étant interne. Le décompte les mesure
+désormais depuis l'archive seule (`padded_cadastral_reference_occurrences`), et la transformation
+porte sa version : `ban-csv-normalize@2`.
+
+| Décision | Relations | Adresses |
+|---|---:|---:|
+| `certain` | 272 695 | 248 209 |
+| `ambiguous` | 49 479 | 23 762 |
+| `rejected` | 3 760 | 3 302 |
+| **Total** | **325 934** | |
+
+Métriques par commune agrégées sur les 332 communes : 248 209 certaines, 1 759 ambiguës,
+2 685 rejetées, 184 788 sans relation — soit 437 441, le compte exact des adresses normalisées.
+Une adresse portant à la fois une relation certaine et une ambiguë est comptée certaine.
+
+Les 3 760 relations rejetées se répartissent en 2 960 références de 14 caractères introuvables au
+référentiel actif — renouvellement parcellaire entre le millésime cadastral du 1er juin et le
+millésime BAN du 17 juin — et 800 références de 15 caractères que la normalisation ne réconcilie
+pas. Chacune porte son motif dans `meta.entity_match.evidence`, avec l'identifiant source.
+
+### Les paliers de confiance ne sont pas mesurés
+
+Sur les 90 499 relations résolues dont le point n'est pas couvert par la parcelle déclarée :
+
+| Grandeur | Distance |
+|---|---:|
+| p50 | 12,19 m |
+| p90 | 121,14 m |
+| p95 | 263,96 m |
+| p99 | 595,32 m |
+| maximum | 3 563,09 m |
+
+| Tranche | Relations |
+|---|---:|
+| 0–1 m | 11 705 |
+| 1–2 m | 6 332 |
+| 2–5 m | 10 727 |
+| 5–10 m | 12 256 |
+| 10–20 m | 15 246 |
+| 20–50 m | 16 872 |
+| 50–100 m | 6 939 |
+| > 100 m | 10 422 |
+
+La frontière de 10 m qui sépare `certain` de `ambiguous` ne correspond à aucune rupture : la
+densité **croît** en la traversant — 12 256 relations entre 5 et 10 m, 15 246 entre 10 et 20 m —
+et culmine entre 20 et 50 m. Le seuil coupe en pleine densité, il n'est pas issu d'une mesure.
+
+Les valeurs 0,99 / 0,95 / 0,80 posent un problème distinct et plus profond : une confiance est la
+probabilité que la relation soit juste, et aucune géométrie ne l'estime sans vérité terrain.
+Mesurer une distance ne dit pas si la parcelle déclarée est la bonne. Leur calibration relève
+donc de la revue manuelle stratifiée de [B4](../backlog/B4-revue-manuelle-appariements.md), pas
+d'un percentile.
+
+### Verdict : `display_only`
+
+Les adresses sont saines — identité vérifiée, position présente ou retirée avec motif — et peuvent
+alimenter la recherche et la carte. Les relations parcellaires, dont les paliers ne sont pas
+justifiés, ne peuvent pas fonder une feature entrant dans un score.
+
+Ce statut est désormais opposable techniquement : `DS-05@2026-06-17` figure dans
+`meta.active_dataset_release` en `display_only` et est exclue de `meta.analysis_dataset_release`.
+Preuves dans [`ban-import-35.json`](./ban-import-35.json).
 
 ## Features et valeurs manquantes
 

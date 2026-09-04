@@ -147,6 +147,77 @@ def test_identity_checksum_ignores_every_quarantinable_attribute() -> None:
             assert source_field not in BAN_IDENTITY_FIELDS
 
 
+def test_padded_cadastral_reference_is_brought_back_to_the_idu_form(tmp_path: Path) -> None:
+    """BAN publie une partie de ses `cad_parcelles` avec l'ordinal de commune sur quatre
+    chiffres. Comparés tels quels, ces identifiants ne résolvent contre aucune parcelle :
+    sur le 35, 158 866 relations déclarées sur 325 934 disparaissaient ainsi."""
+    row = ban_row()
+    row["cad_parcelles"] = "350001000AE0125"
+
+    records = read_records(tmp_path / "ban.csv.gz", [row])
+
+    assert records[0].cadastral_ids == ("35001000AE0125",)
+
+
+def test_a_canonical_reference_is_left_untouched(tmp_path: Path) -> None:
+    row = ban_row()
+    row["cad_parcelles"] = "35238000AB0001"
+
+    records = read_records(tmp_path / "ban.csv.gz", [row])
+
+    assert records[0].cadastral_ids == ("35238000AB0001",)
+
+
+def test_an_unexpected_length_is_never_guessed(tmp_path: Path) -> None:
+    """Une référence que la règle ne couvre pas doit rester intacte : elle deviendra une
+    relation rejetée avec motif, jamais une parcelle devinée."""
+    row = ban_row()
+    row["cad_parcelles"] = "35238000AB000|3523800AB0001XY7"
+
+    records = read_records(tmp_path / "ban.csv.gz", [row])
+
+    assert records[0].cadastral_ids == ("35238000AB000", "3523800AB0001XY7")
+
+
+def test_only_a_padding_zero_is_removed(tmp_path: Path) -> None:
+    """La règle ne retire un caractère que si c'est un zéro à la position du padding.
+    Un identifiant de 15 caractères sans ce zéro n'est pas une forme padded."""
+    row = ban_row()
+    row["cad_parcelles"] = "351001000AE0125"
+
+    records = read_records(tmp_path / "ban.csv.gz", [row])
+
+    assert records[0].cadastral_ids == ("351001000AE0125",)
+
+
+def test_normalization_never_erases_the_source_form(tmp_path: Path) -> None:
+    """La couche d'observation doit rester fidèle à ce que la source a dit : la forme
+    brute voyage dans `properties`, d'où l'audit peut toujours la relire."""
+    row = ban_row()
+    row["cad_parcelles"] = "350001000AE0125"
+
+    records = read_records(tmp_path / "ban.csv.gz", [row])
+
+    assert records[0].properties["cad_parcelles"] == "350001000AE0125"
+
+
+def test_census_measures_the_padding_volume_from_the_archive_alone(tmp_path: Path) -> None:
+    """Le volume normalisé doit être reproductible depuis l'archive checksumée, sans base :
+    c'est ce qui rend le chiffre du rapport d'audit opposable."""
+    padded = ban_row() | {
+        "id": "35001_0167_00001",
+        "cad_parcelles": "350001000AE0125|35238000AB0002",
+    }
+    malformed = ban_row() | {"id": "35001_0168_00001", "cad_parcelles": "TROP-COURT"}
+    write_ban_archive(tmp_path / "ban.csv.gz", [padded, malformed])
+
+    census = census_ban_archive(tmp_path / "ban.csv.gz")
+
+    assert census.cadastral_reference_occurrences == 3
+    assert census.padded_cadastral_reference_occurrences == 1
+    assert census.malformed_cadastral_reference_occurrences == 1
+
+
 def mixed_archive(path: Path) -> Path:
     """Archive contenant une fois chaque cas que le décompte doit savoir séparer."""
     rows = [
@@ -223,4 +294,7 @@ def test_census_refuses_counters_that_lose_source_rows() -> None:
             exact_duplicate_identifiers=1,
             exact_duplicate_rows=2,
             exact_duplicate_excess_rows=1,
+            cadastral_reference_occurrences=0,
+            padded_cadastral_reference_occurrences=0,
+            malformed_cadastral_reference_occurrences=0,
         )

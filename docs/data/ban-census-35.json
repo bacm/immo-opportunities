@@ -1,1 +1,27 @@
-{"ambiguous_attribute_communes": 82, "ambiguous_attribute_identifiers": 217, "ambiguous_attribute_row_share": 0.00102, "ambiguous_attribute_rows": 447, "attribute_collapse_excess_rows": 230, "communes": 332, "conflicting_identity_identifiers": 0, "conflicting_identity_rows": 0, "deduplicated_excess_rows": 238, "department": "35", "exact_duplicate_excess_rows": 8, "exact_duplicate_identifiers": 8, "exact_duplicate_rows": 16, "expected_deduplicated_rows": 238, "expected_normalized_rows": 437441, "expected_quarantined_rows": 0, "identified_rows": 437679, "identifiers": 437441, "parse_quarantined_rows": 0, "release_key": "2026-06-17", "sha256": "22160b6d570c1ca557fd5eb60e99f4d83a80be715422fce5a828f3d847ccc3d0", "source_rows": 437679}
+{
+  "ambiguous_attribute_communes": 82,
+  "ambiguous_attribute_identifiers": 217,
+  "ambiguous_attribute_row_share": 0.00102,
+  "ambiguous_attribute_rows": 447,
+  "attribute_collapse_excess_rows": 230,
+  "cadastral_reference_occurrences": 326161,
+  "communes": 332,
+  "conflicting_identity_identifiers": 0,
+  "conflicting_identity_rows": 0,
+  "deduplicated_excess_rows": 238,
+  "department": "35",
+  "exact_duplicate_excess_rows": 8,
+  "exact_duplicate_identifiers": 8,
+  "exact_duplicate_rows": 16,
+  "expected_deduplicated_rows": 238,
+  "expected_normalized_rows": 437441,
+  "expected_quarantined_rows": 0,
+  "identified_rows": 437679,
+  "identifiers": 437441,
+  "malformed_cadastral_reference_occurrences": 0,
+  "padded_cadastral_reference_occurrences": 158866,
+  "parse_quarantined_rows": 0,
+  "release_key": "2026-06-17",
+  "sha256": "22160b6d570c1ca557fd5eb60e99f4d83a80be715422fce5a828f3d847ccc3d0",
+  "source_rows": 437679
+}

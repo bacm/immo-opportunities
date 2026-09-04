@@ -12,7 +12,7 @@ acceptables faute de manifeste réel importé et contrôlé.
 | DS-02 RNB | `2026-08-01`, département 35 | oui | oui | contrôles automatiques produits, revue manuelle requise |
 | DS-03 BDNB Open | à sélectionner | non | non | contrat seulement, non publiable |
 | DS-04 BD TOPO | à sélectionner | non | non | contrat seulement, non publiable |
-| DS-05 BAN | `2026-06-17`, département 35 | oui | en cours d'audit | règle d'acceptation corrigée, import réel à exécuter |
+| DS-05 BAN | `2026-06-17`, département 35 | oui | oui | **`display_only`** — adresses exploitables, relations parcellaires non calibrées |
 
 Une URL `latest` ne constitue jamais une release. Le manifeste versionné doit contenir l'URL
 résolue, la taille et le SHA-256 avant qu'un import puisse être accepté.
@@ -83,6 +83,36 @@ conservée et seul l'attribut contradictoire devient manquant avec un motif. Une
 sur l'identité elle-même reste, elle, bloquante. Voir
 [le rapport de quarantaine par attribut](./ban-attribute-quarantine-35.md) et le détail des 217
 identifiants dans [`ban-conflicting-identifiers-35.csv`](./ban-conflicting-identifiers-35.csv).
+
+### Verdict du 4 septembre 2026 — `display_only`
+
+Import réel exécuté sur base propre, cadastre `DS-01@2026-06-01` publié comme référentiel actif.
+Compteurs persistés : 437 679 lignes lues, 437 441 normalisées, 0 en quarantaine, 238 dédupliquées
+— identiques à ceux que [le décompte de l'archive](./ban-census-35.json) prédisait, ce qui lève la
+limite laissée ouverte par [BUG-01](../backlog/BUG-01-chiffres-audit-ban.md). Preuves complètes
+dans [`ban-import-35.json`](./ban-import-35.json).
+
+**Ce qui est acquis.** L'identité des adresses est vérifiée : aucun identifiant réutilisé avec une
+identité contradictoire, contrôle bloquant `conflicting_ban_identity` au vert. Les 216 adresses
+sans position n'entrent dans **aucune** relation spatiale. Les relations `cad_parcelles` se
+résolvent à 98,8 % contre la géométrie cadastrale active ; les 3 760 restantes (3 302 adresses,
+1,15 %) sont conservées en relation `rejected` motivée, jamais écartées en silence.
+
+**Ce qui manque.** Les paliers de confiance 0,99 / 0,95 / 0,80 et la frontière de 10 m qui sépare
+`certain` de `ambiguous` ne viennent d'aucune mesure. La distribution observée des distances
+point ↔ parcelle déclarée les contredit : la densité **croît** en traversant 10 m et culmine entre
+20 et 50 m. Voir [le rapport spatial 35](./spatial-reference-35-report.md#audit-ban).
+
+Une confiance est une probabilité que la relation soit juste. Aucune géométrie ne l'estime sans
+vérité terrain : cela relève de [B4](../backlog/B4-revue-manuelle-appariements.md).
+
+D'où le verdict. Les adresses sont saines et peuvent alimenter la recherche et la carte ; les
+relations parcellaires ne peuvent pas fonder une feature entrant dans un score. C'est exactement
+la portée de `display_only`, désormais opposable techniquement : la release figure dans
+`meta.active_dataset_release` et est exclue de `meta.analysis_dataset_release`.
+
+Passage à `accepted` conditionné à B4 : paliers recalibrés depuis la distribution observée, ou
+justifiés par une revue manuelle stratifiée.
 
 ## Garanties transversales
 

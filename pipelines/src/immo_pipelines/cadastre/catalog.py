@@ -287,50 +287,81 @@ class DatasetCatalog:
         self.connection.execute("RESET ROLE")
         self.connection.commit()
 
+    def _release_data_source(self, release_id: str) -> str:
+        row = self.connection.execute(
+            "SELECT data_source_id FROM meta.dataset_release WHERE id = %s",
+            (release_id,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError(f"Unknown release {release_id}")
+        return str(row[0])
+
+    def _require_successful_import(self, release_id: str) -> None:
+        """Toute source : rien n'est acceptable sans au moins un import reussi."""
+        row = self.connection.execute(
+            """
+            SELECT 1 FROM meta.import_run
+             WHERE release_id = %s AND status = 'succeeded' LIMIT 1
+            """,
+            (release_id,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("Release requires at least one successful import run")
+
+    def _require_complete_cadastre_release(self, release_id: str) -> None:
+        """DS-01 seulement : trois couches archivees, importees, et metriques par commune."""
+        gate = self.connection.execute(
+            """
+            WITH release_assets AS (
+                SELECT count(DISTINCT layer) FILTER (
+                           WHERE layer IN ('communes', 'parcelles', 'batiments')
+                       ) AS layer_count
+                  FROM meta.raw_asset WHERE release_id = %(release_id)s
+            ), successful_imports AS (
+                SELECT count(DISTINCT runner_metadata->>'layer') FILTER (
+                           WHERE runner_metadata->>'layer'
+                                 IN ('communes', 'parcelles', 'batiments')
+                       ) AS layer_count
+                  FROM meta.import_run
+                 WHERE release_id = %(release_id)s AND status = 'succeeded'
+            ), communes AS (
+                SELECT count(*) AS count
+                  FROM reference.administrative_area
+                 WHERE release_id = %(release_id)s AND area_type = 'commune'
+            ), commune_metrics AS (
+                SELECT count(*) AS count
+                  FROM meta.data_quality_check
+                 WHERE release_id = %(release_id)s
+                   AND scope_type = 'commune'
+                   AND check_code IN (
+                       'parcel_count', 'building_count', 'quarantined_geometry_count'
+                   )
+            )
+            SELECT release_assets.layer_count,
+                   successful_imports.layer_count,
+                   communes.count,
+                   commune_metrics.count
+              FROM release_assets, successful_imports, communes, commune_metrics
+            """,
+            {"release_id": release_id},
+        ).fetchone()
+        if gate is None or int(gate[0]) != 3 or int(gate[1]) != 3:
+            raise RuntimeError("Release requires all three archived and imported layers")
+        commune_count = int(gate[2])
+        if commune_count == 0 or int(gate[3]) != commune_count * 3:
+            raise RuntimeError("Release requires complete quality metrics for every commune")
+
     def set_acceptance(self, release_id: str, mode: str) -> None:
         if mode not in {"accepted", "display_only", "rejected"}:
             raise ValueError(f"Unsupported acceptance mode {mode}")
         if mode in {"accepted", "display_only"}:
-            gate = self.connection.execute(
-                """
-                WITH release_assets AS (
-                    SELECT count(DISTINCT layer) FILTER (
-                               WHERE layer IN ('communes', 'parcelles', 'batiments')
-                           ) AS layer_count
-                      FROM meta.raw_asset WHERE release_id = %(release_id)s
-                ), successful_imports AS (
-                    SELECT count(DISTINCT runner_metadata->>'layer') FILTER (
-                               WHERE runner_metadata->>'layer'
-                                     IN ('communes', 'parcelles', 'batiments')
-                           ) AS layer_count
-                      FROM meta.import_run
-                     WHERE release_id = %(release_id)s AND status = 'succeeded'
-                ), communes AS (
-                    SELECT count(*) AS count
-                      FROM reference.administrative_area
-                     WHERE release_id = %(release_id)s AND area_type = 'commune'
-                ), commune_metrics AS (
-                    SELECT count(*) AS count
-                      FROM meta.data_quality_check
-                     WHERE release_id = %(release_id)s
-                       AND scope_type = 'commune'
-                       AND check_code IN (
-                           'parcel_count', 'building_count', 'quarantined_geometry_count'
-                       )
-                )
-                SELECT release_assets.layer_count,
-                       successful_imports.layer_count,
-                       communes.count,
-                       commune_metrics.count
-                  FROM release_assets, successful_imports, communes, commune_metrics
-                """,
-                {"release_id": release_id},
-            ).fetchone()
-            if gate is None or int(gate[0]) != 3 or int(gate[1]) != 3:
-                raise RuntimeError("Release requires all three archived and imported layers")
-            commune_count = int(gate[2])
-            if commune_count == 0 or int(gate[3]) != commune_count * 3:
-                raise RuntimeError("Release requires complete quality metrics for every commune")
+            # meta.guard_active_dataset_release fait autorite : il ne verifie la
+            # completude par couches que pour DS-01. Appliquer cette regle a toute
+            # source rendait inacceptable n'importe quelle release non cadastrale,
+            # DS-05 comprise, qui ne publie qu'une seule couche.
+            self._require_successful_import(release_id)
+            if self._release_data_source(release_id) == "DS-01":
+                self._require_complete_cadastre_release(release_id)
 
         blocking_failure = self.connection.execute(
             """
@@ -362,10 +393,14 @@ class DatasetCatalog:
         reason: str,
         action: str = "publish",
     ) -> None:
+        # La source vient de la release, jamais d'un litteral : `meta.publish_dataset_release`
+        # cherche la release par (id, data_source_id) en SELECT STRICT, si bien qu'un
+        # 'DS-01' code en dur rendait toute release non cadastrale impubliable.
+        data_source_id = self._release_data_source(release_id)
         self.connection.execute("SET LOCAL ROLE pipeline_rw")
         self.connection.execute(
-            "SELECT meta.publish_dataset_release('DS-01', %s, 'department', %s, %s, %s, %s)",
-            (release_id, department_code, actor, reason, action),
+            "SELECT meta.publish_dataset_release(%s, %s, 'department', %s, %s, %s, %s)",
+            (data_source_id, release_id, department_code, actor, reason, action),
         )
         self.connection.execute("RESET ROLE")
         self.connection.commit()
