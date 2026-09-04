@@ -1,0 +1,34 @@
+{
+  "contract_id": "DS-01",
+  "contract_version": 1,
+  "release_id": "DS-01@2026-06-01",
+  "release_key": "2026-06-01",
+  "source_published_on": "2026-06-01",
+  "department": "35",
+  "source_srid": 4326,
+  "canonical_srid": 2154,
+  "assets": [
+    {
+      "layer": "communes",
+      "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-communes.json.gz",
+      "declared_size": "4 MiB",
+      "sha256": null,
+      "status": "discovered"
+    },
+    {
+      "layer": "parcelles",
+      "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-parcelles.json.gz",
+      "declared_size": "189 MiB",
+      "sha256": null,
+      "status": "discovered"
+    },
+    {
+      "layer": "batiments",
+      "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-batiments.json.gz",
+      "declared_size": "51 MiB",
+      "sha256": null,
+      "status": "discovered"
+    }
+  ],
+  "note": "Checksums are filled from downloaded bytes before archival and import; null is never publishable."
+}

@@ -1,0 +1,74 @@
+{
+  "version": 8,
+  "name": "Immo real map v1",
+  "sources": {
+    "parcels": {
+      "type": "vector",
+      "tiles": ["/tiles/v1/parcels/{z}/{x}/{y}.mvt"],
+      "minzoom": 13,
+      "maxzoom": 22,
+      "attribution": "Etalab · DGFiP"
+    },
+    "buildings": {
+      "type": "vector",
+      "tiles": ["/tiles/v1/buildings/{z}/{x}/{y}.mvt"],
+      "minzoom": 15,
+      "maxzoom": 22,
+      "attribution": "Etalab · DGFiP"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#eef1eb"}
+    },
+    {
+      "id": "parcels-fill",
+      "type": "fill",
+      "source": "parcels",
+      "source-layer": "parcels",
+      "minzoom": 13,
+      "paint": {
+        "fill-color": "#d8e6c7",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.16, 17, 0.3]
+      }
+    },
+    {
+      "id": "parcels-line",
+      "type": "line",
+      "source": "parcels",
+      "source-layer": "parcels",
+      "minzoom": 13,
+      "paint": {
+        "line-color": "#72917f",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.35, 18, 1.2]
+      }
+    },
+    {
+      "id": "buildings-fill",
+      "type": "fill",
+      "source": "buildings",
+      "source-layer": "buildings",
+      "minzoom": 15,
+      "paint": {"fill-color": "#50695f", "fill-opacity": 0.64}
+    },
+    {
+      "id": "buildings-line",
+      "type": "line",
+      "source": "buildings",
+      "source-layer": "buildings",
+      "minzoom": 16,
+      "paint": {"line-color": "#344b42", "line-width": 0.6}
+    },
+    {
+      "id": "selected-parcel",
+      "type": "line",
+      "source": "parcels",
+      "source-layer": "parcels",
+      "minzoom": 13,
+      "filter": ["==", ["get", "id"], ""],
+      "paint": {"line-color": "#b86d1f", "line-width": 3}
+    }
+  ]
+}

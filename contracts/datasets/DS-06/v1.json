@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-06",
+  "contract_version": 1,
+  "name": "DVF+ open-data",
+  "producer": "DGFiP / Cerema",
+  "homepage": "https://www.data.gouv.fr/datasets/dvf-open-data",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "DVF, DGFiP / Cerema",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "YYYY-MM-DD-source-release",
+    "discovery_url": "https://www.data.gouv.fr/datasets/dvf-open-data",
+    "preferred_format": "departmental PostgreSQL/CSV export",
+    "partition_dimensions": ["release", "department"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": 4326,
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point", "Polygon", "MultiPolygon"],
+    "normalization": "dvf-plus-normalize@1"
+  },
+  "layers": {
+    "mutations": {
+      "target": "observation.transaction",
+      "source_entity_type": "dvf_mutation",
+      "required_properties": {
+        "mutation_id": "string",
+        "mutation_date": "date",
+        "mutation_nature": "string",
+        "price_eur": "number>0"
+      },
+      "additional_properties": "preserve"
+    },
+    "properties": {
+      "target": "observation.transaction_property",
+      "source_entity_type": "dvf_disposition_or_local",
+      "required_properties": {"mutation_id": "string", "property_type": "string"},
+      "optional_properties": {
+        "parcel_id": "string|null",
+        "local_identifier": "string|null",
+        "surface_m2": "number|null",
+        "allocated_price_eur": "number|null"
+      },
+      "additional_properties": "preserve"
+    }
+  },
+  "qualification": {
+    "complex_mutation": "more than one non-equivalent property or parcel unless price allocation is sourced",
+    "unit_price_policy": "never divide an undecomposed complex mutation by an arbitrary surface",
+    "snapshot_policy": "exclude mutations after the evaluation snapshot",
+    "comparable_explanation": "retain distance, segment, date, type, surface, transformations and inclusion/exclusion reason"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "positive_price", "version": "1", "scope": "row", "blocks_publication": true},
+    {"code": "complex_mutation_classification", "version": "1", "scope": "mutation", "blocks_publication": true},
+    {"code": "parcel_match_rate", "version": "1", "scope": "commune", "blocks_publication": false},
+    {"code": "temporal_leakage", "version": "1", "scope": "snapshot", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "department", "acceptance_report_required": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

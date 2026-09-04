@@ -1,0 +1,18 @@
+{
+  "release_id": "DS-05@2026-06-17",
+  "release_key": "2026-06-17",
+  "source_published_on": "2026-06-17",
+  "department": "35",
+  "contract_version": 1,
+  "assets": [
+    {
+      "layer": "addresses",
+      "url": "https://adresse.data.gouv.fr/data/ban/adresses/2026-06-17/csv/adresses-35.csv.gz",
+      "media_type": "text/csv",
+      "content_encoding": "gzip",
+      "download_transport": "curl (source disconnects httpx before response headers)",
+      "byte_size": 17098791,
+      "sha256": "22160b6d570c1ca557fd5eb60e99f4d83a80be715422fce5a828f3d847ccc3d0"
+    }
+  ]
+}

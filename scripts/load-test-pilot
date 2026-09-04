@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+base_url=${1:?Usage: load-test-pilot https://staging.example.test}
+requests=${LOAD_TEST_REQUESTS:-100}
+concurrency=${LOAD_TEST_CONCURRENCY:-10}
+token=${IMMO_ACCESS_TOKEN:-}
+tile_path=${MVT_TEST_PATH:-/tiles/v1/parcels/16/32468/22731.mvt}
+work_dir=$(mktemp -d)
+trap 'rm -rf -- "${work_dir}"' EXIT
+
+authorization=()
+if [[ -n ${token} ]]; then authorization=(-H "Authorization: Bearer ${token}"); fi
+
+measure() {
+  local name=$1
+  local path=$2
+  export base_url path work_dir name token
+  seq 1 "${requests}" | xargs -P "${concurrency}" -I '{}' /bin/bash -ec '
+    headers=()
+    if [[ -n ${token} ]]; then headers=(-H "Authorization: Bearer ${token}"); fi
+    curl --fail --silent --show-error -o /dev/null "${headers[@]}" \
+      -w "%{time_total}\n" "${base_url}${path}" >>"${work_dir}/${name}.times"
+  '
+  local p95
+  p95=$(sort -n "${work_dir}/${name}.times" | awk -v count="${requests}" 'NR == int(count * 0.95 + 0.999) { printf "%.2f", $1 * 1000 }')
+  printf '"%s":{"requests":%s,"concurrency":%s,"p95_ms":%s}' "${name}" "${requests}" "${concurrency}" "${p95}"
+}
+
+printf '{'
+measure map /
+printf ','
+measure list '/api/v1/opportunities?department_code=35&limit=30'
+printf ','
+measure api /api/v1/admin/brittany/readiness
+printf ','
+measure tiles "${tile_path}"
+printf '}\n'

@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: Immo Opportunities
+    orgId: 1
+    folder: Immo Opportunities
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: true

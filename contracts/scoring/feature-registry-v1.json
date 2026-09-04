@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "registry_id": "scoring-features-v1",
+  "registry_version": 1,
+  "frozen_at": "2026-08-07",
+  "policies": {
+    "required": "missing value makes the snapshot non-publishable",
+    "optional": "missing value receives the fixed neutral contribution; weight is not redistributed",
+    "confidence_only": "never changes ranking score and may only reduce confidence",
+    "duplicate": "a feature code may occur at most once in a score definition",
+    "temporal": "all observations and releases must be available no later than snapshot_at",
+    "forbidden": [
+      "VACANCY-*",
+      "owner or household attributes",
+      "simulated DPE",
+      "predicted prices without a separate versioned model",
+      "free-text PLU interpretation",
+      "scraped listing or directory data"
+    ]
+  },
+  "features": [
+    {"code":"FIN-001","name":"division_scenario_margin_range","strategy":"division_extension","datasets":["scenario","MKT"],"formula":"resale range - acquisition - works - fees - finance - holding","unit":"EUR","value_type":"json","valid_range":{"min":null,"max":null},"direction":"increasing","requirement":"required","out_of_range":"flag","missing":"block publication"},
+    {"code":"FIN-002","name":"division_return_on_cost","strategy":"division_extension","datasets":["scenario","MKT"],"formula":"central net margin / central total cost","unit":"ratio","value_type":"number","valid_range":{"min":null,"max":null},"direction":"increasing","requirement":"required","out_of_range":"flag","missing":"block publication"},
+    {"code":"FIN-101","name":"purchase_estimate_range","strategy":"renovation_resale","datasets":["DS-06","scenario"],"formula":"versioned market range or explicit user range","unit":"EUR","value_type":"json","valid_range":{"min":0,"max":null},"direction":"context_only","requirement":"required","out_of_range":"reject","missing":"block publication"},
+    {"code":"FIN-102","name":"works_cost_range","strategy":"renovation_resale","datasets":["REN","scenario"],"formula":"explicit cost range by work item or accepted per-m2 assumption","unit":"EUR","value_type":"json","valid_range":{"min":0,"max":null},"direction":"decreasing_uncertainty","requirement":"required","out_of_range":"reject","missing":"block publication"},
+    {"code":"FIN-103","name":"resale_estimate_range","strategy":"renovation_resale","datasets":["MKT","scenario"],"formula":"versioned comparable range times explicit resale surface","unit":"EUR","value_type":"json","valid_range":{"min":0,"max":null},"direction":"context_only","requirement":"required","out_of_range":"reject","missing":"block publication"},
+    {"code":"FIN-104","name":"net_margin_range","strategy":"renovation_resale","datasets":["FIN"],"formula":"resale - acquisition - works - fees - finance - holding","unit":"EUR","value_type":"json","valid_range":{"min":null,"max":null},"direction":"increasing","requirement":"required","out_of_range":"flag","missing":"block publication"},
+    {"code":"FIN-105","name":"return_on_cost","strategy":"renovation_resale","datasets":["FIN"],"formula":"central net margin / central total cost","unit":"ratio","value_type":"number","valid_range":{"min":null,"max":null},"direction":"increasing","requirement":"required","out_of_range":"flag","missing":"block publication"},
+    {"code":"FIN-106","name":"break_even_purchase_price","strategy":"renovation_resale","datasets":["FIN"],"formula":"resale - works - fees - finance - holding - target margin","unit":"EUR","value_type":"number","valid_range":{"min":0,"max":null},"direction":"increasing","requirement":"required","out_of_range":"flag","missing":"block publication"}
+  ]
+}

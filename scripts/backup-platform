@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_dir=${IMMO_PROJECT_DIR:-/opt/immo}
+backup_root=${BACKUP_DATA_PATH:-/srv/immo/backups}
+runtime_root=${RUNTIME_DATA_PATH:-/srv/immo/runtime}
+
+if [[ ${backup_root} != /* || ${backup_root} == / || ${backup_root} == /srv || ${backup_root} == /srv/immo ]]; then
+  echo "BACKUP_DATA_PATH must be an explicit dedicated absolute directory" >&2
+  exit 2
+fi
+if [[ ! -f ${project_dir}/.env ]]; then
+  echo "Missing deployment environment: ${project_dir}/.env" >&2
+  exit 2
+fi
+
+mkdir -p "${backup_root}" "${runtime_root}/metrics"
+exec 9>"${backup_root}/.backup.lock"
+if ! flock -n 9; then
+  echo "Another platform backup is already running" >&2
+  exit 3
+fi
+
+started_at=$(date +%s)
+backup_id=$(date -u +%Y%m%dT%H%M%SZ)
+partial_dir=$(mktemp -d "${backup_root}/.partial-${backup_id}-XXXXXX")
+final_dir=${backup_root}/${backup_id}
+cleanup() { [[ -d ${partial_dir} ]] && rm -rf -- "${partial_dir}"; }
+trap cleanup EXIT
+
+compose=(
+  docker compose --project-directory "${project_dir}" --env-file "${project_dir}/.env"
+  -f "${project_dir}/compose.yaml" -f "${project_dir}/compose.prod.yaml"
+  -f "${project_dir}/compose.observability.yaml"
+)
+
+"${compose[@]}" exec -T postgres /bin/bash -ec '
+  export PGPASSWORD="$(cat /run/secrets/postgres_superuser_password)"
+  exec pg_dump -U postgres -d immo --format=custom --compress=9 --no-owner --no-acl
+' >"${partial_dir}/postgres.dump"
+
+mkdir -p "${partial_dir}/minio"
+"${compose[@]}" run --rm -T \
+  -v "${partial_dir}/minio:/backup" \
+  --entrypoint /bin/sh minio-init -ec '
+    mc alias set source http://minio:9000 \
+      "$(cat /run/secrets/minio_root_user)" \
+      "$(cat /run/secrets/minio_root_password)" >/dev/null
+    mc mirror --overwrite --preserve source /backup
+  '
+
+postgres_sha=$(sha256sum "${partial_dir}/postgres.dump" | cut -d' ' -f1)
+postgres_bytes=$(wc -c <"${partial_dir}/postgres.dump" | tr -d ' ')
+object_count=$(find "${partial_dir}/minio" -type f | wc -l | tr -d ' ')
+completed_at=$(date +%s)
+cat >"${partial_dir}/manifest.json" <<EOF
+{"backup_id":"${backup_id}","started_at_epoch":${started_at},"completed_at_epoch":${completed_at},"postgres_sha256":"${postgres_sha}","postgres_bytes":${postgres_bytes},"minio_object_count":${object_count}}
+EOF
+chmod 0600 "${partial_dir}/postgres.dump" "${partial_dir}/manifest.json"
+mv -- "${partial_dir}" "${final_dir}"
+trap - EXIT
+
+metric_tmp=$(mktemp "${runtime_root}/metrics/.backup.XXXXXX")
+cat >"${metric_tmp}" <<EOF
+# HELP immo_backup_last_success_timestamp_seconds Last complete platform backup.
+# TYPE immo_backup_last_success_timestamp_seconds gauge
+immo_backup_last_success_timestamp_seconds ${completed_at}
+# HELP immo_backup_duration_seconds Last complete platform backup duration.
+# TYPE immo_backup_duration_seconds gauge
+immo_backup_duration_seconds $((completed_at - started_at))
+EOF
+chmod 0644 "${metric_tmp}"
+mv -- "${metric_tmp}" "${runtime_root}/metrics/backup.prom"
+echo "Backup complete: ${final_dir}"

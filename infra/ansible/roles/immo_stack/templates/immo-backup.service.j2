@@ -1,0 +1,14 @@
+[Unit]
+Description=Immo Opportunities complete backup
+After=immo-compose.service
+Requires=immo-compose.service
+
+[Service]
+Type=oneshot
+Environment=IMMO_PROJECT_DIR={{ immo_project_dir }}
+Environment=BACKUP_DATA_PATH=/srv/immo/backups
+Environment=RUNTIME_DATA_PATH=/srv/immo/runtime
+ExecStart={{ immo_project_dir }}/scripts/backup-platform
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

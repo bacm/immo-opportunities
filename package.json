@@ -1,0 +1,10 @@
+{
+  "name": "immo-opportunities",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @immo/web dev",
+    "build": "pnpm --filter @immo/web build",
+    "typecheck": "pnpm --filter @immo/web typecheck"
+  }
+}

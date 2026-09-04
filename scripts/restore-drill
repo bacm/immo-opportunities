@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 /absolute/path/to/backup-id" >&2
+  exit 2
+fi
+backup_dir=$1
+if [[ ${backup_dir} != /* || ! -f ${backup_dir}/manifest.json || ! -f ${backup_dir}/postgres.dump || ! -d ${backup_dir}/minio ]]; then
+  echo "The target must be one complete, absolute backup directory" >&2
+  exit 2
+fi
+
+drill_id="immo-restore-${RANDOM}"
+postgres_container="${drill_id}-postgres"
+minio_container="${drill_id}-minio"
+network="${drill_id}-network"
+postgres_volume="${drill_id}-postgres"
+minio_volume="${drill_id}-minio"
+postgres_password="drill-${RANDOM}-${RANDOM}"
+minio_user="drilladmin"
+minio_password="drill-secret-${RANDOM}-${RANDOM}"
+started_at=$(date +%s)
+
+cleanup() {
+  docker rm -f "${postgres_container}" "${minio_container}" >/dev/null 2>&1 || true
+  docker volume rm "${postgres_volume}" "${minio_volume}" >/dev/null 2>&1 || true
+  docker network rm "${network}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+docker network create "${network}" >/dev/null
+docker volume create "${postgres_volume}" >/dev/null
+docker volume create "${minio_volume}" >/dev/null
+docker run -d --name "${postgres_container}" --network "${network}" \
+  -e POSTGRES_PASSWORD="${postgres_password}" -v "${postgres_volume}:/var/lib/postgresql/data" \
+  postgis/postgis:15-3.5 >/dev/null
+until docker exec "${postgres_container}" pg_isready -U postgres -d postgres >/dev/null 2>&1; do sleep 1; done
+docker exec -e PGPASSWORD="${postgres_password}" "${postgres_container}" \
+  createdb -U postgres immo_restore
+docker exec -i -e PGPASSWORD="${postgres_password}" "${postgres_container}" \
+  pg_restore -U postgres -d immo_restore --no-owner --no-acl <"${backup_dir}/postgres.dump"
+schema_count=$(docker exec -e PGPASSWORD="${postgres_password}" "${postgres_container}" \
+  psql -U postgres -d immo_restore -Atc "SELECT count(*) FROM information_schema.schemata WHERE schema_name IN ('meta','reference','observation','scoring','app','audit')")
+if [[ ${schema_count} -ne 6 ]]; then
+  echo "PostgreSQL restore is incomplete: ${schema_count}/6 application schemas" >&2
+  exit 1
+fi
+
+docker run -d --name "${minio_container}" --network "${network}" \
+  -e MINIO_ROOT_USER="${minio_user}" -e MINIO_ROOT_PASSWORD="${minio_password}" \
+  -v "${minio_volume}:/data" quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z \
+  server /data >/dev/null
+until docker run --rm --network "${network}" quay.io/minio/mc:RELEASE.2025-05-21T01-59-54Z \
+  alias set restored "http://${minio_container}:9000" "${minio_user}" "${minio_password}" >/dev/null 2>&1; do sleep 1; done
+docker run --rm --network "${network}" -v "${backup_dir}/minio:/backup:ro" \
+  --entrypoint /bin/sh quay.io/minio/mc:RELEASE.2025-05-21T01-59-54Z -ec "
+    mc alias set restored http://${minio_container}:9000 ${minio_user} ${minio_password} >/dev/null
+    for bucket in /backup/*; do
+      [ -d \"\${bucket}\" ] || continue
+      mc mb --ignore-existing restored/\"\$(basename \"\${bucket}\")\" >/dev/null
+      mc mirror \"\${bucket}\" restored/\"\$(basename \"\${bucket}\")\"
+    done
+  "
+expected_objects=$(find "${backup_dir}/minio" -type f | wc -l | tr -d ' ')
+restored_objects=$(docker run --rm --network "${network}" \
+  --entrypoint /bin/sh quay.io/minio/mc:RELEASE.2025-05-21T01-59-54Z -ec "
+    mc alias set restored http://${minio_container}:9000 ${minio_user} ${minio_password} >/dev/null
+    mc find restored --type f | wc -l
+  " | tr -d ' ')
+if [[ ${restored_objects} -ne ${expected_objects} ]]; then
+  echo "MinIO restore is incomplete: ${restored_objects}/${expected_objects} objects" >&2
+  exit 1
+fi
+completed_at=$(date +%s)
+echo "{\"restore_drill\":\"passed\",\"backup\":\"${backup_dir}\",\"rto_seconds\":$((completed_at - started_at)),\"postgres_schemas\":${schema_count},\"minio_objects_restored\":${restored_objects}}"

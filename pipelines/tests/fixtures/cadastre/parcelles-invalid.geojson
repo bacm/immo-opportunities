@@ -1,0 +1,11 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "35238000AB0999",
+      "properties": {"id": "35238000AB0999", "commune": "35238", "prefixe": "000", "section": "AB", "numero": "0999", "contenance": 10},
+      "geometry": {"type": "Polygon", "coordinates": [[[-1.6800,48.1100],[-1.6800,48.1100],[-1.6800,48.1100],[-1.6800,48.1100]]]}
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "name": "parcelles",
+  "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
+  "features": [
+    {
+      "type": "Feature",
+      "id": "35238000AB0001",
+      "properties": {"id": "35238000AB0001", "commune": "35238", "prefixe": "000", "section": "AB", "numero": "0001", "contenance": 420, "arpente": false, "created": "2026-06-01", "updated": "2026-06-01"},
+      "geometry": {"type": "Polygon", "coordinates": [[[-1.6800,48.1100],[-1.6798,48.1100],[-1.6798,48.1102],[-1.6800,48.1102],[-1.6800,48.1100]]]}
+    },
+    {
+      "type": "Feature",
+      "id": "35210000AC0002",
+      "properties": {"id": "35210000AC0002", "commune": "35210", "prefixe": "000", "section": "AC", "numero": "0002", "contenance": 610, "arpente": false, "created": "2026-06-01", "updated": "2026-06-01"},
+      "geometry": {"type": "Polygon", "coordinates": [[[-1.7750,48.1470],[-1.7747,48.1470],[-1.7747,48.1472],[-1.7750,48.1472],[-1.7750,48.1470]]]}
+    },
+    {
+      "type": "Feature",
+      "id": "35346000ZA0003",
+      "properties": {"id": "35346000ZA0003", "commune": "35346", "prefixe": "000", "section": "ZA", "numero": "0003", "arpente": false, "created": "2026-06-01", "updated": "2026-06-01"},
+      "geometry": {"type": "Polygon", "coordinates": [[[-1.8950,48.3420],[-1.8945,48.3420],[-1.8945,48.3423],[-1.8950,48.3423],[-1.8950,48.3420]]]}
+    }
+  ]
+}

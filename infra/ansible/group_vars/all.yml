@@ -1,0 +1,44 @@
+---
+immo_environment: staging
+immo_project_dir: /opt/immo
+immo_secrets_dir: /etc/immo/secrets
+immo_repo_root: /workspace
+immo_sops_file: "/workspace/secrets/{{ immo_environment }}.sops.yaml"
+immo_domain: staging-immo.example.com
+immo_site_address: "https://{{ immo_domain }}"
+immo_acme_email: ops@example.com
+immo_allow_format_data_volumes: false
+
+immo_data_volumes: []
+
+immo_data_directories:
+  - path: /srv/immo/postgres
+    owner: "999"
+    group: "999"
+    mode: "0700"
+  - path: /srv/immo/objects
+    owner: "1000"
+    group: "1000"
+    mode: "0750"
+  - path: /srv/immo/backups
+    owner: root
+    group: root
+    mode: "0700"
+
+immo_runtime_directories:
+  - path: /srv/immo/runtime/metrics
+    owner: root
+    group: root
+    mode: "0755"
+  - path: /srv/immo/runtime/redis
+    owner: "999"
+    group: "1000"
+    mode: "0750"
+  - path: /srv/immo/runtime/caddy/data
+    owner: root
+    group: root
+    mode: "0750"
+  - path: /srv/immo/runtime/caddy/config
+    owner: root
+    group: root
+    mode: "0750"

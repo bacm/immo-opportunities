@@ -1,0 +1,63 @@
+---
+- name: "Wait for {{ immo_volume.name }} device"
+  ansible.builtin.wait_for:
+    path: "{{ immo_volume.device }}"
+    timeout: 60
+
+- name: "Read {{ immo_volume.name }} filesystem type"
+  ansible.builtin.command: "blkid -s TYPE -o value {{ immo_volume.device }}"
+  register: immo_volume_fstype
+  changed_when: false
+  failed_when: immo_volume_fstype.rc not in [0, 2]
+
+- name: "Refuse implicit formatting of {{ immo_volume.name }}"
+  ansible.builtin.assert:
+    that:
+      - immo_volume_fstype.stdout != "" or immo_allow_format_data_volumes | bool
+    fail_msg: >-
+      {{ immo_volume.device }} has no filesystem. Set
+      immo_allow_format_data_volumes=true only for a confirmed empty volume.
+
+- name: "Create ext4 filesystem for {{ immo_volume.name }}"
+  community.general.filesystem:
+    dev: "{{ immo_volume.device }}"
+    fstype: ext4
+    force: false
+  when: immo_volume_fstype.stdout == "" and immo_allow_format_data_volumes | bool
+
+- name: "Read {{ immo_volume.name }} filesystem UUID"
+  ansible.builtin.command: "blkid -s UUID -o value {{ immo_volume.device }}"
+  register: immo_volume_uuid
+  changed_when: false
+
+- name: "Validate {{ immo_volume.name }} filesystem UUID"
+  ansible.builtin.assert:
+    that:
+      - immo_volume_uuid.stdout | length > 0
+
+- name: "Create {{ immo_volume.name }} mount point"
+  ansible.builtin.file:
+    path: "{{ immo_volume.mountpoint }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: "Persist and mount {{ immo_volume.name }} by UUID"
+  ansible.posix.mount:
+    path: "{{ immo_volume.mountpoint }}"
+    src: "UUID={{ immo_volume_uuid.stdout }}"
+    fstype: ext4
+    opts: defaults,noatime
+    dump: "0"
+    passno: "2"
+    state: mounted
+
+- name: "Set {{ immo_volume.name }} data permissions"
+  ansible.builtin.file:
+    path: "{{ immo_volume.mountpoint }}"
+    state: directory
+    owner: "{{ immo_volume.owner }}"
+    group: "{{ immo_volume.group }}"
+    mode: "{{ immo_volume.mode }}"
+

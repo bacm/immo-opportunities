@@ -1,0 +1,53 @@
+{
+	admin 0.0.0.0:2019
+	email {$ACME_EMAIL:off}
+	metrics
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$SITE_ADDRESS:http://localhost:8080} {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle /tiles/v1/parcels/* {
+		uri strip_suffix .mvt
+		uri replace /tiles/v1/parcels /parcels
+		reverse_proxy martin:3000
+	}
+
+	handle /tiles/v1/buildings/* {
+		uri strip_suffix .mvt
+		uri replace /tiles/v1/buildings /buildings
+		reverse_proxy martin:3000
+	}
+
+	handle /tiles/v1/opportunities/* {
+		uri strip_suffix .mvt
+		uri replace /tiles/v1/opportunities /opportunities
+		reverse_proxy martin:3000
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+}

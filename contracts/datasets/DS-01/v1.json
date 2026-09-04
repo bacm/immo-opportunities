@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-01",
+  "contract_version": 1,
+  "name": "Cadastre Etalab consolidé issu du PCI Vecteur",
+  "producer": "DGFiP / Etalab (DINUM)",
+  "homepage": "https://cadastre.data.gouv.fr/datasets/cadastre-etalab",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.data.gouv.fr/pages/legal/licences/etalab-2.0",
+    "attribution": "Données cadastrales Etalab, issues du PCI Vecteur DGFiP",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "YYYY-MM-DD",
+    "discovery_url": "https://cadastre.data.gouv.fr/datasets/cadastre-etalab",
+    "asset_url_template": "https://cadastre.data.gouv.fr/data/etalab-cadastre/{release}/geojson/departements/{department}/cadastre-{department}-{layer}.json.gz",
+    "partition_dimensions": ["release", "department", "layer"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {
+    "country": "FR",
+    "initial_departments": ["35"],
+    "development_sample": [
+      {"code": "35238", "name": "Rennes", "profile": "urban"},
+      {"code": "35210", "name": "Pacé", "profile": "periurban"},
+      {"code": "35346", "name": "Trimer", "profile": "rural"}
+    ]
+  },
+  "spatial": {
+    "source_srid": 4326,
+    "canonical_srid": 2154,
+    "api_srid": 4326,
+    "tile_srid": 3857,
+    "allowed_geometry_types": ["Polygon", "MultiPolygon"],
+    "normalization": "cadastre-normalize@1",
+    "repair": "make-valid-polygonal@1",
+    "repair_policy": "repair only invalid geometries whose polygonal result is non-empty; quarantine all others"
+  },
+  "layers": {
+    "parcelles": {
+      "target": "reference.cadastral_parcel",
+      "required_properties": {
+        "id": "string",
+        "commune": "string",
+        "prefixe": "string",
+        "section": "string",
+        "numero": "string"
+      },
+      "optional_properties": {
+        "contenance": "integer|null",
+        "arpente": "boolean",
+        "created": "string|null",
+        "updated": "string|null"
+      },
+      "additional_properties": "warn"
+    },
+    "batiments": {
+      "target": "reference.cadastral_building",
+      "required_properties": {"commune": "string"},
+      "optional_properties": {
+        "type": "string|null",
+        "nom": "string|null",
+        "created": "string|null",
+        "updated": "string|null"
+      },
+      "additional_properties": "warn"
+    },
+    "communes": {
+      "target": "reference.administrative_area",
+      "required_properties": {"id": "string", "nom": "string"},
+      "optional_properties": {"created": "string|null", "updated": "string|null"},
+      "additional_properties": "warn"
+    }
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "geometry_validity", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "duplicate_source_id", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "source_vs_normalized_count", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "coverage", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "release_delta", "version": "1", "scope": "department", "blocks_publication": false}
+  ],
+  "publication": {
+    "modes": ["accepted", "display_only", "rejected"],
+    "atomic_pointer_scope": "department",
+    "requires_all_communes_measured": true,
+    "rollback": "reactivate a previously accepted release; never mutate normalized rows"
+  },
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "normalized_releases": "retain while referenced by publication history or downstream lineage",
+    "quarantine": "same lifetime as release"
+  }
+}

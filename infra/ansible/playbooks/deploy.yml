@@ -1,0 +1,9 @@
+---
+- name: Deploy Immo Opportunities stack
+  hosts: immo
+  become: true
+  gather_facts: true
+  roles:
+    - secrets
+    - immo_stack
+

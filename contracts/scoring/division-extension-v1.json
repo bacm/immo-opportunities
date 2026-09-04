@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "definition_id": "division-extension-v0.1",
+  "definition_version": 1,
+  "strategy": "division_extension",
+  "status": "draft",
+  "publication_eligible": false,
+  "parameter_status": "profiling_required",
+  "meaning": "relative ranking index, never a probability",
+  "neutral_normalized_value": 0.5,
+  "component_weights": {
+    "land_capacity": 0.40,
+    "preliminary_feasibility": 0.25,
+    "economic_attractiveness": 0.25,
+    "risk_complexity": 0.10
+  },
+  "eligibility": [
+    {"code":"VALID_PARCEL_GEOMETRY","feature":"LAND-001","predicate":"present"},
+    {"code":"RESOLVED_BUILDING_FOOTPRINT","feature":"LAND-002","predicate":"present"},
+    {"code":"GPU_ZONE_AVAILABLE","feature":"URB-001","predicate":"present"},
+    {"code":"GPU_RULE_PROFILE_VALIDATED","feature":"URB-002","predicate":"present"},
+    {"code":"MARKET_OR_SCENARIO_AVAILABLE","any_features":["MKT-001","FIN-001"],"predicate":"any_present"}
+  ],
+  "rules": [
+    {"feature":"LAND-004","component":"land_capacity","weight":0.25,"requirement":"required","transformation":"local_percentile","direction":"increasing","template":"La surface non bâtie apparente se situe au percentile {comparison} du segment local."},
+    {"feature":"LAND-003","component":"land_capacity","weight":0.20,"requirement":"required","transformation":"local_percentile","direction":"decreasing","template":"Le taux d'emprise bâtie se situe au percentile {comparison} du segment local."},
+    {"feature":"LAND-006","component":"land_capacity","weight":0.15,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"La largeur apparente se situe au percentile {comparison} du segment local."},
+    {"feature":"LAND-007","component":"land_capacity","weight":0.15,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"Le recul apparent se situe au percentile {comparison} du segment local."},
+    {"feature":"LAND-008","component":"land_capacity","weight":0.10,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"L'accès apparent se situe au percentile {comparison} du segment local et ne prouve aucun droit d'accès."},
+    {"feature":"LAND-005","component":"land_capacity","weight":0.10,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"La compacité se situe au percentile {comparison} du segment local."},
+    {"feature":"LAND-009","component":"land_capacity","weight":0.05,"requirement":"optional","transformation":"local_percentile","direction":"decreasing","template":"Le nombre de bâtiments se situe au percentile {comparison} du segment local."},
+
+    {"feature":"URB-002","component":"preliminary_feasibility","weight":0.40,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"Le profil de règles validé contribue à hauteur de {normalized}."},
+    {"feature":"URB-004","component":"preliminary_feasibility","weight":0.35,"requirement":"required","transformation":"local_percentile","direction":"increasing","template":"L'emprise résiduelle préliminaire se situe au percentile {comparison}."},
+    {"feature":"URB-003","component":"preliminary_feasibility","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"Les contraintes connues produisent un niveau normalisé de {normalized}."},
+
+    {"feature":"FIN-001","component":"economic_attractiveness","weight":0.30,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"La marge du scénario central produit un niveau normalisé de {normalized}."},
+    {"feature":"FIN-002","component":"economic_attractiveness","weight":0.20,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"Le rendement sur coût produit un niveau normalisé de {normalized}."},
+    {"feature":"MKT-001","component":"economic_attractiveness","weight":0.25,"requirement":"required","transformation":"local_percentile","direction":"increasing","template":"Le niveau de marché se situe au percentile {comparison} du segment local."},
+    {"feature":"MKT-005","component":"economic_attractiveness","weight":0.15,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"La liquidité relative se situe au percentile {comparison} du segment local."},
+    {"feature":"MKT-004","component":"economic_attractiveness","weight":0.10,"requirement":"optional","transformation":"local_percentile","direction":"decreasing","template":"La dispersion de marché se situe au percentile {comparison} du segment local."},
+
+    {"feature":"RISK-001","component":"risk_complexity","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"L'exposition argile fine produit un niveau normalisé de {normalized}."},
+    {"feature":"RISK-002","component":"risk_complexity","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"Le contexte inondation fin produit un niveau normalisé de {normalized}."},
+    {"feature":"RISK-003","component":"risk_complexity","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"La proximité de pollution des sols produit un niveau normalisé de {normalized}."},
+    {"feature":"RISK-004","component":"risk_complexity","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"La proximité de cavités produit un niveau normalisé de {normalized}."},
+
+    {"feature":"URB-005","component":null,"weight":0,"requirement":"confidence_only","transformation":"identity","direction":"confidence_only","template":"La complétude des règles urbanistiques vaut {value}."}
+  ],
+  "confidence": {"match_quality":0.30,"critical_coverage":0.30,"freshness":0.15,"source_consistency":0.10,"comparable_quality":0.15},
+  "forbidden_feature_prefixes": ["VACANCY-","OWNER-","HOUSEHOLD-","PREDICTED-DPE-","SCRAPED-"],
+  "backtest": {"baseline":"cadastral-filter-v1","precision_at":[10,20,50],"required_segments":["urban","periurban","littoral","rural"],"final_holdout_required":true}
+}

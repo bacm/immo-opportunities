@@ -1,0 +1,12 @@
+---
+immo:
+  hosts:
+    immo-staging:
+      ansible_host: 203.0.113.10
+      ansible_user: deploy
+      ansible_port: 22
+  vars:
+    immo_environment: staging
+    immo_domain: staging-immo.example.com
+    immo_admin_cidrs: ["0.0.0.0/0", "::/0"]
+    immo_acme_email: ops@example.com

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+env_file="${COMPOSE_ENV_FILE:-.env.example}"
+compose=(
+  docker compose --env-file "$env_file"
+  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml
+)
+
+result="$("${compose[@]}" exec -T postgres psql --username postgres --dbname immo --tuples-only --no-align <<'SQL'
+SELECT concat_ws('|',
+  has_schema_privilege('martin', 'tiles', 'USAGE'),
+  has_schema_privilege('martin', 'app', 'USAGE'),
+  has_schema_privilege('martin', 'audit', 'USAGE'),
+  has_schema_privilege('martin', 'reference', 'USAGE'),
+  has_table_privilege('martin', 'tiles.cadastral_parcels', 'SELECT'),
+  has_table_privilege('martin', 'reference.cadastral_parcel', 'SELECT'),
+  has_table_privilege('martin', 'tiles.parcel_render_v1', 'SELECT'),
+  has_function_privilege('martin', 'tiles.parcels(integer,integer,integer)', 'EXECUTE'),
+  has_function_privilege('martin', 'tiles.buildings(integer,integer,integer)', 'EXECUTE'),
+  has_function_privilege('martin', 'tiles.opportunities(integer,integer,integer)', 'EXECUTE'),
+  has_table_privilege('martin', 'app.saved_search', 'SELECT'),
+  has_table_privilege('api_rw', 'app.saved_search', 'SELECT'),
+  has_table_privilege('api_rw', 'reference.cadastral_parcel', 'SELECT'),
+  has_table_privilege('api_rw', 'reference.cadastral_parcel', 'INSERT'),
+  has_table_privilege('pipeline_rw', 'reference.cadastral_parcel', 'INSERT'),
+  has_table_privilege('backup_ro', 'reference.cadastral_parcel', 'SELECT')
+);
+SQL
+)"
+
+if [[ "$result" != "t|f|f|f|f|f|f|t|t|t|f|t|t|f|t|t" ]]; then
+  echo "Unexpected Martin schema privileges: $result" >&2
+  exit 1
+fi
+
+echo "Database role isolation passed."

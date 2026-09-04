@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-04",
+  "contract_version": 1,
+  "name": "BD TOPO thème Bâti et réseau routier",
+  "producer": "IGN",
+  "homepage": "https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_BD-TOPO",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "IGN, BD TOPO",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "source edition timestamp",
+    "discovery_url": "https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_BD-TOPO",
+    "preferred_format": "GeoPackage department export",
+    "partition_dimensions": ["release", "department", "layer"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": 2154,
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["LineString", "MultiLineString", "Polygon", "MultiPolygon"],
+    "normalization": "bdtopo-normalize@1",
+    "repair": "make-valid-polygonal@1"
+  },
+  "layers": {
+    "batiment": {
+      "target": "meta.entity_source_observation",
+      "source_entity_type": "bdtopo_building",
+      "required_properties": {"id": "string", "geometry": "polygonal geometry"},
+      "optional_properties": {
+        "nature": "string|null",
+        "usage_1": "string|null",
+        "usage_2": "string|null",
+        "hauteur": "number|null",
+        "leger": "boolean|null"
+      },
+      "additional_properties": "preserve"
+    },
+    "troncon_de_route": {
+      "target": "meta.entity_source_observation",
+      "source_entity_type": "bdtopo_road_segment",
+      "required_properties": {"id": "string", "geometry": "linear geometry"},
+      "optional_properties": {"nature": "string|null", "importance": "string|null"},
+      "additional_properties": "preserve"
+    }
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "layer", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "geometry_validity", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "identifier_uniqueness", "version": "1", "scope": "layer", "blocks_publication": true},
+    {"code": "attribute_completeness", "version": "1", "scope": "commune", "blocks_publication": false},
+    {"code": "match_rate", "version": "1", "scope": "commune", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "department", "ambiguous_critical_matches_block": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

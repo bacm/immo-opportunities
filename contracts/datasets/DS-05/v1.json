@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-05",
+  "contract_version": 1,
+  "name": "Base Adresse Nationale",
+  "producer": "DINUM / IGN / ANCT",
+  "homepage": "https://adresse.data.gouv.fr/",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "Base Adresse Nationale",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "YYYY-MM-DD archived Wednesday release",
+    "discovery_url": "https://adresse.data.gouv.fr/donnees-nationales",
+    "asset_url_template": "https://adresse.data.gouv.fr/data/ban/adresses/{release}/csv/adresses-{department}.csv.gz",
+    "partition_dimensions": ["release", "department"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": 2154,
+    "alternative_source_srid": 4326,
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point"],
+    "normalization": "ban-csv-normalize@1"
+  },
+  "csv": {"encoding": "UTF-8", "delimiter": ";"},
+  "layers": {
+    "addresses": {
+      "target": "reference.address",
+      "source_entity_type": "ban_address",
+      "required_properties": {
+        "id": "string",
+        "numero": "string",
+        "nom_voie": "string",
+        "code_postal": "string",
+        "code_insee": "string",
+        "nom_commune": "string",
+        "x": "number",
+        "y": "number"
+      },
+      "optional_properties": {
+        "id_fantoir": "string|null",
+        "rep": "string|null",
+        "lon": "number|null",
+        "lat": "number|null",
+        "type_position": "string|null",
+        "source_position": "string|null",
+        "source_nom_voie": "string|null",
+        "certification_commune": "boolean|null",
+        "cad_parcelles": "pipe-separated cadastral identifiers|null"
+      },
+      "additional_properties": "preserve"
+    }
+  },
+  "identity": {
+    "official_identifier": "id",
+    "secondary_identifiers": ["id_fantoir"],
+    "cad_parcelles_policy": "experimental explicit source relation; never silently certain"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "coordinate_validity", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "exact_duplicate_ban_record", "version": "1", "scope": "department", "blocks_publication": false},
+    {"code": "conflicting_ban_identifier", "version": "1", "scope": "department", "blocks_publication": true},
+    {"code": "certification_rate", "version": "1", "scope": "commune", "blocks_publication": false},
+    {"code": "parcel_match_rate", "version": "1", "scope": "commune", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "department", "ambiguous_critical_matches_block": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

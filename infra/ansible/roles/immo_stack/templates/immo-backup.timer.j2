@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Immo Opportunities backup
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 Europe/Paris
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

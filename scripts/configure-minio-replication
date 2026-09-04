@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_dir=${IMMO_PROJECT_DIR:-/opt/immo}
+: "${BACKUP_MINIO_ENDPOINT:?BACKUP_MINIO_ENDPOINT is required}"
+: "${BACKUP_MINIO_USER_FILE:?BACKUP_MINIO_USER_FILE is required}"
+: "${BACKUP_MINIO_PASSWORD_FILE:?BACKUP_MINIO_PASSWORD_FILE is required}"
+if [[ ! -f ${BACKUP_MINIO_USER_FILE} || ! -f ${BACKUP_MINIO_PASSWORD_FILE} ]]; then
+  echo "Off-site MinIO credentials must be readable files" >&2
+  exit 2
+fi
+
+compose=(
+  docker compose --project-directory "${project_dir}" --env-file "${project_dir}/.env"
+  -f "${project_dir}/compose.yaml" -f "${project_dir}/compose.prod.yaml"
+  -f "${project_dir}/compose.observability.yaml"
+)
+"${compose[@]}" run --rm -T \
+  -e BACKUP_MINIO_ENDPOINT="${BACKUP_MINIO_ENDPOINT}" \
+  -v "${BACKUP_MINIO_USER_FILE}:/run/secrets/backup_minio_user:ro" \
+  -v "${BACKUP_MINIO_PASSWORD_FILE}:/run/secrets/backup_minio_password:ro" \
+  --entrypoint /bin/sh minio-init -ec '
+    mc alias set primary http://minio:9000 \
+      "$(cat /run/secrets/minio_root_user)" \
+      "$(cat /run/secrets/minio_root_password)" >/dev/null
+    mc alias set replica "$BACKUP_MINIO_ENDPOINT" \
+      "$(cat /run/secrets/backup_minio_user)" \
+      "$(cat /run/secrets/backup_minio_password)" >/dev/null
+    mc admin replicate add primary replica
+    mc admin replicate status primary
+  '

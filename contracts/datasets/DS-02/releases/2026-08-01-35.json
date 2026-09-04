@@ -1,0 +1,17 @@
+{
+  "release_id": "DS-02@2026-08-01",
+  "release_key": "2026-08-01",
+  "source_published_on": "2026-08-01",
+  "department": "35",
+  "contract_version": 1,
+  "assets": [
+    {
+      "layer": "buildings",
+      "url": "https://rnb-opendata.s3.fr-par.scw.cloud/files/RNB_35.csv.zip",
+      "media_type": "text/csv",
+      "content_encoding": "zip",
+      "byte_size": 190932054,
+      "sha256": "b40a4d474d6cbc4cfec2aa8460714675f33349b3cd1e97b3dad4e7b7883d0751"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+base_url="${1:-}"
+env_file="${COMPOSE_ENV_FILE:-.env.example}"
+compose=(
+  docker compose --env-file "$env_file"
+  -f compose.yaml
+  -f compose.dev.yaml
+  -f compose.observability.yaml
+)
+required_services=(postgres redis minio keycloak api martin dagster-code dagster-webserver dagster-daemon web caddy prometheus loki grafana alloy)
+
+running_services="$("${compose[@]}" ps --status running --services)"
+for service in "${required_services[@]}"; do
+  if ! grep -qx "$service" <<<"$running_services"; then
+    echo "Service not running: $service" >&2
+    "${compose[@]}" ps >&2
+    exit 1
+  fi
+done
+
+caddy_address="$("${compose[@]}" port caddy 8080)"
+minio_address="$("${compose[@]}" port minio 9000)"
+keycloak_address="$("${compose[@]}" port keycloak 8080)"
+grafana_address="$("${compose[@]}" port grafana 3000)"
+dagster_address="$("${compose[@]}" port dagster-webserver 3000)"
+base_url="${base_url:-http://localhost:${caddy_address##*:}}"
+
+"${compose[@]}" exec -T postgres pg_isready -U postgres -d postgres >/dev/null
+"${compose[@]}" exec -T redis sh -ec \
+  'redis-cli --no-auth-warning -a "$(cat /run/secrets/redis_password)" ping' \
+  | grep -qx PONG
+
+curl --fail --silent --show-error "$base_url/health" | grep -qx 'ok'
+curl --fail --silent --show-error "$base_url/api/v1/meta/version" | grep -q '"database"'
+curl --fail --silent --show-error "http://${minio_address}/minio/health/live" >/dev/null
+curl --fail --silent --show-error "http://${keycloak_address}/auth/" >/dev/null
+curl --fail --silent --show-error "http://${grafana_address}/api/health" | grep -q '"database"'
+curl --fail --silent --show-error "http://${dagster_address}/server_info" >/dev/null
+
+COMPOSE_ENV_FILE="$env_file" ./scripts/check-database-permissions
+
+echo "Application smoke tests passed."

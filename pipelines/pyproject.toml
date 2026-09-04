@@ -1,0 +1,32 @@
+[project]
+name = "immo-pipelines"
+version = "0.1.0"
+description = "Dagster data pipelines for Immo Opportunities"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "dagster>=1.10,<2",
+  "dagster-postgres>=0.26,<1",
+  "dagster-webserver>=1.10,<2",
+  "httpx>=0.28,<1",
+  "ijson>=3.4,<4",
+  "minio>=7.2,<8",
+  "psycopg[binary]>=3.2,<4",
+  "pyproj>=3.7,<4",
+  "shapely>=2.1,<3",
+  "tenacity>=9.1,<10",
+]
+
+[dependency-groups]
+dev = [
+  "pyright>=1.1.390,<2",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/immo_pipelines"]

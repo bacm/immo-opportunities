@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "definition_id": "renovation-resale-v0.1",
+  "definition_version": 1,
+  "strategy": "renovation_resale",
+  "status": "draft",
+  "publication_eligible": false,
+  "parameter_status": "profiling_required",
+  "meaning": "relative ranking index, never a probability",
+  "neutral_normalized_value": 0.5,
+  "component_weights": {
+    "scenario_economics": 0.40,
+    "renovation_need_potential": 0.25,
+    "market_liquidity": 0.20,
+    "risk_complexity": 0.15
+  },
+  "eligibility": [
+    {"code":"RESOLVED_PROPERTY_UNIT","feature":"LAND-002","predicate":"present"},
+    {"code":"RESIDENTIAL_USE_OBSERVED","feature":"BLD-001","predicate":"present"},
+    {"code":"USABLE_AREA_AVAILABLE","feature":"REN-002","predicate":"present"},
+    {"code":"MARKET_AVAILABLE","feature":"MKT-101","predicate":"present"},
+    {"code":"FINANCIAL_SCENARIO_COMPLETE","all_features":["FIN-101","FIN-102","FIN-103","FIN-104","FIN-105","FIN-106"],"predicate":"all_present"}
+  ],
+  "rules": [
+    {"feature":"FIN-104","component":"scenario_economics","weight":0.50,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"La marge nette centrale produit un niveau normalisé de {normalized}."},
+    {"feature":"FIN-105","component":"scenario_economics","weight":0.30,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"Le rendement sur coût produit un niveau normalisé de {normalized}."},
+    {"feature":"FIN-106","component":"scenario_economics","weight":0.20,"requirement":"required","transformation":"profiled_score","direction":"increasing","template":"La marge de sécurité du prix d'achat produit un niveau normalisé de {normalized}."},
+
+    {"feature":"REN-005","component":"renovation_need_potential","weight":0.40,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"La consommation énergétique observée se situe au percentile {comparison}; elle ne décrit pas seule l'état physique."},
+    {"feature":"REN-007","component":"renovation_need_potential","weight":0.25,"requirement":"optional","transformation":"profiled_score","direction":"increasing","template":"Les caractéristiques déclarées de l'enveloppe produisent un niveau normalisé de {normalized}."},
+    {"feature":"REN-001","component":"renovation_need_potential","weight":0.20,"requirement":"optional","transformation":"profiled_score","direction":"increasing","template":"La période de construction observée produit un niveau normalisé de {normalized}."},
+    {"feature":"REN-003","component":"renovation_need_potential","weight":0.15,"requirement":"optional","transformation":"profiled_score","direction":"increasing","template":"La cohérence bâtimentaire produit un niveau normalisé de {normalized}."},
+
+    {"feature":"MKT-102","component":"market_liquidity","weight":0.35,"requirement":"required","transformation":"local_percentile","direction":"increasing","template":"Le nombre de comparables se situe au percentile {comparison}."},
+    {"feature":"MKT-103","component":"market_liquidity","weight":0.30,"requirement":"optional","transformation":"local_percentile","direction":"decreasing","template":"La dispersion des comparables se situe au percentile {comparison}."},
+    {"feature":"MKT-104","component":"market_liquidity","weight":0.25,"requirement":"confidence_only","transformation":"local_percentile","direction":"confidence_only","template":"La récence médiane des comparables est {value}."},
+    {"feature":"MKT-105","component":"market_liquidity","weight":0.10,"requirement":"optional","transformation":"local_percentile","direction":"increasing","template":"La tendance locale se situe au percentile {comparison}."},
+
+    {"feature":"RISK-101","component":"risk_complexity","weight":0.60,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"Le profil de risques produit un niveau normalisé de {normalized}."},
+    {"feature":"FIN-102","component":"risk_complexity","weight":0.25,"requirement":"required","transformation":"profiled_score","direction":"decreasing","template":"L'incertitude de travaux produit un niveau normalisé de {normalized}."},
+    {"feature":"URB-003","component":"risk_complexity","weight":0.15,"requirement":"optional","transformation":"profiled_score","direction":"decreasing","template":"Les contraintes urbanistiques pertinentes produisent un niveau normalisé de {normalized}."},
+
+    {"feature":"REN-008","component":null,"weight":0,"requirement":"confidence_only","transformation":"identity","direction":"confidence_only","template":"La confiance d'appariement du DPE vaut {value}."}
+  ],
+  "confidence": {"match_quality":0.30,"critical_coverage":0.25,"freshness":0.15,"source_consistency":0.10,"comparable_quality":0.20},
+  "forbidden_feature_prefixes": ["VACANCY-","OWNER-","HOUSEHOLD-","PREDICTED-DPE-","SCRAPED-"],
+  "backtest": {"baseline":"cadastral-filter-v1","precision_at":[10,20,50],"required_segments":["urban","periurban","littoral","rural"],"final_holdout_required":true}
+}

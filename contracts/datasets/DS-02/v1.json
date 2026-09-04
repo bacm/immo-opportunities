@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-02",
+  "contract_version": 1,
+  "name": "Référentiel National des Bâtiments",
+  "producer": "État / RNB",
+  "homepage": "https://rnb.beta.gouv.fr/",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "Référentiel National des Bâtiments (RNB)",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "source publication timestamp",
+    "discovery_url": "https://www.data.gouv.fr/datasets/referentiel-national-des-batiments",
+    "asset_selection": "department export whose resource title identifies department 35",
+    "partition_dimensions": ["release", "department"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": 4326,
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point", "Polygon", "MultiPolygon"],
+    "normalization": "rnb-normalize@1",
+    "repair": "make-valid-polygonal@1"
+  },
+  "layers": {
+    "buildings": {
+      "target": "meta.entity_source_observation",
+      "source_entity_type": "rnb_building",
+      "identity_priority": "preferred",
+      "required_properties": {"rnb_id": "string", "shape": "point or polygonal geometry"},
+      "optional_properties": {
+        "status": "string|null",
+        "point": "point geometry|null",
+        "ext_ids": "array|null",
+        "addresses": "array|null",
+        "plots": "array|null",
+        "validated_by": "array|null"
+      },
+      "additional_properties": "preserve"
+    }
+  },
+  "identity": {
+    "official_identifier": "rnb_id",
+    "never_overwrite": true,
+    "history_policy": "preserve all predecessor, successor and status observations",
+    "point_geometry_policy": "create stable identity without inventing a footprint; resolve polygon from linked source"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "geometry_validity", "version": "1", "scope": "commune", "blocks_publication": true},
+    {"code": "duplicate_rnb_id", "version": "1", "scope": "department", "blocks_publication": true},
+    {"code": "status_distribution", "version": "1", "scope": "department", "blocks_publication": false},
+    {"code": "match_rate", "version": "1", "scope": "commune", "blocks_publication": true}
+  ],
+  "publication": {
+    "atomic_pointer_scope": "department",
+    "requires_stratified_manual_match_review": true,
+    "ambiguous_critical_matches_block": true
+  },
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

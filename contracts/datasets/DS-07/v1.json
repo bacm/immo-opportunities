@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-07",
+  "contract_version": 1,
+  "name": "DPE Logements existants depuis juillet 2021",
+  "producer": "ADEME",
+  "homepage": "https://data.ademe.fr/datasets/dpe-v2-logements-existants",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "ADEME, Observatoire DPE-Audit",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "YYYY-MM-DD-extract",
+    "discovery_url": "https://data.ademe.fr/datasets/dpe-v2-logements-existants",
+    "preferred_format": "CSV/API extract archived before import",
+    "partition_dimensions": ["release", "department"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"], "start_date": "2021-07-01"},
+  "layers": {
+    "assessments": {
+      "target": "observation.energy_assessment",
+      "source_entity_type": "ademe_dpe",
+      "required_properties": {
+        "dpe_number": "string",
+        "assessment_date": "date",
+        "energy_label": "A|B|C|D|E|F|G",
+        "energy_consumption_kwh_m2_year": "number>=0",
+        "is_deposited": "boolean"
+      },
+      "optional_properties": {
+        "address_id": "string|null",
+        "building_id": "string|null",
+        "envelope": "object|null",
+        "cancelled_at": "date|null"
+      },
+      "additional_properties": "preserve"
+    }
+  },
+  "field_policy": {
+    "allowed": "actually deposited DPE records and observed declared characteristics",
+    "excluded": ["simulated DPE", "predicted energy label", "BDNB Expert prediction"],
+    "missing_dpe": "neutral contribution; confidence reduction only",
+    "multiple_at_address": "ambiguous until a building or dwelling is resolved"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "deposited_only", "version": "1", "scope": "row", "blocks_publication": true},
+    {"code": "label_consumption_consistency", "version": "1", "scope": "row", "blocks_publication": false},
+    {"code": "building_match_rate", "version": "1", "scope": "commune", "blocks_publication": false},
+    {"code": "multiple_dpe_resolution", "version": "1", "scope": "address", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "department", "acceptance_report_required": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-09",
+  "contract_version": 1,
+  "name": "Géorisques — API et téléchargements",
+  "producer": "DGPR / BRGM",
+  "homepage": "https://www.georisques.gouv.fr/donnees/bases-de-donnees",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "Géorisques, DGPR / BRGM et producteurs indiqués",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "risk-family--YYYY-MM-DD",
+    "discovery_url": "https://www.georisques.gouv.fr/doc-api",
+    "preferred_format": "versioned download; archived API response only when no download exists",
+    "partition_dimensions": ["release", "risk_family", "department"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": "source-dependent and mandatory",
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point", "LineString", "Polygon", "MultiPolygon", "none"],
+    "normalization": "georisques-normalize@1"
+  },
+  "layers": {
+    "risk_observations": {
+      "target": "observation.risk_observation",
+      "source_entity_type": "georisques_observation",
+      "required_properties": {"risk_type": "string", "granularity": "point|zone|parcel|commune"},
+      "additional_properties": "preserve"
+    }
+  },
+  "granularity_policy": {
+    "preserve_source_granularity": true,
+    "commune_to_parcel_inference": "forbidden",
+    "proximity": "only for point sources with distance and known coverage",
+    "coverage_absence": "distinct from observed zero risk"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "risk_family", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "granularity_present", "version": "1", "scope": "row", "blocks_publication": true},
+    {"code": "geometry_validity", "version": "1", "scope": "row", "blocks_publication": true},
+    {"code": "coverage_known", "version": "1", "scope": "commune", "blocks_publication": false}
+  ],
+  "publication": {"atomic_pointer_scope": "risk_family_department", "acceptance_report_required": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

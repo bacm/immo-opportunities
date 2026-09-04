@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+environment="${ENV:-production}"
+inventory="${INVENTORY:-infra/ansible/inventories/generated/${environment}.json}"
+vps_host="${VPS_HOST:?VPS_HOST is required}"
+vps_user="${VPS_USER:?VPS_USER is required}"
+vps_ssh_port="${VPS_SSH_PORT:-22}"
+app_domain="${APP_DOMAIN:?APP_DOMAIN is required}"
+acme_email="${ACME_EMAIL:?ACME_EMAIL is required}"
+admin_cidrs_json="${ADMIN_CIDRS_JSON:?ADMIN_CIDRS_JSON is required}"
+
+if ! [[ "$vps_ssh_port" =~ ^[0-9]+$ ]] || ((vps_ssh_port < 1 || vps_ssh_port > 65535)); then
+  echo "VPS_SSH_PORT must be an integer between 1 and 65535" >&2
+  exit 2
+fi
+
+if ! jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' \
+  <<<"$admin_cidrs_json" >/dev/null; then
+  echo "ADMIN_CIDRS_JSON must be a non-empty JSON array of CIDR strings" >&2
+  exit 2
+fi
+
+mkdir -p "$(dirname "$inventory")"
+umask 077
+
+jq -n \
+  --arg environment "$environment" \
+  --arg host "$vps_host" \
+  --arg user "$vps_user" \
+  --argjson port "$vps_ssh_port" \
+  --arg domain "$app_domain" \
+  --arg email "$acme_email" \
+  --argjson admin_cidrs "$admin_cidrs_json" \
+  '{
+    all: {
+      children: {
+        immo: {
+          hosts: {
+            "immo-vps": {
+              ansible_host: $host,
+              ansible_user: $user,
+              ansible_port: $port
+            }
+          },
+          vars: {
+            immo_environment: $environment,
+            immo_domain: $domain,
+            immo_site_address: ("https://" + $domain),
+            immo_acme_email: $email,
+            immo_admin_cidrs: $admin_cidrs
+          }
+        }
+      }
+    }
+  }' >"$inventory"
+
+echo "Inventory rendered: $inventory"

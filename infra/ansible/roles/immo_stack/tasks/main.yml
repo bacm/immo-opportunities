@@ -1,0 +1,117 @@
+---
+- name: Create deployment directory
+  ansible.builtin.file:
+    path: "{{ immo_project_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy Compose manifests
+  ansible.builtin.copy:
+    src: "{{ immo_repo_root }}/{{ item }}"
+    dest: "{{ immo_project_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - compose.yaml
+    - compose.prod.yaml
+    - compose.observability.yaml
+
+- name: Copy versioned infrastructure configuration
+  ansible.builtin.copy:
+    src: "{{ immo_repo_root }}/{{ item }}/"
+    dest: "{{ immo_project_dir }}/{{ item }}/"
+    owner: root
+    group: root
+    mode: preserve
+  loop:
+    - config
+    - scripts
+
+- name: Install non-secret runtime environment
+  ansible.builtin.template:
+    src: immo.env.j2
+    dest: "{{ immo_project_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Render and validate production Compose model
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ immo_project_dir }}"
+      - -f
+      - compose.yaml
+      - -f
+      - compose.prod.yaml
+      - -f
+      - compose.observability.yaml
+      - config
+      - --quiet
+  args:
+    chdir: "{{ immo_project_dir }}"
+  changed_when: false
+
+- name: Pull immutable service images
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ immo_project_dir }}"
+    files:
+      - compose.yaml
+      - compose.prod.yaml
+      - compose.observability.yaml
+    policy: always
+
+- name: Deploy Compose services and wait for health checks
+  community.docker.docker_compose_v2:
+    project_src: "{{ immo_project_dir }}"
+    files:
+      - compose.yaml
+      - compose.prod.yaml
+      - compose.observability.yaml
+    state: present
+    wait: true
+    wait_timeout: 600
+    remove_orphans: true
+
+- name: Install Compose systemd unit
+  ansible.builtin.template:
+    src: immo-compose.service.j2
+    dest: /etc/systemd/system/immo-compose.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable Compose systemd unit
+  ansible.builtin.systemd:
+    name: immo-compose.service
+    enabled: true
+    daemon_reload: true
+
+- name: Install pilot operations systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - immo-backup.service
+    - immo-backup.timer
+    - immo-pilot-metrics.service
+    - immo-pilot-metrics.timer
+
+- name: Enable pilot operations timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - immo-backup.timer
+    - immo-pilot-metrics.timer

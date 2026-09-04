@@ -1,0 +1,21 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Cibles disponibles", "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}, "targets": [{"expr": "sum(up)", "refId": "A"}]},
+    {"id": 2, "type": "stat", "title": "Âge sauvegarde (h)", "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}, "targets": [{"expr": "(time() - immo_backup_last_success_timestamp_seconds) / 3600", "refId": "A"}]},
+    {"id": 3, "type": "stat", "title": "Âge dernier import (h)", "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}, "targets": [{"expr": "(time() - immo_import_last_success_timestamp_seconds) / 3600", "refId": "A"}]},
+    {"id": 4, "type": "stat", "title": "Sources actives", "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}, "targets": [{"expr": "count(immo_source_last_publication_timestamp_seconds)", "refId": "A"}]},
+    {"id": 5, "type": "timeseries", "title": "Disponibilité par service", "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8}, "targets": [{"expr": "up", "legendFormat": "{{job}}", "refId": "A"}]},
+    {"id": 6, "type": "timeseries", "title": "Mémoire disponible", "gridPos": {"h": 10, "w": 6, "x": 12, "y": 8}, "targets": [{"expr": "node_memory_MemAvailable_bytes", "refId": "A"}]},
+    {"id": 7, "type": "timeseries", "title": "Disque disponible", "gridPos": {"h": 10, "w": 6, "x": 18, "y": 8}, "targets": [{"expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"}", "legendFormat": "{{mountpoint}}", "refId": "A"}]}
+  ],
+  "schemaVersion": 41,
+  "tags": ["brittany", "pilot", "operations"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "Pilote Bretagne — exploitation",
+  "uid": "brittany-pilot-ops",
+  "version": 1
+}

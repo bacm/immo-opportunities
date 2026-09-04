@@ -1,0 +1,29 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Secrets decrypted or generated locally
+secrets/*
+!secrets/*.sops.yaml
+!secrets/README.md
+!secrets/*.example
+
+# Ansible
+*.retry
+infra/ansible/inventories/generated/
+
+# Runtime
+.runtime/
+backups/
+.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo

@@ -1,0 +1,18 @@
+[Unit]
+Description=Immo Opportunities Docker Compose stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{ immo_project_dir }}
+ExecStart=/usr/bin/docker compose -f compose.yaml -f compose.prod.yaml -f compose.observability.yaml up -d --wait
+ExecStop=/usr/bin/docker compose -f compose.yaml -f compose.prod.yaml -f compose.observability.yaml down
+TimeoutStartSec=900
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,27 @@
+groups:
+  - name: brittany-pilot
+    rules:
+      - alert: PlatformBackupMissingOrStale
+        expr: absent(immo_backup_last_success_timestamp_seconds) or (time() - immo_backup_last_success_timestamp_seconds > 93600)
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: La sauvegarde complète a plus de 26 heures ou sa métrique est absente.
+      - alert: ImportPipelineStale
+        expr: absent(immo_import_last_success_timestamp_seconds) or (time() - immo_import_last_success_timestamp_seconds > 172800)
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: Aucun import réussi depuis 48 heures.
+      - alert: CriticalSourcePublicationMissing
+        expr: count(immo_source_last_publication_timestamp_seconds) < 9
+        for: 30m
+        labels: { severity: critical }
+        annotations:
+          summary: Une ou plusieurs sources DS-01 à DS-09 n'ont aucune release active.
+      - alert: ObservedServiceDown
+        expr: up == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Une cible Prometheus est indisponible.

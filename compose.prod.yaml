@@ -1,0 +1,105 @@
+services:
+  migrate:
+    image: ${API_IMAGE:?API_IMAGE is required in production}
+    build: null
+
+  api:
+    image: ${API_IMAGE:?API_IMAGE is required in production}
+    build: null
+    environment:
+      IMMO_ENVIRONMENT: production
+      IMMO_DOCS_ENABLED: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+  dagster-code:
+    image: ${PIPELINES_IMAGE:?PIPELINES_IMAGE is required in production}
+    build: null
+
+  dagster-webserver:
+    image: ${PIPELINES_IMAGE:?PIPELINES_IMAGE is required in production}
+    build: null
+
+  dagster-daemon:
+    image: ${PIPELINES_IMAGE:?PIPELINES_IMAGE is required in production}
+    build: null
+
+  web:
+    image: ${WEB_IMAGE:?WEB_IMAGE is required in production}
+    build: null
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+
+  postgres:
+    volumes:
+      - ${POSTGRES_DATA_PATH:-/srv/immo/postgres}:/var/lib/postgresql/data
+      - ./config/postgres/init:/docker-entrypoint-initdb.d:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 12G
+        reservations:
+          memory: 4G
+
+  redis:
+    volumes:
+      - ${RUNTIME_DATA_PATH:-/srv/immo/runtime}/redis:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+
+  minio:
+    volumes:
+      - ${MINIO_DATA_PATH:-/srv/immo/objects}:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+
+  keycloak:
+    command:
+      - |
+        export KC_DB_PASSWORD="$$(cat /run/secrets/keycloak_db_password)"
+        export KC_BOOTSTRAP_ADMIN_USERNAME="$$(cat /run/secrets/keycloak_admin_user)"
+        export KC_BOOTSTRAP_ADMIN_PASSWORD="$$(cat /run/secrets/keycloak_admin_password)"
+        exec /opt/keycloak/bin/kc.sh start --import-realm --http-enabled=true --http-port=8080 --health-enabled=true --metrics-enabled=true
+    environment:
+      KC_HOSTNAME: ${APP_DOMAIN:?APP_DOMAIN is required in production}
+      KC_HOSTNAME_STRICT: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  caddy:
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${RUNTIME_DATA_PATH:-/srv/immo/runtime}/caddy/data:/data
+      - ${RUNTIME_DATA_PATH:-/srv/immo/runtime}/caddy/config:/config
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+volumes:
+  postgres_data: null
+  redis_data: null
+  minio_data: null
+  caddy_data: null
+  caddy_config: null

@@ -1,0 +1,22 @@
+---
+- name: Bootstrap Immo Opportunities host
+  hosts: immo
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Validate supported VPS operating system and architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_major_version == "24"
+          - ansible_architecture == "x86_64"
+          - ansible_user != "root"
+        fail_msg: >-
+          Bootstrap requires an x86_64 Ubuntu 24.04 VPS and a non-root
+          SSH user with passwordless sudo.
+  roles:
+    - base
+    - docker
+    - storage
+    - secrets
+    - immo_stack

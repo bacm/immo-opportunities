@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+required_variables=(
+  VPS_HOST
+  VPS_USER
+  APP_DOMAIN
+  ACME_EMAIL
+  ADMIN_CIDRS_JSON
+  VPS_SSH_PRIVATE_KEY
+  VPS_SSH_HOST_KEY
+  SOPS_AGE_KEY
+)
+
+missing=()
+for variable in "${required_variables[@]}"; do
+  if [[ -z "${!variable:-}" ]]; then
+    missing+=("$variable")
+  fi
+done
+
+if ((${#missing[@]} > 0)); then
+  printf 'Missing GitHub environment settings: %s\n' "${missing[*]}" >&2
+  exit 2
+fi
+
+if ! [[ "$APP_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  echo "APP_DOMAIN must be a DNS name without scheme or path" >&2
+  exit 2
+fi
+
+if ! [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+  echo "VPS_USER is not a valid Unix account name" >&2
+  exit 2
+fi
+
+if ! [[ "${VPS_SSH_PORT:-22}" =~ ^[0-9]+$ ]] || \
+  (( ${VPS_SSH_PORT:-22} < 1 || ${VPS_SSH_PORT:-22} > 65535 )); then
+  echo "VPS_SSH_PORT must be an integer between 1 and 65535" >&2
+  exit 2
+fi
+
+if [[ "$ACME_EMAIL" =~ [[:space:]] ]] || [[ "$ACME_EMAIL" != *@* ]]; then
+  echo "ACME_EMAIL is invalid" >&2
+  exit 2
+fi
+
+if [[ ! -f secrets/production.sops.yaml ]]; then
+  echo "Missing encrypted file: secrets/production.sops.yaml" >&2
+  exit 2
+fi
+
+if ! grep -q '^sops:' secrets/production.sops.yaml; then
+  echo "secrets/production.sops.yaml is not SOPS-encrypted" >&2
+  exit 2
+fi
+
+if ! jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' \
+  <<<"$ADMIN_CIDRS_JSON" >/dev/null; then
+  echo "ADMIN_CIDRS_JSON must be a non-empty JSON array of CIDR strings" >&2
+  exit 2
+fi
+
+echo "VPS deployment settings are complete."

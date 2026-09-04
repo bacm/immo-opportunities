@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-03",
+  "contract_version": 1,
+  "name": "Base de Données Nationale des Bâtiments Open",
+  "producer": "CSTB",
+  "homepage": "https://bdnb.io/",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "BDNB, millésime et producteurs des valeurs sources",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "YYYY-MM-suffix",
+    "discovery_url": "https://www.data.gouv.fr/datasets/base-de-donnees-nationale-des-batiments",
+    "preferred_format": "GeoPackage department export",
+    "partition_dimensions": ["release", "department", "table"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": "read and validate from GeoPackage",
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point", "Polygon", "MultiPolygon"],
+    "normalization": "bdnb-open-normalize@1"
+  },
+  "layers": {
+    "building_groups": {
+      "target": "meta.entity_source_observation",
+      "source_entity_type": "bdnb_building_group",
+      "entity_level": "building_group_not_physical_building",
+      "required_properties": {"bdnb_group_id": "string", "geometry": "polygonal geometry"},
+      "optional_properties": {
+        "rnb_id": "string|null",
+        "usage_observed": "string|null",
+        "height_m_observed": "number|null",
+        "dwelling_count_observed": "integer|null"
+      },
+      "additional_properties": "preserve"
+    },
+    "source_relations": {
+      "target": "meta.entity_match",
+      "required_properties": {
+        "bdnb_group_id": "string",
+        "source_dataset": "string",
+        "source_identifier": "string"
+      },
+      "additional_properties": "preserve"
+    }
+  },
+  "field_policy": {
+    "allowed": "open observed values with original producer and field provenance",
+    "excluded": ["BDNB Expert predictions", "simulated DPE", "socio-economic predictions"],
+    "deduplication": "a primary-source value supersedes its BDNB copy for feature computation"
+  },
+  "quality_checks": [
+    {"code": "schema", "version": "1", "scope": "table", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "entity_level_present", "version": "1", "scope": "row", "blocks_publication": true},
+    {"code": "provenance_present", "version": "1", "scope": "field", "blocks_publication": true},
+    {"code": "expert_fields_excluded", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "match_rate", "version": "1", "scope": "commune", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "department", "ambiguous_critical_matches_block": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

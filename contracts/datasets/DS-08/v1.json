@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-08",
+  "contract_version": 1,
+  "name": "Géoportail de l'urbanisme — exports CNIG",
+  "producer": "Collectivités / GPU",
+  "homepage": "https://www.geoportail-urbanisme.gouv.fr/",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "Géoportail de l'urbanisme et autorité compétente",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false
+  },
+  "release": {
+    "key_format": "document-id--publication-date",
+    "discovery_url": "https://www.geoportail-urbanisme.gouv.fr/api/",
+    "preferred_format": "CNIG archive with original documents",
+    "partition_dimensions": ["document", "version", "commune"],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true
+  },
+  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "spatial": {
+    "source_srid": "read and validate from CNIG package",
+    "canonical_srid": 2154,
+    "allowed_geometry_types": ["Point", "LineString", "Polygon", "MultiPolygon"],
+    "normalization": "gpu-cnig-normalize@1"
+  },
+  "layers": {
+    "documents": {"target": "observation.urban_document", "source_entity_type": "gpu_document", "additional_properties": "preserve"},
+    "zones": {"target": "observation.urban_zone", "source_entity_type": "gpu_zone", "additional_properties": "preserve"},
+    "constraints": {"target": "observation.urban_constraint", "source_entity_type": "gpu_prescription_or_servitude", "additional_properties": "preserve"}
+  },
+  "field_policy": {
+    "free_text_interpretation": "forbidden",
+    "rule_profiles": "only structured fields reviewed against the exact document version and zone",
+    "opposability": "retain publication, validity and supersession dates"
+  },
+  "quality_checks": [
+    {"code": "cnig_schema", "version": "1", "scope": "document", "blocks_publication": true},
+    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
+    {"code": "document_version", "version": "1", "scope": "document", "blocks_publication": true},
+    {"code": "zone_topology", "version": "1", "scope": "commune", "blocks_publication": false},
+    {"code": "rule_profile_manual_validation", "version": "1", "scope": "zone", "blocks_publication": true}
+  ],
+  "publication": {"atomic_pointer_scope": "document", "acceptance_report_required": true},
+  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+}

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+base_url="${1:-http://localhost:8080}"
+sample_count="${MVT_SAMPLE_COUNT:-20}"
+benchmark_dir="$(mktemp -d)"
+trap 'rm -rf "$benchmark_dir"' EXIT
+
+tiles=(
+  16229/11372 16230/11372 16231/11372 16232/11372 16233/11372
+  16229/11373 16230/11373 16231/11373 16232/11373 16233/11373
+  16229/11374 16230/11374 16231/11374 16232/11374 16233/11374
+  16229/11375 16230/11375 16231/11375 16232/11375 16233/11375
+)
+
+percentile_95() {
+  local source_file="$1"
+  sort -n "$source_file" | awk -v count="$sample_count" '
+    NR == int((count * 95 + 99) / 100) { printf "%.1f", $1 * 1000 }
+  '
+}
+
+measure_layer() {
+  local layer="$1"
+  local phase="$2"
+  local output_file="$benchmark_dir/${layer}-${phase}"
+  : > "$output_file"
+  for ((index = 0; index < sample_count; index += 1)); do
+    local tile="${tiles[$((index % ${#tiles[@]}))]}"
+    curl --fail --silent --show-error --output /dev/null \
+      --write-out '%{time_total}\n' \
+      "$base_url/tiles/v1/$layer/15/$tile.mvt" >> "$output_file"
+  done
+  percentile_95 "$output_file"
+}
+
+for layer in parcels buildings; do
+  cold_p95="$(measure_layer "$layer" cold)"
+  hot_p95="$(measure_layer "$layer" hot)"
+  printf '%s cold_p95_ms=%s hot_p95_ms=%s samples=%s zoom=15\n' \
+    "$layer" "$cold_p95" "$hot_p95" "$sample_count"
+done

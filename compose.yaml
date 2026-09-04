@@ -1,0 +1,440 @@
+name: ${COMPOSE_PROJECT_NAME:-immo-opportunities}
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: ${POSTGRES_IMAGE:-postgis/postgis:15-3.5}
+    platform: ${POSTGRES_PLATFORM:-linux/amd64}
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_superuser_password
+      TZ: ${TZ:-Europe/Paris}
+    secrets:
+      - postgres_superuser_password
+      - immo_db_password
+      - keycloak_db_password
+      - dagster_db_password
+      - martin_db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init:/docker-entrypoint-initdb.d:ro
+    shm_size: 1gb
+    networks:
+      app:
+        aliases: [postgres]
+      data:
+      observability:
+      backup:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  postgres-bootstrap:
+    image: ${POSTGRES_IMAGE:-postgis/postgis:15-3.5}
+    platform: ${POSTGRES_PLATFORM:-linux/amd64}
+    init: true
+    restart: "no"
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        export PGPASSWORD="$$(cat /run/secrets/postgres_superuser_password)"
+        exec /bootstrap/10-init-databases.sh
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      PGHOST: postgres
+      PGPORT: 5432
+    secrets:
+      - postgres_superuser_password
+      - immo_db_password
+      - keycloak_db_password
+      - dagster_db_password
+      - martin_db_password
+    volumes:
+      - ./config/postgres/init/10-init-databases.sh:/bootstrap/10-init-databases.sh:ro
+    networks:
+      - app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    <<: *service-defaults
+    image: ${REDIS_IMAGE:-redis:8.2.6-alpine}
+    command:
+      - /bin/sh
+      - -ec
+      - exec redis-server --appendonly yes --appendfsync everysec --requirepass "$$(cat /run/secrets/redis_password)"
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      app:
+        aliases: [redis]
+      data:
+      observability:
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    <<: *service-defaults
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z}
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+      MINIO_BROWSER_REDIRECT_URL: ${SITE_ADDRESS:-http://localhost:8080}/minio-console/
+    secrets:
+      - minio_root_user
+      - minio_root_password
+    volumes:
+      - minio_data:/data
+    networks:
+      data:
+        aliases: [minio]
+      observability:
+      backup:
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-05-21T01-59-54Z}
+    init: true
+    restart: "no"
+    entrypoint: ["/bin/sh", "/bootstrap/bootstrap-minio.sh"]
+    secrets:
+      - minio_root_user
+      - minio_root_password
+    volumes:
+      - ./scripts/bootstrap-minio.sh:/bootstrap/bootstrap-minio.sh:ro
+    networks:
+      - data
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  keycloak:
+    <<: *service-defaults
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.7.0}
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        export KC_DB_PASSWORD="$$(cat /run/secrets/keycloak_db_password)"
+        export KC_BOOTSTRAP_ADMIN_USERNAME="$$(cat /run/secrets/keycloak_admin_user)"
+        export KC_BOOTSTRAP_ADMIN_PASSWORD="$$(cat /run/secrets/keycloak_admin_password)"
+        exec /opt/keycloak/bin/kc.sh start-dev --import-realm --http-port=8080 --health-enabled=true --metrics-enabled=true
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost:8080}
+    secrets:
+      - keycloak_db_password
+      - keycloak_admin_user
+      - keycloak_admin_password
+    volumes:
+      - ./config/keycloak/realm-immo.json:/opt/keycloak/data/import/realm-immo.json:ro
+    networks:
+      edge:
+        aliases: [keycloak]
+      app:
+      observability:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - /bin/bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /auth/health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q 'HTTP/1.1 200' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  migrate:
+    image: ${API_IMAGE:-immo-opportunities-api:local}
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    init: true
+    restart: "no"
+    command: ["alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
+    environment:
+      IMMO_ENVIRONMENT: ${ENVIRONMENT:-development}
+      IMMO_DATABASE_HOST: postgres
+      IMMO_DATABASE_PASSWORD_FILE: /run/secrets/immo_db_password
+    secrets:
+      - immo_db_password
+    networks:
+      - app
+    depends_on:
+      postgres-bootstrap:
+        condition: service_completed_successfully
+
+  api:
+    <<: *service-defaults
+    image: ${API_IMAGE:-immo-opportunities-api:local}
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      IMMO_ENVIRONMENT: ${ENVIRONMENT:-development}
+      IMMO_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      IMMO_GIT_SHA: ${GIT_SHA:-development}
+      IMMO_DATABASE_HOST: postgres
+      IMMO_DATABASE_PASSWORD_FILE: /run/secrets/immo_db_password
+      IMMO_OIDC_ENABLED: ${OIDC_ENABLED:-true}
+      IMMO_OIDC_ISSUER: ${SITE_ADDRESS:-http://localhost:8080}/auth/realms/immo
+      IMMO_OIDC_JWKS_URL: http://keycloak:8080/auth/realms/immo/protocol/openid-connect/certs
+      IMMO_OIDC_AUDIENCE: immo-api
+    secrets:
+      - immo_db_password
+    networks:
+      edge:
+        aliases: [api]
+      app:
+      observability:
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  martin:
+    <<: *service-defaults
+    image: ${MARTIN_IMAGE:-ghcr.io/maplibre/martin:1.13.0}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        martin_password="$$(sed -e 's/+/%2B/g' -e 's#/#%2F#g' -e 's/=/%3D/g' /run/secrets/martin_db_password)"
+        exec martin --listen-addresses 0.0.0.0:3000 "postgresql://martin:$$martin_password@postgres:5432/immo"
+    secrets:
+      - martin_db_password
+    networks:
+      edge:
+        aliases: [martin]
+      app:
+      observability:
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/health || wget -q --spider http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  dagster-code:
+    <<: *service-defaults
+    image: ${PIPELINES_IMAGE:-immo-opportunities-pipelines:local}
+    build:
+      context: .
+      dockerfile: docker/pipelines/Dockerfile
+    command: ["dagster", "api", "grpc", "--host", "0.0.0.0", "--port", "4000", "--module-name", "immo_pipelines.definitions"]
+    secrets:
+      - dagster_db_password
+      - immo_db_password
+      - minio_root_user
+      - minio_root_password
+    environment:
+      PIPELINE_DATABASE_HOST: postgres
+      PIPELINE_DATABASE_NAME: immo
+      PIPELINE_DATABASE_USER: immo
+      PIPELINE_DATABASE_PASSWORD_FILE: /run/secrets/immo_db_password
+      PIPELINE_MINIO_ENDPOINT: minio:9000
+      PIPELINE_MINIO_ACCESS_KEY_FILE: /run/secrets/minio_root_user
+      PIPELINE_MINIO_SECRET_KEY_FILE: /run/secrets/minio_root_password
+    networks:
+      app:
+        aliases: [dagster-code]
+      data:
+      observability:
+      ingestion:
+    healthcheck:
+      test: ["CMD", "dagster", "api", "grpc-health-check", "--port", "4000"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  dagster-webserver:
+    <<: *service-defaults
+    image: ${PIPELINES_IMAGE:-immo-opportunities-pipelines:local}
+    build:
+      context: .
+      dockerfile: docker/pipelines/Dockerfile
+    command: ["dagster-webserver", "--host", "0.0.0.0", "--port", "3000", "--workspace", "/opt/dagster/workspace.yaml"]
+    secrets:
+      - dagster_db_password
+    networks:
+      edge:
+        aliases: [dagster-webserver]
+      app:
+      observability:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dagster-code:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/server_info', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  dagster-daemon:
+    <<: *service-defaults
+    image: ${PIPELINES_IMAGE:-immo-opportunities-pipelines:local}
+    build:
+      context: .
+      dockerfile: docker/pipelines/Dockerfile
+    command: ["dagster-daemon", "run", "--workspace", "/opt/dagster/workspace.yaml"]
+    secrets:
+      - dagster_db_password
+      - immo_db_password
+      - minio_root_user
+      - minio_root_password
+    environment:
+      PIPELINE_DATABASE_HOST: postgres
+      PIPELINE_DATABASE_NAME: immo
+      PIPELINE_DATABASE_USER: immo
+      PIPELINE_DATABASE_PASSWORD_FILE: /run/secrets/immo_db_password
+      PIPELINE_MINIO_ENDPOINT: minio:9000
+      PIPELINE_MINIO_ACCESS_KEY_FILE: /run/secrets/minio_root_user
+      PIPELINE_MINIO_SECRET_KEY_FILE: /run/secrets/minio_root_password
+    networks:
+      - app
+      - data
+      - observability
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dagster-code:
+        condition: service_healthy
+
+  web:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    image: ${WEB_IMAGE:-immo-opportunities-web:local}
+    networks:
+      edge:
+        aliases: [web]
+      observability:
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/internal-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    <<: *service-defaults
+    image: ${CADDY_IMAGE:-caddy:2.11.4-alpine}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost:8080}
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+      - observability
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      martin:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  app:
+    internal: true
+  data:
+    internal: true
+  # Outbound-only path for source downloads. No ingress service or published port uses it.
+  ingestion:
+  observability:
+    internal: true
+  backup:
+
+secrets:
+  postgres_superuser_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/postgres_superuser_password
+  immo_db_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/immo_db_password
+  keycloak_db_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/keycloak_db_password
+  dagster_db_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/dagster_db_password
+  martin_db_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/martin_db_password
+  redis_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/redis_password
+  minio_root_user:
+    file: ${SECRETS_DIR:-./secrets/dev}/minio_root_user
+  minio_root_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/minio_root_password
+  keycloak_admin_user:
+    file: ${SECRETS_DIR:-./secrets/dev}/keycloak_admin_user
+  keycloak_admin_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/keycloak_admin_password
+  grafana_admin_user:
+    file: ${SECRETS_DIR:-./secrets/dev}/grafana_admin_user
+  grafana_admin_password:
+    file: ${SECRETS_DIR:-./secrets/dev}/grafana_admin_password
