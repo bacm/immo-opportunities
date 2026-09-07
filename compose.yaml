@@ -16,6 +16,32 @@ services:
     <<: *service-defaults
     image: ${POSTGRES_IMAGE:-postgis/postgis:15-3.5}
     platform: ${POSTGRES_PLATFORM:-linux/amd64}
+    # Reglage explicite : l'image livre le postgresql.conf d'initdb, dont les valeurs
+    # visent une base de quelques centaines de mega-octets. Mesure du 7 septembre 2026 sur
+    # le seul departement 35, base de 14 Go : un parcours de meta.entity_source_observation
+    # rapportait `shared hit=119 read=515925`, soit 99,98 % du travail hors du cache de
+    # PostgreSQL. Chaque valeur ci-dessous est surchargeable pour le VPS.
+    # Voir docs/operations/postgresql-tuning.md.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-2GB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-8GB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-64MB}
+      - -c
+      - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-1GB}
+      - -c
+      - random_page_cost=${POSTGRES_RANDOM_PAGE_COST:-1.1}
+      - -c
+      - effective_io_concurrency=${POSTGRES_EFFECTIVE_IO_CONCURRENCY:-200}
+      - -c
+      - max_wal_size=${POSTGRES_MAX_WAL_SIZE:-4GB}
+      - -c
+      - checkpoint_timeout=${POSTGRES_CHECKPOINT_TIMEOUT:-15min}
+      - -c
+      - max_parallel_workers_per_gather=${POSTGRES_MAX_PARALLEL_WORKERS_PER_GATHER:-4}
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres

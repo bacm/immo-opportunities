@@ -15,4 +15,24 @@ docker compose --env-file "$env_file" \
   -f compose.yaml -f compose.prod.yaml -f compose.observability.yaml \
   config --quiet
 
+# Le reglage PostgreSQL ne doit pas disparaitre en silence : l'image livre le
+# postgresql.conf d'initdb, dont work_mem a 4 Mo faisait deborder sur disque les agregats
+# des importeurs — 1 520 ms contre 475 ms mesurees le 7 septembre 2026. Voir
+# docs/operations/postgresql-tuning.md.
+missing=()
+rendered="$(docker compose --env-file "$env_file" \
+  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml \
+  config)"
+for setting in shared_buffers effective_cache_size work_mem maintenance_work_mem \
+  random_page_cost effective_io_concurrency max_wal_size; do
+  if ! grep -q -- "$setting=" <<<"$rendered"; then
+    missing+=("$setting")
+  fi
+done
+if ((${#missing[@]})); then
+  echo "PostgreSQL tuning missing from the Compose configuration: ${missing[*]}" >&2
+  exit 1
+fi
+
 echo "Development and production Compose configurations are valid."
+echo "PostgreSQL tuning is declared for every measured setting."
