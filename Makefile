@@ -89,12 +89,22 @@ cadastre-fixture:
 rnb-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
-		dagster-code python pipelines/scripts/import_rnb_release.py 2026-08-01 --department $(DEPARTMENT)
+		dagster-code python pipelines/scripts/import_rnb_release.py 2026-09-05 --department $(DEPARTMENT)
 
 ban-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/import_ban_release.py 2026-06-17 --department $(DEPARTMENT)
+
+bdnb-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_bdnb_release.py 2026-02-a --department $(DEPARTMENT)
+
+bdtopo-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_bdtopo_release.py 2026-06-15 --department $(DEPARTMENT)
 
 ban-census:
 	test -n "$(ARCHIVE)"

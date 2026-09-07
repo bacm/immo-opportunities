@@ -64,9 +64,9 @@ dérivée du graphe de dépendances.
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
 | [B1](./B1-audit-ban-ds05.md) | Terminer l'audit BAN DS-05 et prononcer un verdict | v0.3 | BUG-03 | M | Terminé | — |
-| [B2a](./B2a-import-bdnb-ds03.md) | Importer et auditer DS-03 BDNB Open sur le 35 | v0.3 | — | L | À faire | **prêt** |
-| [B2b](./B2b-import-bdtopo-ds04.md) | Importer et auditer DS-04 BD TOPO sur le 35 | v0.3 | — | L | À faire | **prêt** |
-| [B3](./B3-rapport-appariements.md) | Rapport de distribution et métriques d'appariement par commune | v0.3 | B1, B2a, B2b | M | À faire | attend B2a, B2b |
+| [B2a](./B2a-import-bdnb-ds03.md) | Importer et auditer DS-03 BDNB Open sur le 35 | v0.3 | — | L | Terminé | — |
+| [B2b](./B2b-import-bdtopo-ds04.md) | Importer et auditer DS-04 BD TOPO sur le 35 | v0.3 | BUG-05 | L | Terminé | — |
+| [B3](./B3-rapport-appariements.md) | Rapport de distribution et métriques d'appariement par commune | v0.3 | B1, B2a, B2b | M | À faire | **prêt** |
 | [B4](./B4-revue-manuelle-appariements.md) | Revue manuelle stratifiée d'un échantillon d'appariements | v0.3 | B3 | M | À faire | attend B3 |
 | [B5](./B5-features-morphologiques.md) | Calculer LAND-001..010 et BLD-001..003 sur releases acceptées | v0.3 | B4 | M | À faire | attend B4 |
 
@@ -78,6 +78,7 @@ dérivée du graphe de dépendances.
 | [BUG-02](./BUG-02-scripts-import-hors-dagster.md) | Les imports réels passent par des scripts one-shot, pas par Dagster | dette transverse | — | L | À faire | **prêt** |
 | [BUG-03](./BUG-03-quarantaine-par-attribut.md) | Le modèle de quarantaine ne connaît que l'enregistrement, pas l'attribut | v0.3 | — | M | Terminé | — |
 | [BUG-04](./BUG-04-propagation-referentiel-spatial.md) | Publier DS-01 ne propage pas le référentiel spatial canonique | v0.3 | — | S | Terminé | — |
+| [BUG-05](./BUG-05-ds02-rnb-non-reproductible.md) | DS-02 RNB n'est pas reproductible : l'URL épinglée est un alias mouvant | v0.3 | — | M | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -130,7 +131,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**5/38 terminés.** Prêts à démarrer : A1, B2a, B2b, BUG-02, C1, G6, G7.
+**8/39 terminés.** Prêts à démarrer : A1, B3, BUG-02, C1, G6, G7.
 
 <!-- END:tickets -->
 

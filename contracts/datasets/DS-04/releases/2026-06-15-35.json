@@ -1,0 +1,27 @@
+{
+  "release_id": "DS-04@2026-06-15",
+  "release_key": "2026-06-15",
+  "source_published_on": "2026-06-15",
+  "department": "35",
+  "contract_version": 1,
+  "source_edition": "BDTOPO_3-5_TOUSTHEMES_GPKG_LAMB93_D035_2026-06-15",
+  "discovery": {
+    "catalog_entry": "https://data.geopf.fr/telechargement/resource/BDTOPO/BDTOPO_3-5_TOUSTHEMES_GPKG_LAMB93_D035_2026-06-15",
+    "edition_date": "2026-06-15",
+    "zone": "D035",
+    "format": "GPKG",
+    "declared_md5": "4cff570dfdf9a665e7984e516c56dd6d"
+  },
+  "assets": [
+    {
+      "layer": "bdtopo",
+      "url": "https://data.geopf.fr/telechargement/download/BDTOPO/BDTOPO_3-5_TOUSTHEMES_GPKG_LAMB93_D035_2026-06-15/BDTOPO_3-5_TOUSTHEMES_GPKG_LAMB93_D035_2026-06-15.7z",
+      "media_type": "application/geopackage+sqlite3",
+      "content_encoding": "7z",
+      "byte_size": 528975501,
+      "sha256": "0d06d6e76f1ca0131e7bb228d9e1aa387001f77a1442f06481fe4a66002c559e",
+      "member_path": "BDTOPO_3-5_TOUSTHEMES_GPKG_LAMB93_D035_2026-06-15/BDTOPO/1_DONNEES_LIVRAISON_2026-06-00418/BDT_3-5_GPKG_LAMB93_D035_ED2026-06-15/BDT_3-5_GPKG_LAMB93_D035-ED2026-06-15.gpkg",
+      "layers": ["batiment", "troncon_de_route"]
+    }
+  ]
+}

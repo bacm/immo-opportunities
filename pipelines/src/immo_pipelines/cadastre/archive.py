@@ -5,12 +5,24 @@ import subprocess
 from collections.abc import Mapping
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import httpx
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from immo_pipelines.cadastre.contract import ChecksumMismatchError, sha256_file
+from immo_pipelines.cadastre.contract import (
+    ChecksumMismatchError,
+    SchemaChangeError,
+    sha256_file,
+)
+
+
+class ArchivedObjectMissingError(RuntimeError):
+    """L'objet n'est pas (ou pas encore) dans l'object store.
+
+    Distinct d'une panne d'acces : c'est le cas normal d'une cle d'archive nommee par un
+    manifeste avant le premier archivage.
+    """
 
 
 class ObjectStore(Protocol):
@@ -46,7 +58,15 @@ class MinioObjectStore:
         return str(result.etag)
 
     def get_file(self, object_key: str, destination: Path) -> None:
-        self._client.fget_object(self._bucket, object_key, str(destination))
+        s3_error: Any = import_module("minio.error").S3Error
+        try:
+            self._client.fget_object(self._bucket, object_key, str(destination))
+        except s3_error as exc:
+            # Ne traduire que l'absence : une erreur d'acces ou de configuration doit
+            # remonter telle quelle, jamais etre confondue avec « pas encore archive ».
+            if getattr(exc, "code", None) in {"NoSuchKey", "NoSuchBucket"}:
+                raise ArchivedObjectMissingError(object_key) from exc
+            raise
 
 
 @retry(
@@ -123,6 +143,25 @@ def download_asset(
         return _download_asset_httpx(source_url, destination, expected_sha256)
     except (httpx.TransportError, httpx.HTTPStatusError):
         return _download_asset_curl(source_url, destination, expected_sha256)
+
+
+def extract_seven_zip_member(archive_path: Path, member_path: str, destination_dir: Path) -> Path:
+    """Extraire un membre nomme d'une archive `7z` et renvoyer son chemin.
+
+    DS-04 est la seule source distribuee en `7z`, et son GeoPackage de 3,1 Go doit atterrir
+    sur disque : `sqlite3` a besoin d'un fichier reel, pas d'un flux. Le membre est celui que
+    le manifeste epingle (`member_path`), jamais devine dans l'archive.
+    """
+    seven_zip_file: Any = import_module("py7zr").SevenZipFile
+    with seven_zip_file(archive_path, "r") as archive:
+        names = cast(list[str], archive.getnames())
+        if member_path not in names:
+            raise SchemaChangeError(f"Archive {archive_path.name} has no member {member_path}")
+        archive.extract(path=str(destination_dir), targets=[member_path])
+    extracted = destination_dir / member_path
+    if not extracted.is_file():
+        raise RuntimeError(f"Extraction produced no file at {extracted}")
+    return extracted
 
 
 def archive_asset(

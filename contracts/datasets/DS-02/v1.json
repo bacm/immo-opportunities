@@ -15,18 +15,34 @@
     "personal_data": false
   },
   "release": {
-    "key_format": "source publication timestamp",
+    "key_format": "last-modified timestamp of the source object",
     "discovery_url": "https://www.data.gouv.fr/datasets/referentiel-national-des-batiments",
     "asset_selection": "department export whose resource title identifies department 35",
-    "partition_dimensions": ["release", "department"],
+    "partition_dimensions": [
+      "release",
+      "department"
+    ],
     "checksum_algorithm": "sha256",
-    "latest_alias_forbidden_for_reproducible_imports": true
+    "latest_alias_forbidden_for_reproducible_imports": true,
+    "key_format_rationale": "The RNB is continuously updated and publishes no millesime. A release key can therefore not name an upstream edition: it names the producer's bytes as observed, and the SHA-256 is what identifies them. Two operators archiving the same bytes derive the same key.",
+    "source_url_is_mutable": true,
+    "archived_copy_required": true,
+    "archived_copy_rationale": "The producer overwrites one object per department, keeps a single S3 version and exposes no dated object. Reproducibility rests on the archived copy, which the manifest must name so that a database rebuilt from scratch still has a path back to the accepted bytes."
   },
-  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "coverage": {
+    "country": "FR",
+    "initial_departments": [
+      "35"
+    ]
+  },
   "spatial": {
     "source_srid": 4326,
     "canonical_srid": 2154,
-    "allowed_geometry_types": ["Point", "Polygon", "MultiPolygon"],
+    "allowed_geometry_types": [
+      "Point",
+      "Polygon",
+      "MultiPolygon"
+    ],
     "normalization": "rnb-normalize@1",
     "repair": "make-valid-polygonal@1"
   },
@@ -35,7 +51,10 @@
       "target": "meta.entity_source_observation",
       "source_entity_type": "rnb_building",
       "identity_priority": "preferred",
-      "required_properties": {"rnb_id": "string", "shape": "point or polygonal geometry"},
+      "required_properties": {
+        "rnb_id": "string",
+        "shape": "point or polygonal geometry"
+      },
       "optional_properties": {
         "status": "string|null",
         "point": "point geometry|null",
@@ -54,17 +73,50 @@
     "point_geometry_policy": "create stable identity without inventing a footprint; resolve polygon from linked source"
   },
   "quality_checks": [
-    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "geometry_validity", "version": "1", "scope": "commune", "blocks_publication": true},
-    {"code": "duplicate_rnb_id", "version": "1", "scope": "department", "blocks_publication": true},
-    {"code": "status_distribution", "version": "1", "scope": "department", "blocks_publication": false},
-    {"code": "match_rate", "version": "1", "scope": "commune", "blocks_publication": true}
+    {
+      "code": "schema",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "checksum",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "geometry_validity",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": true
+    },
+    {
+      "code": "duplicate_rnb_id",
+      "version": "1",
+      "scope": "department",
+      "blocks_publication": true
+    },
+    {
+      "code": "status_distribution",
+      "version": "1",
+      "scope": "department",
+      "blocks_publication": false
+    },
+    {
+      "code": "match_rate",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": true
+    }
   ],
   "publication": {
     "atomic_pointer_scope": "department",
     "requires_stratified_manual_match_review": true,
     "ambiguous_critical_matches_block": true
   },
-  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "observations": "append-only by release"
+  }
 }

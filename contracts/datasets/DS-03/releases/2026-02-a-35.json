@@ -1,0 +1,45 @@
+{
+  "release_id": "DS-03@2026-02-a",
+  "release_key": "2026-02-a",
+  "source_published_on": "2026-05-22",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "BDNB millesime identifier, as the producer names it. The export was published on 2026-05-22; the millesime it describes is 2026-02-a.",
+  "discovery": {
+    "catalog_entry": "https://www.data.gouv.fr/datasets/base-de-donnees-nationale-des-batiments",
+    "millesime_page": "https://bdnb.io/archives_data/bdnb_millesime_2026_02_a/",
+    "data_model_version": "v0.7.10",
+    "note": "The producer publishes a dated departmental export for the current millesime, and a SHA-256 for it in a sibling _metadata.yml. The national export (39 GB csv, 51 GB gpkg) is therefore not needed: no local slicing is involved, so nothing about this release depends on a procedure of ours."
+  },
+  "assets": [
+    {
+      "layer": "bdnb",
+      "url": "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2026-02-a/millesime_2026-02-a_dep35/open_data_millesime_2026-02-a_dep35_gpkg.zip",
+      "media_type": "application/geopackage+sqlite3",
+      "content_encoding": "zip",
+      "byte_size": 804719036,
+      "sha256": "eea296e0cac1279463bfbe8d9b97b53bd1dea1a9db10cb68a94665939e7818c9",
+      "declared_sha256": "eea296e0cac1279463bfbe8d9b97b53bd1dea1a9db10cb68a94665939e7818c9",
+      "declared_sha256_source": "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2026-02-a/millesime_2026-02-a_dep35/open_data_millesime_2026-02-a_dep35_gpkg_metadata.yml",
+      "member_path": "gpkg/bdnb.gpkg",
+      "tables": [
+        "batiment_groupe_compile",
+        "batiment_construction",
+        "rel_batiment_construction_rnb",
+        "rel_batiment_groupe_parcelle",
+        "metadonnees_colonne"
+      ]
+    }
+  ],
+  "companion_assets": [
+    {
+      "layer": "bdnb_csv",
+      "purpose": "normalised per-theme tables, used to audit the field policy against the producer's own column dictionary",
+      "url": "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2026-02-a/millesime_2026-02-a_dep35/open_data_millesime_2026-02-a_dep35_csv.zip",
+      "byte_size": 619682182,
+      "sha256": "a2f500545e8591f3c4e0b5a8d5ff8749edd2965bc9fef0c1e8d54da8068b28f6",
+      "imported": false
+    }
+  ],
+  "note": "The CSTB is the first producer in this repository to publish a SHA-256 for its own asset: both checksums above were verified conforming on 7 September 2026. The URL carries the millesime, so it is not an alias -- unlike DS-02, see BUG-05."
+}

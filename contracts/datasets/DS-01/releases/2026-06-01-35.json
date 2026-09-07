@@ -11,24 +11,30 @@
     {
       "layer": "communes",
       "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-communes.json.gz",
-      "declared_size": "4 MiB",
-      "sha256": null,
-      "status": "discovered"
+      "sha256": "e704ff62739c6371bbcbe857635c2ade60b70134709f637886b7332f8c1b1bf0",
+      "status": "pinned",
+      "byte_size": 4207492,
+      "media_type": "application/geo+json",
+      "content_encoding": "gzip"
     },
     {
       "layer": "parcelles",
       "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-parcelles.json.gz",
-      "declared_size": "189 MiB",
-      "sha256": null,
-      "status": "discovered"
+      "sha256": "ef8ea1a4ccaf709662c7276ed32ce18d4c46f9ef1b9701bd80f8c05449b5dcf1",
+      "status": "pinned",
+      "byte_size": 198030907,
+      "media_type": "application/geo+json",
+      "content_encoding": "gzip"
     },
     {
       "layer": "batiments",
       "url": "https://cadastre.data.gouv.fr/data/etalab-cadastre/2026-06-01/geojson/departements/35/cadastre-35-batiments.json.gz",
-      "declared_size": "51 MiB",
-      "sha256": null,
-      "status": "discovered"
+      "sha256": "ecc71585cd6654f3bd4f3c278914dcca4cde429e03181aa88cccbc044d826497",
+      "status": "pinned",
+      "byte_size": 52953504,
+      "media_type": "application/geo+json",
+      "content_encoding": "gzip"
     }
   ],
-  "note": "Checksums are filled from downloaded bytes before archival and import; null is never publishable."
+  "note": "Checksums measured from the dated Etalab directory and verified against docs/data/DS-01-acceptance.md on 7 September 2026. A null checksum is never publishable: immo_pipelines.cadastre.manifest.require_reproducible refuses it before download."
 }

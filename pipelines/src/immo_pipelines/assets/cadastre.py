@@ -1,5 +1,4 @@
 import hashlib
-import json
 import tempfile
 from datetime import date, datetime
 from decimal import Decimal
@@ -18,14 +17,15 @@ from dagster import (
     asset,
 )
 
-from immo_pipelines.cadastre.archive import (
-    MinioObjectStore,
-    archive_asset,
-    download_asset,
-)
-from immo_pipelines.cadastre.catalog import DatasetCatalog, RawAssetRegistration
-from immo_pipelines.cadastre.contract import SchemaChangeError, load_contract, sha256_file
+from immo_pipelines.cadastre.archive import MinioObjectStore
+from immo_pipelines.cadastre.catalog import DatasetCatalog
+from immo_pipelines.cadastre.contract import SchemaChangeError, load_contract
 from immo_pipelines.cadastre.importer import CadastreImporter
+from immo_pipelines.cadastre.manifest import (
+    load_release_manifest,
+    require_reproducible,
+    resolve_asset,
+)
 from immo_pipelines.cadastre.processor import CadastreFeatureProcessor
 from immo_pipelines.cadastre.settings import CadastreSettings
 
@@ -37,10 +37,6 @@ cadastre_partitions = MultiPartitionsDefinition(
         "release": cadastre_release_partitions,
     }
 )
-
-
-def _project_root() -> Path:
-    return Path(__file__).resolve().parents[4]
 
 
 def _partition(context: AssetExecutionContext) -> tuple[str, str]:
@@ -72,17 +68,13 @@ def _json_compatible(value: object) -> object:
 )
 def cadastre_department_release(context: AssetExecutionContext) -> MaterializeResult[Any]:
     release_key, department_code = _partition(context)
-    manifest_path = (
-        _project_root()
-        / "contracts"
-        / "datasets"
-        / "DS-01"
-        / "releases"
-        / f"{release_key}-{department_code}.json"
-    )
-    manifest_value = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest = cast(dict[str, Any], manifest_value)
-    release_id = str(manifest["release_id"])
+    manifest = load_release_manifest("DS-01", release_key, department_code)
+    release_id = manifest.release_id
+    # Refuser avant tout telechargement un asset qu'on ne saurait pas retrouver. DS-01
+    # portait `"sha256": null` sur ses trois couches : le reimport telechargeait donc des
+    # octets qu'aucun checksum ne contraignait. Voir BUG-05.
+    for manifest_asset in manifest.assets:
+        require_reproducible(release_id, manifest_asset)
     contract = load_contract()
     processor = CadastreFeatureProcessor(contract)
     settings = CadastreSettings.from_environment()
@@ -104,62 +96,26 @@ def cadastre_department_release(context: AssetExecutionContext) -> MaterializeRe
         catalog.register_release(
             release_id=release_id,
             release_key=release_key,
-            published_on=date.fromisoformat(str(manifest["source_published_on"])),
+            published_on=date.fromisoformat(manifest.source_published_on),
             schema_fingerprint=contract.schema_fingerprint(),
             department_code=department_code,
         )
         importer = CadastreImporter(connection, processor)
         with tempfile.TemporaryDirectory(prefix="immo-cadastre-") as temp_directory:
             temporary_root = Path(temp_directory)
-            for asset_manifest_value in cast(list[dict[str, Any]], manifest["assets"]):
-                layer = str(asset_manifest_value["layer"])
-                source_url = str(asset_manifest_value["url"])
-                expected_checksum_value = asset_manifest_value.get("sha256")
-                expected_checksum = (
-                    str(expected_checksum_value) if expected_checksum_value is not None else None
-                )
+            for manifest_asset in manifest.assets:
+                layer = manifest_asset.layer
                 local_path = temporary_root / f"{layer}.json.gz"
-                archived_asset = catalog.find_raw_asset(
-                    release_id=release_id,
-                    layer=layer,
-                    territory_code=department_code,
-                    source_url=source_url,
+                resolved = resolve_asset(
+                    catalog=catalog,
+                    object_store=object_store,
+                    manifest=manifest,
+                    asset=manifest_asset,
+                    destination=local_path,
                 )
-                if archived_asset is not None:
-                    context.log.info(
-                        "Restoring %s from immutable archive %s",
-                        layer,
-                        archived_asset.object_key,
-                    )
-                    object_store.get_file(archived_asset.object_key, local_path)
-                    checksum = sha256_file(local_path, archived_asset.sha256)
-                    raw_asset_id = archived_asset.id
-                else:
-                    checksum = download_asset(source_url, local_path, expected_checksum)
-                    object_key = (
-                        f"DS-01/{release_key}/department/{department_code}/"
-                        f"{layer}/{checksum}.json.gz"
-                    )
-                    etag = archive_asset(
-                        object_store,
-                        local_path,
-                        object_key=object_key,
-                        sha256=checksum,
-                        source_url=source_url,
-                        release_id=release_id,
-                    )
-                    raw_asset_id = catalog.register_raw_asset(
-                        RawAssetRegistration(
-                            release_id=release_id,
-                            layer=layer,
-                            territory_code=department_code,
-                            source_url=source_url,
-                            object_key=object_key,
-                            byte_size=local_path.stat().st_size,
-                            sha256=checksum,
-                            etag=etag,
-                        )
-                    )
+                context.log.info("Resolved %s from %s", layer, resolved.origin)
+                checksum = resolved.sha256
+                raw_asset_id = resolved.raw_asset_id
                 catalog.record_asset_check(
                     release_id=release_id,
                     department_code=department_code,

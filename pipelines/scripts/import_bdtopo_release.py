@@ -8,7 +8,7 @@ from pathlib import Path
 
 import psycopg
 
-from immo_pipelines.cadastre.archive import MinioObjectStore
+from immo_pipelines.cadastre.archive import MinioObjectStore, extract_seven_zip_member
 from immo_pipelines.cadastre.catalog import DatasetCatalog
 from immo_pipelines.cadastre.manifest import (
     load_release_manifest,
@@ -16,22 +16,27 @@ from immo_pipelines.cadastre.manifest import (
     resolve_asset,
 )
 from immo_pipelines.cadastre.settings import CadastreSettings
-from immo_pipelines.spatial.importer import RnbImporter
+from immo_pipelines.spatial.bdtopo import BDTOPO_TRANSFORMATION_VERSION
+from immo_pipelines.spatial.importer import BdtopoImporter
 
 
 def contract_fingerprint() -> str:
-    path = project_root() / "contracts" / "datasets" / "DS-02" / "v1.json"
+    path = project_root() / "contracts" / "datasets" / "DS-04" / "v1.json"
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Archive and import one RNB department release")
+    parser = argparse.ArgumentParser(
+        description="Archive and import one BD TOPO department release"
+    )
     parser.add_argument("release")
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
     arguments = parser.parse_args()
 
-    manifest = load_release_manifest("DS-02", arguments.release, arguments.department)
-    asset = manifest.asset("buildings")
+    manifest = load_release_manifest("DS-04", arguments.release, arguments.department)
+    asset = manifest.asset("bdtopo")
+    if asset.member_path is None:
+        raise RuntimeError("DS-04 manifest must name the GeoPackage member inside the archive")
     settings = CadastreSettings.from_environment()
     object_store = MinioObjectStore(
         settings.minio_endpoint, settings.minio_access_key, settings.minio_secret_key
@@ -51,31 +56,49 @@ def main() -> int:
             published_on=date.fromisoformat(manifest.source_published_on),
             schema_fingerprint=contract_fingerprint(),
             department_code=manifest.department,
-            data_source_id="DS-02",
-            source_srid=4326,
+            data_source_id="DS-04",
+            source_srid=2154,
         )
-        with tempfile.TemporaryDirectory(prefix="immo-rnb-") as temporary_directory:
-            local_path = Path(temporary_directory) / "rnb.csv.zip"
+        with tempfile.TemporaryDirectory(prefix="immo-bdtopo-") as temporary_directory:
+            working = Path(temporary_directory)
+            archive_path = working / "bdtopo.7z"
             resolved = resolve_asset(
                 catalog=catalog,
                 object_store=object_store,
                 manifest=manifest,
                 asset=asset,
-                destination=local_path,
+                destination=archive_path,
             )
-            importer = RnbImporter(connection)
+            geopackage = extract_seven_zip_member(archive_path, asset.member_path, working)
+            # L'archive de 529 Mo n'a plus d'utilite une fois le GeoPackage de 3,1 Go extrait,
+            # et les deux ensemble saturent inutilement le disque du conteneur.
+            archive_path.unlink(missing_ok=True)
+
+            importer = BdtopoImporter(connection)
             outcome = importer.import_archive(
-                import_run_id=f"rnb:{manifest.release_key}:{manifest.department}",
+                import_run_id=(
+                    f"bdtopo:{manifest.release_key}:{manifest.department}"
+                    f":{BDTOPO_TRANSFORMATION_VERSION}"
+                ),
                 release_id=manifest.release_id,
                 department_code=manifest.department,
                 raw_asset_id=resolved.raw_asset_id,
-                source_path=local_path,
+                source_path=geopackage,
                 idempotency_key=(
-                    f"{manifest.release_id}:{manifest.department}:buildings:{resolved.sha256}"
+                    f"{manifest.release_id}:{manifest.department}:bdtopo:"
+                    f"{resolved.sha256}:{BDTOPO_TRANSFORMATION_VERSION}"
                 ),
             )
             importer.refresh_match_metrics(manifest.release_id, manifest.department)
-    print(json.dumps({**asdict(outcome), "asset_origin": resolved.origin}, sort_keys=True))
+            rates = importer.method_rates(manifest.release_id)
+    print(
+        json.dumps(
+            {**asdict(outcome), "asset_origin": resolved.origin, "match_rates": rates},
+            sort_keys=True,
+            ensure_ascii=False,
+            default=str,
+        )
+    )
     return 0
 
 

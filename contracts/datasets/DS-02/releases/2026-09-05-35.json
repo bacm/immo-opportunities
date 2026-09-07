@@ -1,0 +1,32 @@
+{
+  "release_id": "DS-02@2026-09-05",
+  "release_key": "2026-09-05",
+  "source_published_on": "2026-09-05",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "last-modified of the source object, observed 2026-09-05T10:19:41Z. The RNB is a continuously updated database and publishes no millesime: the key identifies the producer's bytes, not an upstream edition.",
+  "discovery": {
+    "catalog_entry": "https://www.data.gouv.fr/datasets/referentiel-national-des-batiments",
+    "resource_title": "Export Départemental 35",
+    "declared_sha1": "ba0fe9971d4bec407af8451920ffbde4b63dc0bf",
+    "declared_filesize": 191084366,
+    "note": "data.gouv.fr publishes a SHA-1 that tracks the mutable object. Verified conforming at archival; it is a transfer cross-check, never a pin."
+  },
+  "assets": [
+    {
+      "layer": "buildings",
+      "url": "https://rnb-opendata.s3.fr-par.scw.cloud/files/RNB_35.csv.zip",
+      "url_is_mutable": true,
+      "media_type": "text/csv",
+      "content_encoding": "zip",
+      "byte_size": 191084366,
+      "sha256": "becfb525c771fc7bbae1f7a4318a907d19c7ac87be6a8d6478fff93c311b89a6",
+      "archive": {
+        "bucket": "raw-sources",
+        "object_key": "DS-02/2026-09-05/department/35/buildings/becfb525c771fc7bbae1f7a4318a907d19c7ac87be6a8d6478fff93c311b89a6.csv.zip"
+      },
+      "member_path": "RNB_35.csv"
+    }
+  ],
+  "note": "The producer overwrites files/RNB_35.csv.zip in place, keeps a single S3 version and exposes no dated object. The archived copy is therefore the only durable path back to these bytes: it must be restored with the platform backup before this release can be reimported. See BUG-05."
+}

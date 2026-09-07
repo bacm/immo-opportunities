@@ -13,5 +13,8 @@
       "byte_size": 190932054,
       "sha256": "b40a4d474d6cbc4cfec2aa8460714675f33349b3cd1e97b3dad4e7b7883d0751"
     }
-  ]
+  ],
+  "status": "withdrawn",
+  "withdrawn_on": "2026-09-07",
+  "withdrawn_reason": "These bytes are unrecoverable. The pinned URL is a mutable alias the producer overwrites in place; the bucket keeps a single S3 version and exposes no dated object, and the immutable copy was absent from the object store. Kept as the record of what was accepted on 1 August 2026, never as an importable release: require_reproducible refuses it, since the URL carries no date and no archived copy is named. Superseded by DS-02@2026-09-05. See BUG-05."
 }
