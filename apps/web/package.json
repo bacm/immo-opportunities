@@ -7,8 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "generate:api": "openapi-typescript ../../contracts/openapi/v1.json -o src/generated/api.ts",
-    "test:e2e": "playwright test",
-    "typecheck": "tsc -b --pretty false"
+    "test:e2e": "playwright test --grep-invert 'captures de démonstration'",
+    "typecheck": "tsc -b --pretty false",
+    "capture:demo": "playwright test demo-capture --grep 'captures de démonstration'"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
