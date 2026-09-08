@@ -463,6 +463,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/review/samples/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample Progress */
+        get: operations["sample_progress_api_v1_review_samples__sample_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/samples/{sample_id}/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Next Case */
+        get: operations["next_case_api_v1_review_samples__sample_id__next_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/samples/{sample_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample Results */
+        get: operations["sample_results_api_v1_review_samples__sample_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/verdicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Verdict */
+        post: operations["submit_verdict_api_v1_review_verdicts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reviews/{review_id}/outcomes": {
         parameters: {
             query?: never;
@@ -662,6 +730,40 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * BlindCaseResponse
+         * @description Un cas à juger, **sans** la décision du moteur.
+         *
+         *     Aucun champ de ce modèle ne porte la décision, la confiance ou la justification. Les
+         *     exposer ferait mesurer à la revue l'accord avec le moteur au lieu de l'exactitude, ce que
+         *     le protocole de B4 interdit explicitement.
+         */
+        BlindCaseResponse: {
+            /** Commune Code */
+            commune_code: string | null;
+            /** Commune Name */
+            commune_name: string | null;
+            /** Drawn Rank */
+            drawn_rank: number;
+            /** Id */
+            id: number;
+            /** Latitude */
+            latitude: number | null;
+            /** Left Kind */
+            left_kind: string | null;
+            /** Left Label */
+            left_label: string | null;
+            /** Longitude */
+            longitude: number | null;
+            /** Right Kind */
+            right_kind: string | null;
+            /** Right Label */
+            right_label: string | null;
+            /** Sample Id */
+            sample_id: string;
+            /** Territorial Stratum */
+            territorial_stratum: string;
         };
         /** CadastralParcelResponse */
         CadastralParcelResponse: {
@@ -1086,6 +1188,25 @@ export interface components {
              */
             stage: "desk_analysis" | "contact" | "visit" | "offer" | "acquisition";
         };
+        /** ReviewProgressResponse */
+        ReviewProgressResponse: {
+            /** Drawn At */
+            drawn_at: string;
+            /** Judged Cases */
+            judged_cases: number;
+            /** Protocol Document */
+            protocol_document: string;
+            /** Sample Id */
+            sample_id: string;
+            /** Seed */
+            seed: number;
+            /** Size Rationale */
+            size_rationale: string;
+            /** Target Size */
+            target_size: number;
+            /** Total Cases */
+            total_cases: number;
+        };
         /** ReviewRequest */
         ReviewRequest: {
             /** Blind Id */
@@ -1340,6 +1461,25 @@ export interface components {
              */
             status: "new" | "to_analyze" | "retained" | "contact_to_prepare" | "contacted" | "visit" | "offer" | "acquired" | "lost" | "rejected" | "ignored";
         };
+        /** StratumResultResponse */
+        StratumResultResponse: {
+            /** Accuracy */
+            accuracy: number | null;
+            /** Correct */
+            correct: number;
+            /** Drawn */
+            drawn: number;
+            /** Incorrect */
+            incorrect: number;
+            /** Judged */
+            judged: number;
+            /** Matching Stratum */
+            matching_stratum: string;
+            /** Territorial Stratum */
+            territorial_stratum: string;
+            /** Undecidable */
+            undecidable: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -1352,6 +1492,33 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VerdictRequest */
+        VerdictRequest: {
+            /** Case Id */
+            case_id: number;
+            /** Evidence Consulted */
+            evidence_consulted: string;
+            /** Rationale */
+            rationale: string;
+            /** Reviewer */
+            reviewer: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "correct" | "incorrect" | "undecidable";
+        };
+        /** VerdictResponse */
+        VerdictResponse: {
+            /** Case Id */
+            case_id: number;
+            /** Id */
+            id: number;
+            /** Recorded At */
+            recorded_at: string;
+            /** Verdict */
+            verdict: string;
         };
         /** VersionResponse */
         VersionResponse: {
@@ -2256,6 +2423,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_progress_api_v1_review_samples__sample_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewProgressResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    next_case_api_v1_review_samples__sample_id__next_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlindCaseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_results_api_v1_review_samples__sample_id__results_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StratumResultResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_verdict_api_v1_review_verdicts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerdictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictResponse"];
                 };
             };
             /** @description Validation Error */

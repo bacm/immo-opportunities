@@ -17,6 +17,7 @@ import {
   MapPin,
   Plus,
   RefreshCw,
+  ClipboardCheck,
   Search,
   Settings,
   TriangleAlert,
@@ -33,6 +34,10 @@ import {
   loadSession,
   publishBrittany,
   loadAddressContext,
+  loadNextReviewCase,
+  loadReviewProgress,
+  loadReviewResults,
+  submitReviewVerdict,
   loadCommuneCoverage,
   searchEntities,
   updateCandidateStatus,
@@ -45,7 +50,10 @@ import {
   type OpportunitySummary,
   type ScenarioRequest,
   type AddressContext,
+  type BlindCase,
   type CommuneCoverage,
+  type ReviewProgress,
+  type StratumResult,
   type EntityMatch,
   type SearchResult,
   type Session,
@@ -109,6 +117,7 @@ function App() {
   const [addressContext, setAddressContext] = useState<AddressContext | null>(null)
   const [addressLoading, setAddressLoading] = useState(false)
   const [coverage, setCoverage] = useState<CommuneCoverage | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [detail, setDetail] = useState<EntityDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [query, setQuery] = useState(initialParams.get('q') ?? '')
@@ -367,7 +376,7 @@ function App() {
     <div className={`app-shell ${opportunityId || selection ? 'has-detail' : ''}`}>
       <aside className="sidebar" aria-label="Navigation principale">
         <div className="brand-mark" title="Immo">i<span>m</span></div>
-        <nav><button className="nav-item active"><Compass size={21} /><span>Explorer</span></button><button className="nav-item" onClick={() => setAdminOpen(true)}><Database size={20} /><span>Pilote</span></button></nav>
+        <nav><button className="nav-item active"><Compass size={21} /><span>Explorer</span></button><button className="nav-item" onClick={() => setAdminOpen(true)}><Database size={20} /><span>Pilote</span></button><button className="nav-item" onClick={() => setReviewOpen(true)}><ClipboardCheck size={20} /><span>Revue</span></button></nav>
         <div className="sidebar-bottom"><button className="nav-item"><CircleHelp size={20} /><span>Aide</span></button><button className="avatar" aria-label={`Compte de ${session?.display_name ?? 'l’utilisateur'}`}>{initials(session?.display_name ?? 'Utilisateur')}</button></div>
       </aside>
 
@@ -445,6 +454,7 @@ function App() {
         </section>
       </main>
       {adminOpen && <AdminPanel session={session} onClose={() => setAdminOpen(false)} />}
+      {reviewOpen && <ReviewPanel sampleId="b4-2026-09-08" reviewer={session?.display_name ?? 'relecteur'} onClose={() => setReviewOpen(false)} />}
     </div>
   )
 }
@@ -715,6 +725,137 @@ function AddressSheet({ context, onClose, onRelated }: { context: AddressContext
       })}
     </div>
   </>
+}
+
+/**
+ * Écran de revue manuelle — B4.
+ *
+ * Le relecteur ne voit **jamais** la décision du moteur : l'API ne la lui envoie pas. Ce n'est
+ * donc pas un masquage côté écran, qu'une inspection du réseau contournerait, mais une absence
+ * à la source. Sans cela la revue mesurerait l'accord avec le moteur, pas l'exactitude.
+ *
+ * L'écran affiche ce qu'il faut pour aller regarder la donnée d'origine : les identifiants des
+ * deux côtés, la commune, et un lien vers la carte au bon endroit. Le protocole demande de
+ * consulter les sources, pas de trancher au jugé — d'où le champ « ce que j'ai consulté », qui
+ * est obligatoire.
+ */
+function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; reviewer: string; onClose: () => void }) {
+  const [progress, setProgress] = useState<ReviewProgress | null>(null)
+  const [current, setCurrent] = useState<BlindCase | null>(null)
+  const [results, setResults] = useState<StratumResult[]>([])
+  const [verdict, setVerdict] = useState<'correct' | 'incorrect' | 'undecidable' | ''>('')
+  const [rationale, setRationale] = useState('')
+  const [evidence, setEvidence] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [finished, setFinished] = useState(false)
+
+  const refresh = useCallback(async () => {
+    setError('')
+    try {
+      const [nextProgress, nextResults] = await Promise.all([
+        loadReviewProgress(sampleId),
+        loadReviewResults(sampleId),
+      ])
+      setProgress(nextProgress)
+      setResults(nextResults)
+      try {
+        setCurrent(await loadNextReviewCase(sampleId))
+        setFinished(false)
+      } catch {
+        // 404 : plus aucun cas à juger. C'est une fin normale, pas une erreur.
+        setCurrent(null)
+        setFinished(true)
+      }
+    } catch (caught) {
+      setError((caught as Error).message)
+    }
+  }, [sampleId])
+
+  useEffect(() => { void refresh() }, [refresh])
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!current || !verdict) return
+    setBusy(true)
+    setError('')
+    try {
+      await submitReviewVerdict({
+        case_id: current.id, verdict, reviewer,
+        rationale: rationale.trim(), evidence_consulted: evidence.trim(),
+      })
+      setVerdict(''); setRationale(''); setEvidence('')
+      await refresh()
+    } catch (caught) {
+      setError((caught as Error).message)
+    } finally { setBusy(false) }
+  }
+
+  const mapHref = current && current.longitude !== null && current.latitude !== null
+    ? `/?lon=${current.longitude.toFixed(6)}&lat=${current.latitude.toFixed(6)}&z=18.00`
+    : null
+
+  return <div className="admin-overlay" role="dialog" aria-modal="true" aria-labelledby="review-title">
+    <section className="admin-panel">
+      <header>
+        <div><span className="eyebrow">REVUE MANUELLE</span><h2 id="review-title">Échantillon {sampleId}</h2></div>
+        <button className="icon-button" aria-label="Fermer la revue" onClick={onClose}><X size={17} /></button>
+      </header>
+      <div className="admin-content">
+        {error && <State icon={<TriangleAlert />} title="Enregistrement impossible" text={error} />}
+        {progress && <section className="detail-section">
+          <h3>Avancement</h3>
+          <dl className="facts">
+            <div><dt>Cas jugés</dt><dd>{progress.judged_cases} / {progress.total_cases}</dd></div>
+            <div><dt>Graine</dt><dd>{progress.seed}</dd></div>
+            <div><dt>Protocole</dt><dd>{progress.protocol_document}</dd></div>
+          </dl>
+          <p className="detail-note">{progress.size_rationale}</p>
+        </section>}
+
+        {finished && <State icon={<CheckCircle2 />} title="Échantillon entièrement jugé" text="Tous les cas tirés portent un verdict. Le dépouillement par strate est ci-dessous." />}
+
+        {current && <section className="detail-section">
+          <h3>Cas {current.drawn_rank} · {current.territorial_stratum}</h3>
+          <dl className="facts">
+            <div><dt>Commune</dt><dd>{current.commune_name ?? current.commune_code}</dd></div>
+            <div><dt>{current.left_kind}</dt><dd>{current.left_label}</dd></div>
+            <div><dt>{current.right_kind}</dt><dd>{current.right_label}</dd></div>
+          </dl>
+          {mapHref
+            ? <p className="detail-note"><a href={mapHref} target="_blank" rel="noreferrer">Ouvrir sur la carte, zoom 18</a> — puis comparer aux sources d’origine.</p>
+            : <p className="detail-note">Ce cas n’a pas de position exploitable : le juger demande de consulter les sources directement.</p>}
+
+          <form className="review-form" onSubmit={submit}>
+            <div className="review-verdicts" role="group" aria-label="Verdict">
+              {([['correct', 'Correct'], ['incorrect', 'Incorrect'], ['undecidable', 'Indécidable']] as const).map(([value, label]) =>
+                <button key={value} type="button" className={verdict === value ? 'active' : ''} onClick={() => setVerdict(value)}>{label}</button>)}
+            </div>
+            <label>Motif<textarea value={rationale} maxLength={2000} onChange={(event) => setRationale(event.target.value)} placeholder="Pourquoi ce verdict…" /></label>
+            <label>Ce que j’ai consulté<input value={evidence} maxLength={500} onChange={(event) => setEvidence(event.target.value)} placeholder="carte, BAN, cadastre…" /></label>
+            <button type="submit" disabled={busy || !verdict || rationale.trim().length < 3 || evidence.trim().length < 3}>Enregistrer et passer au suivant</button>
+          </form>
+          <p className="detail-note">« Indécidable » est un résultat valide. Ne pas le forcer : un cas indécidable n’est jamais compté comme correct.</p>
+        </section>}
+
+        {results.length > 0 && <section className="detail-section">
+          <h3>Dépouillement par strate</h3>
+          <div className="review-results">
+            <table>
+              <thead><tr><th>Appariement</th><th>Territoire</th><th>Tirés</th><th>Jugés</th><th>Corrects</th><th>Incorrects</th><th>Indécid.</th><th>Exactitude</th></tr></thead>
+              <tbody>{results.map((row) => <tr key={`${row.matching_stratum}:${row.territorial_stratum}`}>
+                <td>{row.matching_stratum}</td><td>{row.territorial_stratum}</td>
+                <td>{row.drawn}</td><td>{row.judged}</td><td>{row.correct}</td>
+                <td>{row.incorrect}</td><td>{row.undecidable}</td>
+                <td>{row.accuracy === null ? '—' : `${(row.accuracy * 100).toFixed(1)} %`}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <p className="detail-note">L’exactitude est calculée sur les seuls cas tranchés. Les indécidables ont leur colonne et ne gonflent aucun taux.</p>
+        </section>}
+      </div>
+    </section>
+  </div>
 }
 
 export default App

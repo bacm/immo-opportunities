@@ -10,6 +10,7 @@ from immo.api.routes.explorer import router as explorer_router
 from immo.api.routes.health import router as health_router
 from immo.api.routes.market_data import router as market_data_router
 from immo.api.routes.meta import router as meta_router
+from immo.api.routes.review import router as review_router
 from immo.api.routes.scoring import router as scoring_router
 from immo.api.routes.spatial import router as spatial_router
 from immo.config import get_settings
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(cadastre_router)
     app.include_router(brittany_pilot_router)
     app.include_router(spatial_router)
+    app.include_router(review_router)
     app.include_router(explorer_router)
     app.include_router(market_data_router)
     app.include_router(scoring_router)

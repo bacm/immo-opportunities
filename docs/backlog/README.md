@@ -81,6 +81,7 @@ dérivée du graphe de dépendances.
 | [BUG-05](./BUG-05-ds02-rnb-non-reproductible.md) | DS-02 RNB n'est pas reproductible : l'URL épinglée est un alias mouvant | v0.3 | — | M | Terminé | — |
 | [BUG-06](./BUG-06-reglage-postgresql.md) | PostgreSQL tourne avec le `postgresql.conf` d'initdb | dette transverse | — | S | Terminé | — |
 | [BUG-07](./BUG-07-tuiles-vides-et-recherche-adresse.md) | L'Explorer ne montre rien : carte vide et recherche d'adresse en erreur | v0.4 | — | M | Terminé | — |
+| [BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md) | Une release remplacée n'est jamais retirée | dette transverse | — | M | À faire | **prêt** |
 
 ### C — v0.4 Carte réelle
 
@@ -133,7 +134,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**14/41 terminés.** Prêts à démarrer : A1, B4, BUG-02, G6, G7.
+**14/42 terminés.** Prêts à démarrer : A1, B4, BUG-02, BUG-08, G6, G7.
 
 <!-- END:tickets -->
 

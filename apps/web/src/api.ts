@@ -19,6 +19,9 @@ export type Session = components['schemas']['SessionResponse']
 export type AddressContext = components['schemas']['AddressContextResponse']
 export type EntityMatch = components['schemas']['EntityMatchResponse']
 export type CommuneCoverage = components['schemas']['CommuneCoverageResponse']
+export type BlindCase = components['schemas']['BlindCaseResponse']
+export type ReviewProgress = components['schemas']['ReviewProgressResponse']
+export type StratumResult = components['schemas']['StratumResultResponse']
 
 export type BrittanyReadiness = {
   publishable: boolean
@@ -125,6 +128,36 @@ export function loadAddressContext(id: string, signal?: AbortSignal) {
  */
 export function loadCommuneCoverage(communeCode: string, signal?: AbortSignal) {
   return request<CommuneCoverage>(`/api/v1/spatial/coverage?commune_code=${encodeURIComponent(communeCode)}`, { signal })
+}
+
+/**
+ * Revue manuelle B4. Le cas rendu est **aveugle** : l'API n'expose ni la décision du moteur, ni
+ * sa confiance, ni sa justification. Le front n'a donc rien à masquer — il ne les reçoit pas.
+ */
+export function loadReviewProgress(sampleId: string, signal?: AbortSignal) {
+  return request<ReviewProgress>(`/api/v1/review/samples/${encodeURIComponent(sampleId)}`, { signal })
+}
+
+export function loadNextReviewCase(sampleId: string, signal?: AbortSignal) {
+  return request<BlindCase>(`/api/v1/review/samples/${encodeURIComponent(sampleId)}/next`, { signal })
+}
+
+export function loadReviewResults(sampleId: string, signal?: AbortSignal) {
+  return request<StratumResult[]>(`/api/v1/review/samples/${encodeURIComponent(sampleId)}/results`, { signal })
+}
+
+export function submitReviewVerdict(payload: {
+  case_id: number
+  verdict: 'correct' | 'incorrect' | 'undecidable'
+  reviewer: string
+  rationale: string
+  evidence_consulted: string
+}) {
+  return request<components['schemas']['VerdictResponse']>('/api/v1/review/verdicts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function loadOpportunities(filters: {

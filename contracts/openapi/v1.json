@@ -132,6 +132,131 @@
         "title": "AreaResponse",
         "type": "object"
       },
+      "BlindCaseResponse": {
+        "description": "Un cas à juger, **sans** la décision du moteur.\n\nAucun champ de ce modèle ne porte la décision, la confiance ou la justification. Les\nexposer ferait mesurer à la revue l'accord avec le moteur au lieu de l'exactitude, ce que\nle protocole de B4 interdit explicitement.",
+        "properties": {
+          "commune_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commune Code"
+          },
+          "commune_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commune Name"
+          },
+          "drawn_rank": {
+            "title": "Drawn Rank",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "left_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Kind"
+          },
+          "left_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Label"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "right_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Kind"
+          },
+          "right_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Label"
+          },
+          "sample_id": {
+            "title": "Sample Id",
+            "type": "string"
+          },
+          "territorial_stratum": {
+            "title": "Territorial Stratum",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sample_id",
+          "territorial_stratum",
+          "commune_code",
+          "commune_name",
+          "drawn_rank",
+          "left_label",
+          "left_kind",
+          "right_label",
+          "right_kind",
+          "longitude",
+          "latitude"
+        ],
+        "title": "BlindCaseResponse",
+        "type": "object"
+      },
       "CadastralParcelResponse": {
         "properties": {
           "cadastral_id": {
@@ -1390,6 +1515,54 @@
         "title": "ReviewOutcomeResponse",
         "type": "object"
       },
+      "ReviewProgressResponse": {
+        "properties": {
+          "drawn_at": {
+            "title": "Drawn At",
+            "type": "string"
+          },
+          "judged_cases": {
+            "title": "Judged Cases",
+            "type": "integer"
+          },
+          "protocol_document": {
+            "title": "Protocol Document",
+            "type": "string"
+          },
+          "sample_id": {
+            "title": "Sample Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "size_rationale": {
+            "title": "Size Rationale",
+            "type": "string"
+          },
+          "target_size": {
+            "title": "Target Size",
+            "type": "integer"
+          },
+          "total_cases": {
+            "title": "Total Cases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sample_id",
+          "seed",
+          "target_size",
+          "size_rationale",
+          "protocol_document",
+          "drawn_at",
+          "total_cases",
+          "judged_cases"
+        ],
+        "title": "ReviewProgressResponse",
+        "type": "object"
+      },
       "ReviewRequest": {
         "properties": {
           "blind_id": {
@@ -2258,6 +2431,61 @@
         "title": "StatusRequest",
         "type": "object"
       },
+      "StratumResultResponse": {
+        "properties": {
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "correct": {
+            "title": "Correct",
+            "type": "integer"
+          },
+          "drawn": {
+            "title": "Drawn",
+            "type": "integer"
+          },
+          "incorrect": {
+            "title": "Incorrect",
+            "type": "integer"
+          },
+          "judged": {
+            "title": "Judged",
+            "type": "integer"
+          },
+          "matching_stratum": {
+            "title": "Matching Stratum",
+            "type": "string"
+          },
+          "territorial_stratum": {
+            "title": "Territorial Stratum",
+            "type": "string"
+          },
+          "undecidable": {
+            "title": "Undecidable",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matching_stratum",
+          "territorial_stratum",
+          "drawn",
+          "judged",
+          "correct",
+          "incorrect",
+          "undecidable",
+          "accuracy"
+        ],
+        "title": "StratumResultResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2296,6 +2524,78 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerdictRequest": {
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "integer"
+          },
+          "evidence_consulted": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Evidence Consulted",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reviewer": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reviewer",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "incorrect",
+              "undecidable"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "verdict",
+          "reviewer",
+          "rationale",
+          "evidence_consulted"
+        ],
+        "title": "VerdictRequest",
+        "type": "object"
+      },
+      "VerdictResponse": {
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "case_id",
+          "verdict",
+          "recorded_at"
+        ],
+        "title": "VerdictResponse",
         "type": "object"
       },
       "VersionResponse": {
@@ -3800,6 +4100,189 @@
         "summary": "Property Unit Market Context",
         "tags": [
           "market-data"
+        ]
+      }
+    },
+    "/api/v1/review/samples/{sample_id}": {
+      "get": {
+        "operationId": "sample_progress_api_v1_review_samples__sample_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sample_id",
+            "required": true,
+            "schema": {
+              "title": "Sample Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sample Progress",
+        "tags": [
+          "matching-review"
+        ]
+      }
+    },
+    "/api/v1/review/samples/{sample_id}/next": {
+      "get": {
+        "operationId": "next_case_api_v1_review_samples__sample_id__next_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sample_id",
+            "required": true,
+            "schema": {
+              "title": "Sample Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlindCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Next Case",
+        "tags": [
+          "matching-review"
+        ]
+      }
+    },
+    "/api/v1/review/samples/{sample_id}/results": {
+      "get": {
+        "operationId": "sample_results_api_v1_review_samples__sample_id__results_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sample_id",
+            "required": true,
+            "schema": {
+              "title": "Sample Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StratumResultResponse"
+                  },
+                  "title": "Response Sample Results Api V1 Review Samples  Sample Id  Results Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sample Results",
+        "tags": [
+          "matching-review"
+        ]
+      }
+    },
+    "/api/v1/review/verdicts": {
+      "post": {
+        "operationId": "submit_verdict_api_v1_review_verdicts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerdictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerdictResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Verdict",
+        "tags": [
+          "matching-review"
         ]
       }
     },
