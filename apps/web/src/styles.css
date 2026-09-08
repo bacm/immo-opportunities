@@ -194,6 +194,11 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .related-list { display: grid; gap: 6px; }
 .related-list button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; }
 .related-list button:hover { background: var(--soft); }
+.match-row { display: grid; gap: 8px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
+.match-row:last-child { border-bottom: none; }
+.match-row > button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.match-row > button:hover { background: var(--soft); }
+.detail-note { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .source-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; }
 .source-row > span { display: flex; flex-direction: column; }
 .source-row strong { font-size: 10px; }

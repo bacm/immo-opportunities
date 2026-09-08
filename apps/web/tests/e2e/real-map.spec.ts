@@ -154,3 +154,71 @@ test('sélecteur Bretagne et gate régional refusent une fausse couverture', asy
   await expect(page.getByText('Département 56')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Publier la Bretagne' })).toBeDisabled()
 })
+
+test('recherche d’adresse réelle : recentrage, entités liées, appariements et URL partageable', async ({ page }) => {
+  // FR-001 sur données réelles : aucune fixture, l'API répond depuis la release BAN activée.
+  await page.goto('/')
+  const search = page.getByRole('textbox', { name: 'Rechercher' })
+  await search.fill('rue de la monnaie')
+
+  // Plusieurs adresses plausibles : une liste, jamais une sélection implicite du premier.
+  const options = page.getByRole('option')
+  await expect(options.first()).toBeVisible({ timeout: 15_000 })
+  expect(await options.count()).toBeGreaterThan(1)
+
+  await search.press('ArrowDown')
+  await search.press('Enter')
+
+  await expect(page.getByText('ADRESSE', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: /Rue de la Monnaie/i })).toBeVisible()
+
+  // L'appariement est visible avec sa méthode et sa décision, pas seulement son résultat.
+  await expect(page.getByRole('heading', { name: 'Appariements certains' })).toBeVisible()
+  await expect(page.getByText('source_relation').first()).toBeVisible()
+
+  // URL partageable : rouvrir restitue le même état.
+  await expect(page).toHaveURL(/address=address%3Aban%3A/)
+  const shared = page.url()
+  await page.reload()
+  await expect(page).toHaveURL(shared)
+  await expect(page.getByText('ADRESSE', { exact: true })).toBeVisible({ timeout: 15_000 })
+})
+
+test('adresse sans position : présente dans les résultats, non localisée, motif visible', async ({ page }) => {
+  // Les 216 adresses sans position de BUG-03 doivent rester consultables sans que la carte se
+  // recentre sur un point arbitraire.
+  await page.route('**/api/v1/search?query=*', async (route) => {
+    await route.fulfill({
+      json: [{
+        entity_type: 'address', id: 'address:ban:35238_0000_09999',
+        label: '9999 Rue Sans Position 35000 Rennes', secondary_label: 'Adresse · 35238',
+        center: null, bbox: null,
+      }],
+    })
+  })
+  await page.route('**/api/v1/spatial/addresses/*', async (route) => {
+    await route.fulfill({
+      json: {
+        address: {
+          id: 'address:ban:35238_0000_09999',
+          display_label: '9999 Rue Sans Position 35000 Rennes',
+          commune_code: '35238', department_code: '35',
+          longitude: null, latitude: null, position_status: 'ambiguous_position',
+        },
+        matches: [],
+      },
+    })
+  })
+
+  await page.goto('/')
+  const search = page.getByRole('textbox', { name: 'Rechercher' })
+  await search.fill('rue sans position')
+  await search.press('ArrowDown')
+  await search.press('Enter')
+
+  await expect(page.getByText('ADRESSE', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/Non localisée · ambiguous_position/)).toBeVisible()
+  await expect(page.getByText(/la carte n’a pas été recentrée/)).toBeVisible()
+  // Une absence d'appariement est motivée, et distinguée d'un rejet.
+  await expect(page.getByText(/C’est une absence, pas un rejet/)).toBeVisible()
+})

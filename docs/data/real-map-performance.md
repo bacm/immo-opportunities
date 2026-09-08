@@ -61,9 +61,54 @@ la chute des buffers et le benchmark HTTP confirment l'usage sélectif des index
 - OpenAPI généré dans `contracts/openapi/v1.json`, client généré dans
   `apps/web/src/generated/api.ts`.
 
-## Limite amont
+## Recherche d'adresse — mesure du 8 septembre 2026, C1
 
-La recherche commune et parcelle utilise les données réelles actives. La recherche d'adresse est
-implémentée mais filtre volontairement les adresses dont la release DS-05 n'est pas acceptée. La
-démonstration « adresse du 35 » ne pourra donc être validée qu'après résolution des contrôles
-bloquants BAN documentés dans le rapport du référentiel spatial.
+La limite amont ci-dessous est levée : `DS-05@2026-06-17` est activée en `display_only`, et la
+recherche porte sur les 437 441 adresses réelles du 35.
+
+Latence de bout en bout, cinq mesures par requête, API locale sur données réelles :
+
+| Requête | min | médiane | max |
+|---|---:|---:|---:|
+| `acigne` — nom de commune | 155 ms | 162 ms | 213 ms |
+| `rue de la monnaie` | 756 ms | 795 ms | 820 ms |
+| `1 rue de la gare` | 857 ms | 898 ms | 1 092 ms |
+
+### Pourquoi une phrase coûte cinq fois plus qu'un mot
+
+Le plan l'explique, et ce n'est pas un index manquant — `address_label_trgm` existe et est
+utilisé :
+
+```text
+Bitmap Index Scan on address_label_trgm  rows=198606  (47 ms)
+Bitmap Heap Scan on address              rows=1986    (730 ms)
+  Rows Removed by Index Recheck: 196620
+```
+
+L'index trigramme retient **198 606 candidats sur 437 441**, soit 45 % de la table, dont 196 620
+sont rejetés à la relecture. Une phrase courante comme « rue de la » partage ses trigrammes avec
+presque toutes les adresses du département : la sélectivité de `pg_trgm` s'effondre sur les mots
+fréquents, exactement là où l'utilisateur tape le plus.
+
+### Ce que cette mesure tranche pour N13
+
+[N13](../backlog/NICE-backlog.md) conditionne l'introduction d'Elasticsearch à cette mesure.
+Elle est faite, et elle ne la justifie pas :
+
+- l'ordre de grandeur reste sous la seconde, sur un poste partagé avec quinze conteneurs ;
+- la cause est identifiée et ne relève pas d'un défaut de moteur : c'est la nature de `pg_trgm`
+  sur des mots fréquents ;
+- deux leviers internes existent avant d'envisager un moteur externe — relever
+  `pg_trgm.similarity_threshold` au-delà de 0,3, qui réduirait mécaniquement les candidats, ou
+  restreindre le préfiltre trigramme au nom de voie plutôt qu'au libellé complet.
+
+Aucun des deux n'est appliqué ici : les appliquer changerait les résultats retournés, donc ce qui
+est affiché à l'utilisateur, et cela mérite d'être décidé sur des cas réels plutôt que sur une
+mesure de latence. **Le sujet reste ouvert, documenté, et ne bloque pas C1.**
+
+### Parcours vérifié dans un navigateur
+
+Playwright, 6 tests passés en 7,1 s, dont deux ajoutés par C1 : recherche d'adresse réelle avec
+recentrage, liste de résultats sans sélection implicite, appariements visibles avec leur méthode
+et leur décision, URL partageable restituant le même état après rechargement, et adresse sans
+position affichée avec son motif sans que la carte se recentre.

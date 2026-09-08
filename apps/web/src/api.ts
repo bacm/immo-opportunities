@@ -16,6 +16,8 @@ export type ScenarioRequest = components['schemas']['ScenarioRequest']
 export type ScenarioResponse = components['schemas']['ScenarioResponse']
 export type NoteResponse = components['schemas']['NoteResponse']
 export type Session = components['schemas']['SessionResponse']
+export type AddressContext = components['schemas']['AddressContextResponse']
+export type EntityMatch = components['schemas']['EntityMatchResponse']
 
 export type BrittanyReadiness = {
   publishable: boolean
@@ -103,6 +105,17 @@ export function loadViewport(bbox: Bbox, signal?: AbortSignal) {
 export function loadEntity(type: EntityType, id: string, signal?: AbortSignal) {
   const collection = type === 'property_unit' ? 'property-units' : `${type}s`
   return request<EntityDetail>(`/api/v1/${collection}/${encodeURIComponent(id)}`, { signal })
+}
+
+/**
+ * Contexte d'une adresse : sa position, son statut de position, et les appariements qui la
+ * relient aux entités canoniques — chacun avec sa méthode, sa confiance et sa décision.
+ *
+ * Une adresse n'est pas une entité canonique de l'Explorer : elle ne se charge donc pas par
+ * `loadEntity`, dont les collections sont parcelle, bâtiment et unité foncière.
+ */
+export function loadAddressContext(id: string, signal?: AbortSignal) {
+  return request<AddressContext>(`/api/v1/spatial/addresses/${encodeURIComponent(id)}`, { signal })
 }
 
 export async function loadOpportunities(filters: {

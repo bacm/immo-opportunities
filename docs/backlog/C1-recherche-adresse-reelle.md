@@ -1,6 +1,6 @@
 # C1 — Recherche adresse réelle FR-001 sur données BAN acceptées
 
-**Version :** v0.4 · **Taille :** M · **État :** À faire
+**Version :** v0.4 · **Taille :** M · **État :** Terminé
 **Dépend de :** B1 · **Bloque :** C2, C3, clôture de v0.4
 
 ## Contexte à charger
@@ -45,6 +45,50 @@ FR-001 — recherche par adresse, commune ou parcelle. Une recherche d'adresse d
 4. Restituer l'état complet dans l'URL : entité sélectionnée, cadrage, filtres actifs.
 5. Rester cohérent avec le frontend existant : `App.tsx`, CSS custom, MapLibre. Aucune bibliothèque
    nouvelle introduite pour ce ticket.
+
+## Résultat au 8 septembre 2026
+
+Le ticket annonçait « une activation, pas une construction ». C'était vrai côté API — la branche
+`address` de `/api/v1/search` existait et fonctionnait — et faux côté front : `chooseSearchResult`
+ne créait une sélection que pour `entity_type === 'parcel'`. Une adresse recentrait la carte et
+n'ouvrait **aucune fiche**.
+
+Livré, en restant dans `App.tsx` + CSS custom + MapLibre, sans bibliothèque nouvelle :
+
+- sélection d'une adresse depuis la recherche, avec son propre paramètre d'URL `address=` — une
+  adresse n'est pas une entité canonique, donc `type`/`id` continuent de désigner sans ambiguïté
+  une parcelle, un bâtiment ou une unité foncière ;
+- `AddressSheet` : position et statut, puis les appariements **groupés par décision** — certains,
+  ambigus, rejetés — chacun avec sa méthode, sa confiance, sa justification et ses releases ;
+- une adresse sans position ne recentre pas la carte, et son motif est affiché ;
+- une absence d'appariement est distinguée d'un rejet, par un texte explicite.
+
+## Mesure de performance — ce que le ticket demandait de trancher
+
+| Requête | min | médiane | max |
+|---|---:|---:|---:|
+| `acigne` | 155 ms | 162 ms | 213 ms |
+| `rue de la monnaie` | 756 ms | 795 ms | 820 ms |
+| `1 rue de la gare` | 857 ms | 898 ms | 1 092 ms |
+
+L'index trigramme retient 198 606 candidats sur 437 441 et en rejette 196 620 au recheck : une
+phrase courante partage ses trigrammes avec presque toutes les adresses du département.
+
+**Cela ne justifie pas [N13](./NICE-backlog.md).** L'ordre de grandeur reste sous la seconde, et
+deux leviers internes existent avant tout moteur externe — relever le seuil de similarité, ou
+restreindre le préfiltre au nom de voie. Aucun n'est appliqué : les deux changent les résultats
+affichés, donc ils se décident sur des cas réels, pas sur une latence. Détail dans
+[`real-map-performance.md`](../data/real-map-performance.md).
+
+## Ce que ce ticket a permis de découvrir
+
+`make check` ne passait pas `web-check` depuis le début de cette session — `pnpm` et
+`node_modules` étaient absents. Les avoir installés a révélé que **les six tests Playwright
+échouaient tous** contre le conteneur, qui redirige vers Keycloak : ils visent le serveur de
+développement, où l'authentification est désactivée. Ce n'est pas un défaut, mais ce n'était
+écrit nulle part.
+
+`make check` est désormais vert **en entier**, y compris `web-check` et le build.
 
 ## Points de vigilance
 

@@ -32,6 +32,7 @@ import {
   loadOpportunity,
   loadSession,
   publishBrittany,
+  loadAddressContext,
   searchEntities,
   updateCandidateStatus,
   withdrawBrittany,
@@ -42,6 +43,8 @@ import {
   type OpportunityDetail,
   type OpportunitySummary,
   type ScenarioRequest,
+  type AddressContext,
+  type EntityMatch,
   type SearchResult,
   type Session,
 } from './api'
@@ -72,6 +75,14 @@ function initialSelection(params: URLSearchParams): Selection | null {
   return null
 }
 
+// Une adresse n'est pas une entité canonique de l'Explorer : elle a son propre paramètre d'URL,
+// pour que `type`/`id` continuent de désigner sans ambiguïté une parcelle, un bâtiment ou une
+// unité foncière.
+function initialAddressId(params: URLSearchParams): string | null {
+  const id = params.get('address')
+  return id && id.startsWith('address:') ? id : null
+}
+
 function formatArea(value: number | null) {
   return value === null ? 'Non disponible' : `${Math.round(value).toLocaleString('fr-FR')} m²`
 }
@@ -92,6 +103,9 @@ function App() {
   })
   const [selection, setSelection] = useState<Selection | null>(() => initialSelection(initialParams))
   const [opportunityId, setOpportunityId] = useState(initialParams.get('opportunity'))
+  const [addressId, setAddressId] = useState<string | null>(() => initialAddressId(initialParams))
+  const [addressContext, setAddressContext] = useState<AddressContext | null>(null)
+  const [addressLoading, setAddressLoading] = useState(false)
   const [detail, setDetail] = useState<EntityDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [query, setQuery] = useState(initialParams.get('q') ?? '')
@@ -157,8 +171,9 @@ function App() {
       next.set('type', selection.type)
       next.set('id', selection.id)
     }
+    if (addressId) next.set('address', addressId)
     window.history.replaceState(null, '', `${window.location.pathname}?${next}`)
-  }, [view, query, orthophoto, selection, strategy, minimumScore, confidence, department, opportunityId])
+  }, [view, query, orthophoto, selection, strategy, minimumScore, confidence, department, opportunityId, addressId])
 
   useEffect(() => {
     const normalized = query.trim()
@@ -226,6 +241,22 @@ function App() {
     return () => controller.abort()
   }, [selection])
 
+  useEffect(() => {
+    if (!addressId) {
+      setAddressContext(null)
+      return
+    }
+    const controller = new AbortController()
+    setAddressLoading(true)
+    loadAddressContext(addressId, controller.signal)
+      .then((record) => setAddressContext(record))
+      .catch((error: unknown) => {
+        if ((error as Error).name !== 'AbortError') setAddressContext(null)
+      })
+      .finally(() => setAddressLoading(false))
+    return () => controller.abort()
+  }, [addressId])
+
   const handleViewport = useCallback((nextBbox: Bbox, nextView: MapView) => {
     void nextBbox
     setView(nextView)
@@ -235,9 +266,19 @@ function App() {
     setQuery(result.label)
     setSearchOpen(false)
     setOpportunityId(null)
-    mapRef.current?.fitBounds(result.bbox)
-    if (result.entity_type === 'parcel') setSelection({ type: 'parcel', id: result.id })
-    else setSelection(null)
+    // Une adresse sans position ne recentre pas la carte : la recentrer sur un point arbitraire
+    // ferait passer une absence pour une localisation.
+    if (result.bbox) mapRef.current?.fitBounds(result.bbox)
+    if (result.entity_type === 'address') {
+      setAddressId(result.id)
+      setSelection(null)
+    } else if (result.entity_type === 'parcel') {
+      setAddressId(null)
+      setSelection({ type: 'parcel', id: result.id })
+    } else {
+      setAddressId(null)
+      setSelection(null)
+    }
   }
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -368,7 +409,10 @@ function App() {
           </section>
 
           <aside className="detail-panel" aria-live="polite">
-            {!selection && !opportunityId && <State icon={<MapPin />} title="Sélectionnez un candidat" text="Cliquez une opportunité dans la liste ou sur la carte pour examiner ses preuves." />}
+            {!selection && !opportunityId && !addressId && <State icon={<MapPin />} title="Sélectionnez un candidat" text="Cliquez une opportunité dans la liste ou sur la carte pour examiner ses preuves." />}
+            {!opportunityId && addressId && addressLoading && !addressContext && <State icon={<LoaderCircle className="spin" />} title="Chargement de l’adresse" text="Récupération des entités liées et de leurs appariements." />}
+            {!opportunityId && addressId && !addressLoading && !addressContext && <State icon={<TriangleAlert />} title="Adresse indisponible" text="L’adresse est absente de la release active ou le service est indisponible." action={<button onClick={() => setAddressId(null)}>Fermer</button>} />}
+            {!opportunityId && addressContext && <AddressSheet context={addressContext} onClose={() => setAddressId(null)} onRelated={(type, id) => { setAddressId(null); setSelection({ type, id }) }} />}
             {opportunityId && <OpportunitySheet id={opportunityId} onClose={() => setOpportunityId(null)} onProperty={(id) => { setOpportunityId(null); setSelection({ type: 'property_unit', id }) }} />}
             {!opportunityId && selection && detailLoading && !detail && <State icon={<LoaderCircle className="spin" />} title="Chargement de la fiche" text="Récupération du détail exact par l’API." />}
             {!opportunityId && selection && !detailLoading && !detail && <State icon={<TriangleAlert />} title="Fiche indisponible" text="L’entité est absente de la release active ou le service est indisponible." action={<button onClick={() => setSelection(null)}>Fermer</button>} />}
@@ -561,6 +605,59 @@ function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onC
       {Object.keys(detail.properties).length > 0 && <section className="detail-section"><h3>Attributs</h3><dl className="facts">{Object.entries(detail.properties).map(([key, value]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd>{value === null ? 'Non disponible' : String(value)}</dd></div>)}</dl></section>}
       {detail.related_entities.length > 0 && <section className="detail-section"><h3>Entités liées</h3><div className="related-list">{detail.related_entities.map((entity) => <button key={`${entity.entity_type}:${entity.id}`} onClick={() => onRelated(entity.entity_type, entity.id)}>{entity.entity_type === 'building' ? <Building2 size={15} /> : <MapIcon size={15} />}<span>{entity.label}</span></button>)}</div></section>}
       <section className="detail-section"><h3>Provenance</h3>{detail.sources.map((source, index) => <div className="source-row" key={`${source.data_source_id}:${index}`}><ExternalLink size={15} /><span><strong>{source.data_source_id}</strong><small>{source.producer ?? 'Producteur documenté'}{source.release_id ? ` · ${source.release_id}` : ''}</small></span></div>)}</section>
+    </div>
+  </>
+}
+
+/**
+ * Fiche d'une adresse : sa position quand elle en a une, et les entités auxquelles elle se
+ * rattache — chacune avec la méthode, la confiance et la décision de son appariement.
+ *
+ * Trois exigences de FR-001 et FR-007 gouvernent ce rendu :
+ *
+ * - une adresse **sans position** s'affiche avec son motif, et la carte ne se recentre pas ;
+ * - un appariement **ambigu** est montré comme tel, jamais réduit au plus probable ;
+ * - une relation **rejetée** reste visible avec sa justification : c'est une décision, pas une
+ *   absence, et la masquer ferait disparaître un cas que l'utilisateur doit pouvoir juger.
+ */
+function AddressSheet({ context, onClose, onRelated }: { context: AddressContext; onClose: () => void; onRelated: (type: EntityType, id: string) => void }) {
+  const { address, matches } = context
+  const located = address.longitude !== null && address.latitude !== null
+  const certain = matches.filter((match) => match.decision === 'certain')
+  const ambiguous = matches.filter((match) => match.decision === 'ambiguous')
+  const rejected = matches.filter((match) => match.decision === 'rejected')
+  return <>
+    <div className="detail-actions"><span className="eyebrow">ADRESSE</span><button className="icon-button" onClick={onClose} aria-label="Fermer la fiche"><X size={17} /></button></div>
+    <div className="detail-scroll">
+      <header className="detail-header"><span className="entity-icon"><MapPin size={24} /></span><div><h2>{address.display_label}</h2><p>{address.commune_code} · {address.department_code}</p></div></header>
+      <section className="detail-section">
+        <h3>Position</h3>
+        <dl className="facts">
+          <div><dt>État</dt><dd>{located ? 'Localisée' : `Non localisée · ${address.position_status}`}</dd></div>
+          <div><dt>Identifiant stable</dt><dd>{address.id}</dd></div>
+        </dl>
+        {!located && <p className="detail-note">Cette adresse existe dans la release mais sa position est inutilisable. Elle n’entre dans aucune relation spatiale et la carte n’a pas été recentrée.</p>}
+      </section>
+      {matches.length === 0 && <section className="detail-section"><h3>Entités liées</h3><p className="detail-note">Aucun appariement pour cette adresse dans la release active. C’est une absence, pas un rejet : rien ne permet de la rattacher, et rien ne l’en empêche formellement.</p></section>}
+      {[['Appariements certains', certain], ['Appariements ambigus', ambiguous], ['Relations rejetées', rejected]].map(([title, group]) => {
+        const list = group as EntityMatch[]
+        if (!list.length) return null
+        return <section className="detail-section" key={title as string}>
+          <h3>{title as string}</h3>
+          {list.map((match) => <div className="match-row" key={match.id}>
+            <button onClick={() => onRelated(match.right_entity_type as EntityType, match.right_entity_id)}>
+              <MapIcon size={15} /><span>{match.right_entity_id}</span>
+            </button>
+            <dl className="facts">
+              <div><dt>Méthode</dt><dd>{match.method}</dd></div>
+              <div><dt>Confiance</dt><dd>{match.confidence}</dd></div>
+              <div><dt>Décision</dt><dd>{match.decision}</dd></div>
+              <div><dt>Justification</dt><dd>{match.rationale}</dd></div>
+              <div><dt>Releases</dt><dd>{match.release_ids.join(', ')}</dd></div>
+            </dl>
+          </div>)}
+        </section>
+      })}
     </div>
   </>
 }
