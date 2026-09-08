@@ -87,8 +87,8 @@ dérivée du graphe de dépendances.
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
 | [C1](./C1-recherche-adresse-reelle.md) | Recherche adresse réelle FR-001 sur données BAN acceptées | v0.4 | B1 | M | Terminé | — |
-| [C2](./C2-zone-non-couverte.md) | Distinguer zone non couverte et zone sans résultat | v0.4 | C1 | S | À faire | **prêt** |
-| [C3](./C3-capture-demo-adresse.md) | Capture de démonstration adresse 35 | v0.4 | C1, C2 | S | À faire | attend C2 |
+| [C2](./C2-zone-non-couverte.md) | Distinguer zone non couverte et zone sans résultat | v0.4 | C1 | S | Terminé | — |
+| [C3](./C3-capture-demo-adresse.md) | Capture de démonstration adresse 35 | v0.4 | C1, C2 | S | À faire | **prêt** |
 
 ### D — v0.5 Données métier 35
 
@@ -133,7 +133,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**12/41 terminés.** Prêts à démarrer : A1, B4, BUG-02, C2, G6, G7.
+**13/41 terminés.** Prêts à démarrer : A1, B4, BUG-02, C3, G6, G7.
 
 <!-- END:tickets -->
 
