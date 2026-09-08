@@ -192,6 +192,115 @@ def find_entity_match(match_id: int) -> EntityMatchRecord | None:
     return _match_from_mapping(dict(mapping)) if mapping is not None else None
 
 
+# Les cinq sources du referentiel spatial. Les sources metier DS-06 a DS-09 ont leur propre
+# couverture, exposee par `market_data.list_market_data_coverage`.
+SPATIAL_SOURCE_IDS = ("DS-01", "DS-02", "DS-03", "DS-04", "DS-05")
+
+
+def commune_coverage(commune_code: str) -> dict[str, Any] | None:
+    """Couverture d'une commune, source par source.
+
+    Trois etats que l'utilisateur ne doit jamais confondre :
+
+    - **`not_covered`** : aucune source active ici. Une absence de candidat ne veut alors rien
+      dire, et la presenter comme un resultat vide laisserait croire qu'un territoire est sans
+      interet alors qu'il n'a simplement jamais ete importe.
+    - **`partial`** : certaines sources seulement. Le classement est incomplet, et les sources
+      manquantes sont **nommees** — un avertissement generique n'apprend rien.
+    - **`covered`** : les cinq sources spatiales sont actives sur ce territoire.
+
+    Une source est comptee couverte si elle a une release **active** sur le departement de la
+    commune, et au moins une observation dans cette commune. Les deux conditions comptent :
+    un pointeur actif sans donnee locale ne couvre pas la commune, et des donnees sans pointeur
+    actif ne sont pas lisibles par l'API.
+    """
+    statement = text(
+        """
+        WITH commune AS (
+            SELECT code, name, department_code
+              FROM reference.area
+             WHERE area_type = 'commune' AND code = :commune_code
+        ), source AS (
+            SELECT data_source.id, data_source.name
+              FROM meta.data_source
+             WHERE data_source.id = ANY(:source_ids)
+        )
+        SELECT commune.code AS commune_code, commune.name AS commune_name,
+               commune.department_code, source.id AS data_source_id,
+               source.name AS source_name,
+               active.release_id,
+               release.acceptance_status,
+               coalesce(observed.record_count, 0) AS record_count
+          FROM commune
+          CROSS JOIN source
+          LEFT JOIN meta.active_dataset_release AS active
+                 ON active.data_source_id = source.id
+                AND active.scope_type = 'department'
+                AND active.scope_code = commune.department_code
+          LEFT JOIN meta.dataset_release AS release ON release.id = active.release_id
+          LEFT JOIN LATERAL (
+              SELECT sum(
+                         metric.certain_count + metric.ambiguous_count
+                       + metric.rejected_count + metric.unmatched_count
+                     ) AS record_count
+                FROM meta.entity_match_metric AS metric
+               WHERE metric.release_id = active.release_id
+                 AND metric.commune_code = commune.code
+          ) AS observed ON true
+         ORDER BY source.id
+        """
+    )
+    with get_engine().connect() as connection:
+        rows = list(
+            connection.execute(
+                statement,
+                {"commune_code": commune_code, "source_ids": list(SPATIAL_SOURCE_IDS)},
+            ).mappings()
+        )
+    if not rows:
+        return None
+
+    sources: list[dict[str, Any]] = []
+    for row in rows:
+        # DS-01 ne produit aucune metrique d'appariement : c'est le referentiel contre lequel
+        # les autres s'apparient. Son pointeur actif suffit donc a le declarer couvrant.
+        record_count = int(row["record_count"])
+        has_release = row["release_id"] is not None
+        covered = has_release and (record_count > 0 or row["data_source_id"] == "DS-01")
+        sources.append(
+            {
+                "data_source_id": str(row["data_source_id"]),
+                "name": str(row["source_name"]),
+                "release_id": str(row["release_id"]) if row["release_id"] else None,
+                "acceptance_status": (
+                    str(row["acceptance_status"]) if row["acceptance_status"] else None
+                ),
+                "covered": covered,
+                "record_count": record_count,
+            }
+        )
+    covered_count = sum(1 for source in sources if source["covered"])
+    if covered_count == 0:
+        state = "not_covered"
+    elif covered_count < len(sources):
+        state = "partial"
+    else:
+        state = "covered"
+    return {
+        "commune_code": str(rows[0]["commune_code"]),
+        "commune_name": str(rows[0]["commune_name"]) if rows[0]["commune_name"] else None,
+        "department_code": str(rows[0]["department_code"]),
+        "state": state,
+        "sources": sources,
+        # Nommees, jamais comptees : « 2 sources manquantes » n'apprend rien a l'utilisateur.
+        "missing_sources": [
+            f"{source['data_source_id']} {source['name']}"
+            for source in sources
+            if not source["covered"]
+        ],
+    }
+
+
 def search_addresses(
     query: str,
     *,

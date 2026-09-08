@@ -18,6 +18,7 @@ export type NoteResponse = components['schemas']['NoteResponse']
 export type Session = components['schemas']['SessionResponse']
 export type AddressContext = components['schemas']['AddressContextResponse']
 export type EntityMatch = components['schemas']['EntityMatchResponse']
+export type CommuneCoverage = components['schemas']['CommuneCoverageResponse']
 
 export type BrittanyReadiness = {
   publishable: boolean
@@ -116,6 +117,14 @@ export function loadEntity(type: EntityType, id: string, signal?: AbortSignal) {
  */
 export function loadAddressContext(id: string, signal?: AbortSignal) {
   return request<AddressContext>(`/api/v1/spatial/addresses/${encodeURIComponent(id)}`, { signal })
+}
+
+/**
+ * Couverture d'une commune, source par source. Distingue trois états que l'utilisateur ne doit
+ * jamais confondre : territoire non couvert, couvert partiellement, couvert.
+ */
+export function loadCommuneCoverage(communeCode: string, signal?: AbortSignal) {
+  return request<CommuneCoverage>(`/api/v1/spatial/coverage?commune_code=${encodeURIComponent(communeCode)}`, { signal })
 }
 
 export async function loadOpportunities(filters: {

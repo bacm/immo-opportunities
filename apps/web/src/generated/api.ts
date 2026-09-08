@@ -582,6 +582,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/spatial/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coverage */
+        get: operations["coverage_api_v1_spatial_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/spatial/matches/{match_id}": {
         parameters: {
             query?: never;
@@ -683,6 +700,24 @@ export interface components {
             status: "new" | "to_analyze" | "retained" | "contact_to_prepare" | "contacted" | "visit" | "offer" | "acquired" | "lost" | "rejected" | "ignored";
             /** Updated At */
             updated_at: string | null;
+        };
+        /** CommuneCoverageResponse */
+        CommuneCoverageResponse: {
+            /** Commune Code */
+            commune_code: string;
+            /** Commune Name */
+            commune_name: string | null;
+            /** Department Code */
+            department_code: string;
+            /** Missing Sources */
+            missing_sources: string[];
+            /** Sources */
+            sources: components["schemas"]["SourceCoverageResponse"][];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "covered" | "partial" | "not_covered";
         };
         /** CoverageResponse */
         CoverageResponse: {
@@ -1264,6 +1299,21 @@ export interface components {
             role: "platform_admin" | "organization_admin" | "analyst" | "viewer";
             /** User Id */
             user_id: string;
+        };
+        /** SourceCoverageResponse */
+        SourceCoverageResponse: {
+            /** Acceptance Status */
+            acceptance_status: string | null;
+            /** Covered */
+            covered: boolean;
+            /** Data Source Id */
+            data_source_id: string;
+            /** Name */
+            name: string;
+            /** Record Count */
+            record_count: number;
+            /** Release Id */
+            release_id: string | null;
         };
         /** SourceIdentifierResponse */
         SourceIdentifierResponse: {
@@ -2422,6 +2472,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AddressContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coverage_api_v1_spatial_coverage_get: {
+        parameters: {
+            query: {
+                commune_code: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommuneCoverageResponse"];
                 };
             };
             /** @description Validation Error */

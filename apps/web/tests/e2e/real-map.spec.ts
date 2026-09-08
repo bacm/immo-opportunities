@@ -213,6 +213,7 @@ test('adresse sans position : présente dans les résultats, non localisée, mot
   await page.goto('/')
   const search = page.getByRole('textbox', { name: 'Rechercher' })
   await search.fill('rue sans position')
+  await expect(page.getByRole('option', { name: /Rue Sans Position/ })).toBeVisible()
   await search.press('ArrowDown')
   await search.press('Enter')
 
@@ -221,4 +222,97 @@ test('adresse sans position : présente dans les résultats, non localisée, mot
   await expect(page.getByText(/la carte n’a pas été recentrée/)).toBeVisible()
   // Une absence d'appariement est motivée, et distinguée d'un rejet.
   await expect(page.getByText(/C’est une absence, pas un rejet/)).toBeVisible()
+})
+
+const coverageSources = (covered: string[]) =>
+  ['DS-01', 'DS-02', 'DS-03', 'DS-04', 'DS-05'].map((id) => ({
+    data_source_id: id, name: `Source ${id}`,
+    release_id: covered.includes(id) ? `${id}@2026-01-01` : null,
+    acceptance_status: covered.includes(id) ? 'accepted' : null,
+    covered: covered.includes(id), record_count: covered.includes(id) ? 1200 : 0,
+  }))
+
+async function openCommune(page: import('@playwright/test').Page, coverage: Record<string, unknown>) {
+  // La couverture suit la commune de l'entité consultée : on ouvre donc une adresse.
+  await page.route('**/api/v1/search?query=*', async (route) => {
+    await route.fulfill({ json: [{
+      entity_type: 'address', id: 'address:ban:35238_0001_00001',
+      label: '1 Rue Témoin 35000 Rennes', secondary_label: 'Adresse · 35238',
+      center: [-1.68, 48.11], bbox: [-1.69, 48.10, -1.67, 48.12],
+    }] })
+  })
+  await page.route('**/api/v1/spatial/addresses/*', async (route) => {
+    await route.fulfill({ json: {
+      address: {
+        id: 'address:ban:35238_0001_00001', display_label: '1 Rue Témoin 35000 Rennes',
+        commune_code: '35238', department_code: '35',
+        longitude: -1.68, latitude: 48.11, position_status: 'available',
+      },
+      matches: [],
+    } })
+  })
+  await page.route('**/api/v1/spatial/coverage?*', async (route) => {
+    await route.fulfill({ json: coverage })
+  })
+  await page.goto('/')
+  const search = page.getByRole('textbox', { name: 'Rechercher' })
+  await search.fill('rue temoin')
+  // Attendre que la liste soit peuplée : ArrowDown n'ouvre le menu que si des résultats sont
+  // déjà là, sinon la navigation clavier ne sélectionne rien.
+  await expect(page.getByRole('option', { name: /Rue Témoin/ })).toBeVisible()
+  await search.press('ArrowDown')
+  await search.press('Enter')
+}
+
+test('territoire non couvert : jamais présenté comme un résultat vide', async ({ page }) => {
+  await openCommune(page, {
+    commune_code: '22001', commune_name: 'COMMUNE SANS DONNÉE', department_code: '22',
+    state: 'not_covered', sources: coverageSources([]),
+    missing_sources: ['DS-01 Cadastre', 'DS-02 RNB', 'DS-03 BDNB', 'DS-04 BD TOPO', 'DS-05 BAN'],
+  })
+
+  await expect(page.getByText(/territoire non couvert/)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/ne veut rien dire ici/)).toBeVisible()
+  // L'état « aucun résultat » ne doit jamais accompagner un territoire non couvert.
+  await expect(page.getByText(/territoire couvert/)).toHaveCount(0)
+})
+
+test('données partielles : les sources absentes sont nommées, pas comptées', async ({ page }) => {
+  await openCommune(page, {
+    commune_code: '35238', commune_name: 'RENNES', department_code: '35',
+    state: 'partial', sources: coverageSources(['DS-01', 'DS-03', 'DS-04', 'DS-05']),
+    missing_sources: ['DS-02 Référentiel National des Bâtiments'],
+  })
+
+  await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
+  await expect(page.getByText(/Classement incomplet/)).toBeVisible()
+})
+
+test('territoire couvert : une absence de candidat signifie bien aucun résultat', async ({ page }) => {
+  await openCommune(page, {
+    commune_code: '35238', commune_name: 'RENNES', department_code: '35',
+    state: 'covered', sources: coverageSources(['DS-01', 'DS-02', 'DS-03', 'DS-04', 'DS-05']),
+    missing_sources: [],
+  })
+
+  await expect(page.getByText(/territoire couvert/)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/aucun bien ne correspond aux filtres/)).toBeVisible()
+  // La liste reste honnête sur la vraie raison de son vide : aucun score publié.
+  await expect(page.getByText('Aucun candidat publié')).toBeVisible()
+})
+
+test('l’état de couverture survit au partage d’URL', async ({ page }) => {
+  await openCommune(page, {
+    commune_code: '35238', commune_name: 'RENNES', department_code: '35',
+    state: 'partial', sources: coverageSources(['DS-01', 'DS-03', 'DS-04', 'DS-05']),
+    missing_sources: ['DS-02 Référentiel National des Bâtiments'],
+  })
+  await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
+
+  const shared = page.url()
+  await page.reload()
+  await expect(page).toHaveURL(shared)
+  await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
 })

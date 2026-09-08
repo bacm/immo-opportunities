@@ -33,6 +33,7 @@ import {
   loadSession,
   publishBrittany,
   loadAddressContext,
+  loadCommuneCoverage,
   searchEntities,
   updateCandidateStatus,
   withdrawBrittany,
@@ -44,6 +45,7 @@ import {
   type OpportunitySummary,
   type ScenarioRequest,
   type AddressContext,
+  type CommuneCoverage,
   type EntityMatch,
   type SearchResult,
   type Session,
@@ -106,6 +108,7 @@ function App() {
   const [addressId, setAddressId] = useState<string | null>(() => initialAddressId(initialParams))
   const [addressContext, setAddressContext] = useState<AddressContext | null>(null)
   const [addressLoading, setAddressLoading] = useState(false)
+  const [coverage, setCoverage] = useState<CommuneCoverage | null>(null)
   const [detail, setDetail] = useState<EntityDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [query, setQuery] = useState(initialParams.get('q') ?? '')
@@ -257,6 +260,25 @@ function App() {
     return () => controller.abort()
   }, [addressId])
 
+  // La commune observée est celle de ce que l'utilisateur consulte : l'adresse ouverte, sinon
+  // l'entité sélectionnée. Sans sélection, aucune couverture n'est affirmée — annoncer un état
+  // sans savoir de quel territoire on parle serait pire que se taire.
+  const observedCommune = addressContext?.address.commune_code ?? detail?.commune_code ?? null
+
+  useEffect(() => {
+    if (!observedCommune) {
+      setCoverage(null)
+      return
+    }
+    const controller = new AbortController()
+    loadCommuneCoverage(observedCommune, controller.signal)
+      .then((record) => setCoverage(record))
+      .catch((error: unknown) => {
+        if ((error as Error).name !== 'AbortError') setCoverage(null)
+      })
+    return () => controller.abort()
+  }, [observedCommune])
+
   const handleViewport = useCallback((nextBbox: Bbox, nextView: MapView) => {
     void nextBbox
     setView(nextView)
@@ -383,6 +405,8 @@ function App() {
         </section>
         {saveSearchOpen && <form className="save-search-popover" onSubmit={saveSearch}><label>Nom de la recherche<input autoFocus value={savedSearchName} maxLength={160} onChange={(event) => setSavedSearchName(event.target.value)} /></label><button type="submit">Enregistrer</button></form>}
         {savedSearchMessage && <div className="toast" role="status">{savedSearchMessage}<button aria-label="Fermer le message" onClick={() => setSavedSearchMessage('')}><X size={13} /></button></div>}
+
+        {coverage && <CoverageBanner coverage={coverage} />}
 
         <section className="explorer-grid">
           <section className="result-panel" aria-label="Candidats publiés">
@@ -607,6 +631,37 @@ function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onC
       <section className="detail-section"><h3>Provenance</h3>{detail.sources.map((source, index) => <div className="source-row" key={`${source.data_source_id}:${index}`}><ExternalLink size={15} /><span><strong>{source.data_source_id}</strong><small>{source.producer ?? 'Producteur documenté'}{source.release_id ? ` · ${source.release_id}` : ''}</small></span></div>)}</section>
     </div>
   </>
+}
+
+/**
+ * État de couverture du territoire observé.
+ *
+ * La distinction que porte ce composant est une exigence produit, pas un détail d'affichage :
+ * « territoire non couvert » et « aucun résultat » se ressemblent à l'écran et signifient le
+ * contraire l'un de l'autre. Confondre les deux laisserait croire à un marchand de biens qu'un
+ * territoire est sans intérêt alors qu'il n'a jamais été importé.
+ *
+ * Placé au-dessus de la grille, il est partagé par la carte et la liste : leur état est donc
+ * synchronisé par construction, et non par deux rendus qu'il faudrait garder d'accord.
+ */
+function CoverageBanner({ coverage }: { coverage: CommuneCoverage }) {
+  const territory = coverage.commune_name ?? coverage.commune_code
+  if (coverage.state === 'covered') {
+    return <div className="coverage-banner covered" role="status">
+      <CheckCircle2 size={15} />
+      <span><strong>{territory} · territoire couvert</strong><small>Les cinq sources du référentiel spatial sont actives ici. Une absence de candidat signifie qu’aucun bien ne correspond aux filtres.</small></span>
+    </div>
+  }
+  if (coverage.state === 'not_covered') {
+    return <div className="coverage-banner not-covered" role="status">
+      <TriangleAlert size={15} />
+      <span><strong>{territory} · territoire non couvert</strong><small>Aucune source active sur ce territoire. Une absence de candidat ne veut rien dire ici : la donnée n’a pas été importée.</small></span>
+    </div>
+  }
+  return <div className="coverage-banner partial" role="status">
+    <TriangleAlert size={15} />
+    <span><strong>{territory} · données partielles</strong><small>Classement incomplet. Sources absentes : {coverage.missing_sources.join(', ')}.</small></span>
+  </div>
 }
 
 /**

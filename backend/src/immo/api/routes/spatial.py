@@ -4,7 +4,12 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
-from immo.spatial import find_address_context, find_entity_match, search_addresses
+from immo.spatial import (
+    commune_coverage,
+    find_address_context,
+    find_entity_match,
+    search_addresses,
+)
 
 router = APIRouter(prefix="/api/v1/spatial", tags=["spatial-reference"])
 
@@ -19,6 +24,27 @@ class AddressSearchResponse(BaseModel):
     longitude: float | None
     latitude: float | None
     position_status: str
+
+
+class SourceCoverageResponse(BaseModel):
+    data_source_id: str
+    name: str
+    release_id: str | None
+    acceptance_status: str | None
+    covered: bool
+    record_count: int = Field(ge=0)
+
+
+class CommuneCoverageResponse(BaseModel):
+    commune_code: str
+    commune_name: str | None
+    department_code: str
+    # `not_covered` n'est pas `covered` avec zero resultat : le premier dit que l'absence ne
+    # veut rien dire, le second qu'aucun bien ne correspond. Les confondre laisserait croire
+    # qu'un territoire est vide alors qu'il n'a jamais ete importe.
+    state: Literal["covered", "partial", "not_covered"]
+    sources: list[SourceCoverageResponse]
+    missing_sources: list[str]
 
 
 class SourceIdentifierResponse(BaseModel):
@@ -69,6 +95,19 @@ class EntityMatchResponse(BaseModel):
 class AddressContextResponse(BaseModel):
     address: AddressSearchResponse
     matches: list[EntityMatchResponse]
+
+
+@router.get("/coverage", response_model=CommuneCoverageResponse)
+def coverage(
+    commune_code: str = Query(pattern=r"^[0-9A-Z]{5}$"),
+) -> CommuneCoverageResponse:
+    try:
+        record = commune_coverage(commune_code)
+    except (OSError, SQLAlchemyError) as exc:
+        raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
+    if record is None:
+        raise HTTPException(status_code=404, detail="Commune not found")
+    return CommuneCoverageResponse.model_validate(record)
 
 
 @router.get("/addresses", response_model=list[AddressSearchResponse])

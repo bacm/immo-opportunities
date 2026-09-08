@@ -266,6 +266,62 @@
         "title": "CandidateStateResponse",
         "type": "object"
       },
+      "CommuneCoverageResponse": {
+        "properties": {
+          "commune_code": {
+            "title": "Commune Code",
+            "type": "string"
+          },
+          "commune_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commune Name"
+          },
+          "department_code": {
+            "title": "Department Code",
+            "type": "string"
+          },
+          "missing_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Sources",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceCoverageResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "covered",
+              "partial",
+              "not_covered"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commune_code",
+          "commune_name",
+          "department_code",
+          "state",
+          "sources",
+          "missing_sources"
+        ],
+        "title": "CommuneCoverageResponse",
+        "type": "object"
+      },
       "CoverageResponse": {
         "properties": {
           "acceptance_status": {
@@ -2051,6 +2107,59 @@
           "role"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SourceCoverageResponse": {
+        "properties": {
+          "acceptance_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptance Status"
+          },
+          "covered": {
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "data_source_id": {
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "record_count": {
+            "minimum": 0.0,
+            "title": "Record Count",
+            "type": "integer"
+          },
+          "release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Id"
+          }
+        },
+        "required": [
+          "data_source_id",
+          "name",
+          "release_id",
+          "acceptance_status",
+          "covered",
+          "record_count"
+        ],
+        "title": "SourceCoverageResponse",
         "type": "object"
       },
       "SourceIdentifierResponse": {
@@ -4035,6 +4144,49 @@
           }
         },
         "summary": "Address Context",
+        "tags": [
+          "spatial-reference"
+        ]
+      }
+    },
+    "/api/v1/spatial/coverage": {
+      "get": {
+        "operationId": "coverage_api_v1_spatial_coverage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "commune_code",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9A-Z]{5}$",
+              "title": "Commune Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommuneCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Coverage",
         "tags": [
           "spatial-reference"
         ]

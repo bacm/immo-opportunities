@@ -194,6 +194,13 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .related-list { display: grid; gap: 6px; }
 .related-list button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; }
 .related-list button:hover { background: var(--soft); }
+.coverage-banner { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; margin: 0 0 10px; border-radius: 9px; border: 1px solid var(--line); }
+.coverage-banner > span { display: flex; flex-direction: column; gap: 2px; }
+.coverage-banner strong { font-size: 11px; }
+.coverage-banner small { color: var(--muted); font-size: 9px; line-height: 1.5; }
+.coverage-banner.covered { background: color-mix(in srgb, #1f8a4c 8%, white); border-color: color-mix(in srgb, #1f8a4c 30%, var(--line)); }
+.coverage-banner.partial { background: color-mix(in srgb, #b7791f 10%, white); border-color: color-mix(in srgb, #b7791f 34%, var(--line)); }
+.coverage-banner.not-covered { background: color-mix(in srgb, #b23b3b 10%, white); border-color: color-mix(in srgb, #b23b3b 34%, var(--line)); }
 .match-row { display: grid; gap: 8px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
 .match-row:last-child { border-bottom: none; }
 .match-row > button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
