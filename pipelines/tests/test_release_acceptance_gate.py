@@ -50,6 +50,8 @@ class FakeConnection:
         self.commits_before.append(self.commits)
         if "refresh_cadastre_spatial_reference" in statement:
             return _Result((332, 1_333_327, 1_333_327))
+        if "tiles.refresh_render_v1" in statement:
+            return _Result((1_333_327, 865_335))
         # Du plus spécifique au plus général : la requête de complétude cadastrale
         # contient elle aussi `FROM meta.import_run`, elle doit donc être reconnue
         # avant la barrière générique d'import réussi.
@@ -78,6 +80,10 @@ class FakeConnection:
     @property
     def propagation_was_queried(self) -> bool:
         return any("refresh_cadastre_spatial_reference" in s for s in self.statements)
+
+    @property
+    def render_was_queried(self) -> bool:
+        return any("tiles.refresh_render_v1" in s for s in self.statements)
 
 
 def catalog_for(connection: FakeConnection) -> DatasetCatalog:
@@ -219,3 +225,40 @@ def test_a_rollback_publication_realigns_the_spatial_reference_too() -> None:
     )
 
     assert connection.propagation_was_queried
+
+
+def test_publishing_a_cadastral_release_also_refreshes_the_tile_render() -> None:
+    """Une carte vide est une reponse valide : rien ne signale l'oubli — BUG-07.
+
+    `tiles.refresh_render_v1` n'avait qu'un appelant, la migration qui l'a creee, laquelle
+    boucle sur les departements **deja publies a cet instant**. DS-01 publie apres, les tables
+    de rendu sont restees vides et Martin a repondu 204 sur chaque tuile, sans erreur.
+    """
+    connection = FakeConnection(data_source_id="DS-01")
+    counts = catalog_for(connection).publish("DS-01@2026-06-01", "35", actor="test", reason="test")
+
+    assert connection.render_was_queried
+    assert counts is not None
+    assert counts.render_parcel_count == 1_333_327
+    assert counts.render_building_count == 865_335
+
+
+def test_the_tile_render_is_refreshed_inside_the_publication_transaction() -> None:
+    """Meme exigence que la propagation : aucune fenetre ou le pointeur avance seul."""
+    connection = FakeConnection(data_source_id="DS-01")
+    catalog_for(connection).publish("DS-01@2026-06-01", "35", actor="test", reason="test")
+
+    publish_at = connection.index_of("meta.publish_dataset_release")
+    render_at = connection.index_of("tiles.refresh_render_v1")
+    assert publish_at < render_at
+    # Aucun commit entre le deplacement du pointeur et le calcul du rendu.
+    assert connection.commits_before[render_at] == connection.commits_before[publish_at]
+
+
+def test_a_non_cadastral_release_does_not_refresh_the_tile_render() -> None:
+    """Le rendu decrit le cadastre : publier la BAN n'a aucune raison de le recalculer."""
+    connection = FakeConnection(data_source_id="DS-05")
+    counts = catalog_for(connection).publish("DS-05@2026-06-17", "35", actor="test", reason="test")
+
+    assert not connection.render_was_queried
+    assert counts is None

@@ -36,6 +36,10 @@ class SpatialReferenceCounts:
     area_count: int
     parcel_count: int
     property_unit_count: int
+    # Volumes des tables de rendu Martin. Nuls tant qu'aucune tuile n'a ete calculee :
+    # c'est exactement ce que l'Explorer montre, une carte vide.
+    render_parcel_count: int = 0
+    render_building_count: int = 0
 
 
 class DatasetCatalog:
@@ -405,10 +409,26 @@ class DatasetCatalog:
         ).fetchone()
         if row is None:
             raise RuntimeError("Spatial reference propagation returned no counts")
+        # Les tables de rendu Martin suivent le meme raisonnement que les identites
+        # canoniques ci-dessus, et souffraient du meme defaut : elles n'etaient peuplees que
+        # par la migration `20260805_0008_real_map`, sur les departements **deja publies a
+        # cet instant**. DS-01 ayant ete publie apres, elles sont restees vides et l'Explorer
+        # n'affichait aucune parcelle ni aucun batiment — sans erreur, Martin repondant 204.
+        #
+        # Le rendu appartient donc a la publication, au meme titre que la propagation :
+        # meme transaction, aucune fenetre ou le pointeur avance seul.
+        render = self.connection.execute(
+            "SELECT * FROM tiles.refresh_render_v1(%s)",
+            (department_code,),
+        ).fetchone()
+        if render is None:
+            raise RuntimeError("Tile render refresh returned no counts")
         return SpatialReferenceCounts(
             area_count=int(row[0]),
             parcel_count=int(row[1]),
             property_unit_count=int(row[2]),
+            render_parcel_count=int(render[0]),
+            render_building_count=int(render[1]),
         )
 
     def publish(

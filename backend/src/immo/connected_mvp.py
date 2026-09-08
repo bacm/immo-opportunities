@@ -678,8 +678,14 @@ def list_match_metrics(
                   LEFT JOIN reference.area AS commune
                          ON commune.area_type = 'commune'
                         AND commune.code = metric.commune_code
-                 WHERE (:relation_type IS NULL OR metric.relation_type = :relation_type)
-                   AND (:commune_code IS NULL OR metric.commune_code = :commune_code)
+                 WHERE (
+                           CAST(:relation_type AS text) IS NULL
+                           OR metric.relation_type = CAST(:relation_type AS text)
+                       )
+                   AND (
+                           CAST(:commune_code AS text) IS NULL
+                           OR metric.commune_code = CAST(:commune_code AS text)
+                       )
                  ORDER BY metric.relation_type, metric.commune_code
                  LIMIT :limit
                 """

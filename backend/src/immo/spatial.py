@@ -214,7 +214,11 @@ def search_addresses(
                ) AS position_status
           FROM reference.address AS address
          WHERE normalized_label % unaccent(lower(:query))
-           AND (:commune_code IS NULL OR commune_code = :commune_code)
+           -- Le CAST est obligatoire : sans lui, PostgreSQL ne peut pas deduire le type
+           -- d'un parametre qui n'apparait que compare a NULL et a une colonne, et rejette
+           -- la requete par AmbiguousParameter des que commune_code vaut NULL. Meme motif
+           -- que dans scoring.py.
+           AND (CAST(:commune_code AS text) IS NULL OR commune_code = CAST(:commune_code AS text))
            AND EXISTS (
                SELECT 1
                  FROM meta.entity_source_identifier AS identifier

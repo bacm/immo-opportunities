@@ -57,13 +57,18 @@ docker compose --env-file .env.example \
     --department 35 --actor "<vous>" --reason "Reconstitution locale"
 ```
 
-La publication propage le référentiel canonique dans sa propre transaction et imprime les volumes
-obtenus :
+La publication propage le référentiel canonique **et les tables de rendu Martin** dans sa propre
+transaction, et imprime les volumes obtenus :
 
 ```json
 "spatial_reference": {"area_count": 332, "parcel_count": 1333327,
-                      "property_unit_count": 1333327}
+                      "property_unit_count": 1333327,
+                      "render_parcel_count": 1333327, "render_building_count": 865335}
 ```
+
+Un `render_parcel_count` nul signifie une carte vide dans l'Explorer : Martin répondra `204` sur
+chaque tuile, sans erreur. C'était le cas jusqu'au 8 septembre 2026 — voir
+[BUG-07](../backlog/BUG-07-tuiles-vides-et-recherche-adresse.md).
 
 Elle traverse 1,33 M parcelles : 2 min 11 s mesurées sur le 35, ce n'est pas un blocage. Il n'y a
 **aucun appel manuel** à `reference.refresh_cadastre_spatial_reference` à faire — c'était le cas
