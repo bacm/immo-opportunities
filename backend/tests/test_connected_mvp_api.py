@@ -201,3 +201,50 @@ def test_admin_requires_repository_role_check_and_carries_request_id(monkeypatch
     )
     assert response.status_code == 200
     assert captured["request_id"] == "e2e-admin-1"
+
+
+def test_admin_match_metrics_passes_filters_and_request_id(monkeypatch) -> None:
+    """FR-012 : les métriques d'appariement sont exposées à l'administration — B3."""
+    captured: dict[str, object] = {}
+
+    def fake_list(
+        principal,
+        request_id: str,
+        limit: int,
+        relation_type: str | None = None,
+        commune_code: str | None = None,
+    ):
+        captured.update(
+            request_id=request_id,
+            limit=limit,
+            relation_type=relation_type,
+            commune_code=commune_code,
+        )
+        return []
+
+    monkeypatch.setattr("immo.api.routes.connected_mvp.list_match_metrics", fake_list)
+    response = TestClient(create_app()).get(
+        "/api/v1/admin/match-metrics",
+        params={"relation_type": "bdnb_group_rnb", "commune_code": "35238", "limit": 50},
+        headers={"X-Request-ID": "e2e-metrics-1"},
+    )
+
+    assert response.status_code == 200
+    assert captured == {
+        "request_id": "e2e-metrics-1",
+        "limit": 50,
+        "relation_type": "bdnb_group_rnb",
+        "commune_code": "35238",
+    }
+
+
+def test_admin_match_metrics_rejects_a_malformed_commune_code(monkeypatch) -> None:
+    """Un code commune INSEE fait cinq caractères : le refuser tôt, pas en base."""
+    monkeypatch.setattr(
+        "immo.api.routes.connected_mvp.list_match_metrics",
+        lambda *args, **kwargs: [],
+    )
+    response = TestClient(create_app()).get(
+        "/api/v1/admin/match-metrics", params={"commune_code": "35"}
+    )
+    assert response.status_code == 422

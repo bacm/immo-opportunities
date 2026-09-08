@@ -1,6 +1,6 @@
 # B3 — Rapport de distribution et métriques d'appariement par commune
 
-**Version :** v0.3 · **Taille :** M · **État :** À faire
+**Version :** v0.3 · **Taille :** M · **État :** Terminé
 **Dépend de :** B1, B2a, B2b · **Bloque :** B4
 
 ## Contexte à charger
@@ -44,6 +44,53 @@ Et pour chacune :
 2. la ventilation **par commune**, persistée en base et non seulement écrite dans un document ;
 3. la distribution des scores de confiance, pas seulement leur moyenne ;
 4. les cas non appariés avec leur motif, distingués des cas rejetés.
+
+## Résultat au 8 septembre 2026
+
+Rapport livré : [`spatial-matching-distribution-35.md`](../data/spatial-matching-distribution-35.md),
+**généré** et non saisi. Régénération :
+
+```bash
+make matching-report DEPARTMENT=35
+```
+
+La cible recalcule les métriques avant de rendre — le document ne peut donc pas décrire un état
+périmé.
+
+| Relation | certain | ambigu | rejeté | non apparié | total |
+|---|---:|---:|---:|---:|---:|
+| Bâtiment ↔ Parcelle | 737 353 | 0 | 0 | 4 010 | 741 363 |
+| Adresse ↔ Parcelle | 248 209 | 1 759 | 2 685 | 184 788 | 437 441 |
+| Adresse ↔ Bâtiment | 393 355 | 0 | 0 | 44 086 | 437 441 |
+| Bâtiment BD TOPO ↔ Bâtiment RNB | 692 621 | 90 841 | 0 | 17 711 | 801 173 |
+| Groupe BDNB ↔ Bâtiment RNB | 422 194 | 104 823 | 0 | 19 284 | 546 301 |
+
+Le rapport porte aussi le volume par méthode, la distribution des confiances, la cardinalité
+réelle — maximum de 37 parcelles pour un bâtiment, 80 bâtiments pour un groupe BDNB — et les
+communes extrêmes de chaque relation, toujours avec leur volume à côté du taux.
+
+## Deux défauts trouvés en produisant le rapport
+
+**La relation adresse ↔ bâtiment était structurellement vide.** Elle était calculée dans
+`_publish_stage` de l'importeur BAN, donc **au moment de l'import et contre les seules données RNB
+présentes à cet instant**. Le RNB ayant été importé après la BAN, la jointure ne produisait aucune
+ligne — sans échouer. Elle est désormais recalculable indépendamment de l'ordre d'import :
+566 248 relations, 393 355 adresses rattachées de façon certaine, 89,9 %.
+
+**Les statistiques comptaient plus que le réglage de [BUG-06](./BUG-06-reglage-postgresql.md).**
+Après insertion de ces 566 248 relations, la métrique qui les lit a tourné **4 h 44 sans
+aboutir** ; statistiques rafraîchies, **2,2 s**. Le planificateur estimait 5 000 lignes là où il y
+en avait 437 441. `ANALYZE` exigeant d'être propriétaire de la table, `pipeline_rw` se contentait
+d'un avertissement et sautait la table. Détail et portée dans
+[`postgresql-tuning.md`](../operations/postgresql-tuning.md).
+
+## Ce qui reste ouvert
+
+- Les trois autres importeurs n'analysent pas après leur import et sont exposés au même défaut.
+  À rattacher à [BUG-02](./BUG-02-scripts-import-hors-dagster.md), dont le passage à Dagster est
+  l'occasion d'y placer un `ANALYZE` de fin d'asset.
+- Aucune des 332 communes n'est « non couverte » : le mécanisme qui distingue ce cas d'un taux nul
+  existe et est testé, mais aucune donnée réelle ne le déclenche aujourd'hui.
 
 ## Points de vigilance
 

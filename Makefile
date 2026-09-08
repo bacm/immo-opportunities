@@ -96,6 +96,17 @@ ban-import:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/import_ban_release.py 2026-06-17 --department $(DEPARTMENT)
 
+matching-refresh:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/refresh_spatial_matching.py --department $(DEPARTMENT)
+
+matching-report: matching-refresh
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/spatial_matching_report.py --department $(DEPARTMENT)
+
 bdnb-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

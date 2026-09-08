@@ -16,6 +16,7 @@ from immo.connected_mvp import (
     get_workspace,
     list_data_quality,
     list_import_runs,
+    list_match_metrics,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["connected-mvp"])
@@ -287,6 +288,19 @@ def admin_import_runs(
     limit: int = Query(default=50, ge=1, le=250),
 ) -> list[dict[str, Any]]:
     return list_import_runs(principal, request.state.request_id, limit)
+
+
+@router.get("/admin/match-metrics", response_model=list[dict[str, Any]])
+def admin_match_metrics(
+    request: Request,
+    principal: PrincipalDep,
+    relation_type: str | None = Query(default=None, max_length=64),
+    commune_code: str | None = Query(default=None, min_length=5, max_length=5),
+    limit: int = Query(default=200, ge=1, le=2000),
+) -> list[dict[str, Any]]:
+    return list_match_metrics(
+        principal, request.state.request_id, limit, relation_type, commune_code
+    )
 
 
 @router.get("/admin/data-quality", response_model=list[dict[str, Any]])

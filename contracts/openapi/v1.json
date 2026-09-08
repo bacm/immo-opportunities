@@ -2554,6 +2554,91 @@
         ]
       }
     },
+    "/api/v1/admin/match-metrics": {
+      "get": {
+        "operationId": "admin_match_metrics_api_v1_admin_match_metrics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "relation_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Relation Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "commune_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 5,
+                  "minLength": 5,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Commune Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Admin Match Metrics Api V1 Admin Match Metrics Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Match Metrics",
+        "tags": [
+          "connected-mvp"
+        ]
+      }
+    },
     "/api/v1/areas": {
       "get": {
         "operationId": "areas_api_v1_areas_get",

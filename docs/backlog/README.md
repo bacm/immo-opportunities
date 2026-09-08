@@ -66,8 +66,8 @@ dérivée du graphe de dépendances.
 | [B1](./B1-audit-ban-ds05.md) | Terminer l'audit BAN DS-05 et prononcer un verdict | v0.3 | BUG-03 | M | Terminé | — |
 | [B2a](./B2a-import-bdnb-ds03.md) | Importer et auditer DS-03 BDNB Open sur le 35 | v0.3 | — | L | Terminé | — |
 | [B2b](./B2b-import-bdtopo-ds04.md) | Importer et auditer DS-04 BD TOPO sur le 35 | v0.3 | BUG-05 | L | Terminé | — |
-| [B3](./B3-rapport-appariements.md) | Rapport de distribution et métriques d'appariement par commune | v0.3 | B1, B2a, B2b | M | À faire | **prêt** |
-| [B4](./B4-revue-manuelle-appariements.md) | Revue manuelle stratifiée d'un échantillon d'appariements | v0.3 | B3 | M | À faire | attend B3 |
+| [B3](./B3-rapport-appariements.md) | Rapport de distribution et métriques d'appariement par commune | v0.3 | B1, B2a, B2b | M | Terminé | — |
+| [B4](./B4-revue-manuelle-appariements.md) | Revue manuelle stratifiée d'un échantillon d'appariements | v0.3 | B3 | M | À faire | **prêt** |
 | [B5](./B5-features-morphologiques.md) | Calculer LAND-001..010 et BLD-001..003 sur releases acceptées | v0.3 | B4 | M | À faire | attend B4 |
 
 ### Bugs et dette technique
@@ -132,7 +132,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**9/40 terminés.** Prêts à démarrer : A1, B3, BUG-02, C1, G6, G7.
+**10/40 terminés.** Prêts à démarrer : A1, B4, BUG-02, C1, G6, G7.
 
 <!-- END:tickets -->
 

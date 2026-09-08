@@ -183,14 +183,53 @@ Le catalogue `morphology-v1` définit `LAND-001` à `LAND-010` et `BLD-001` à `
 formule, transformation, unité, plage et règle de valeur manquante. Le moteur pur est couvert par
 les tests unitaires, y compris les contradictions et l'exclusion des prédictions.
 
-DS-03 et DS-04 ne disposant pas encore de release réelle acceptée, les features qui exigent leurs
-attributs restent absentes avec un motif. Elles ne sont ni imputées ni remplacées par zéro. Les
-identifiants BDNB et BD TOPO transportés par DS-02 ne valent pas observation de ces sources.
+DS-03 et DS-04 sont importées depuis le 7 septembre 2026, mais en `display_only` : leurs
+rattachements ambigus ne peuvent fonder aucune feature entrant dans un score. Les features qui
+exigent un rattachement certain sont désormais calculables ; celles qui dépendraient d'un
+rattachement ambigu restent absentes avec un motif. Elles ne sont ni imputées ni remplacées par
+zéro. Les identifiants BDNB et BD TOPO transportés par DS-02 ne valent pas observation de ces
+sources.
+
+## Distribution des appariements — B3, 7 septembre 2026
+
+Les cinq relations du référentiel spatial sont mesurées par commune et persistées dans
+`meta.entity_match_metric`. Le détail, régénérable par `make matching-report DEPARTMENT=35`, est
+dans [`spatial-matching-distribution-35.md`](./spatial-matching-distribution-35.md).
+
+| Relation | certain | ambigu | rejeté | non apparié | total |
+|---|---:|---:|---:|---:|---:|
+| Bâtiment ↔ Parcelle | 737 353 | 0 | 0 | 4 010 | 741 363 |
+| Adresse ↔ Parcelle | 248 209 | 1 759 | 2 685 | 184 788 | 437 441 |
+| Adresse ↔ Bâtiment | 393 355 | 0 | 0 | 44 086 | 437 441 |
+| Bâtiment BD TOPO ↔ Bâtiment RNB | 692 621 | 90 841 | 0 | 17 711 | 801 173 |
+| Groupe BDNB ↔ Bâtiment RNB | 422 194 | 104 823 | 0 | 19 284 | 546 301 |
+
+Aucune des 332 communes n'est « non couverte » : les cinq relations ont au moins un
+enregistrement partout. Le mécanisme qui distingue ce cas d'un taux nul existe néanmoins —
+quatre classes à zéro — et il est testé.
+
+**Deux volumétries du présent rapport ont changé.** Les 741 376 bâtiments et 1 240 351 relations
+mesurés le 4 septembre portaient sur `DS-02@2026-08-01`, retirée depuis
+[BUG-05](../backlog/BUG-05-ds02-rnb-non-reproductible.md). Sur `DS-02@2026-09-05` : 741 379
+bâtiments et 1 240 355 relations.
+
+**La relation adresse ↔ bâtiment était structurellement vide.** Elle était calculée pendant
+l'import BAN, donc contre les seules données RNB présentes à cet instant : le RNB ayant été
+importé après, la jointure ne produisait aucune ligne sans échouer. Elle est désormais
+recalculable indépendamment de l'ordre d'import, et vaut 566 248 relations pour 393 355 adresses
+rattachées de façon certaine — 89,9 %.
+
+**Cardinalité réelle**, que le modèle porte nativement et qu'un ratio moyen masquerait :
+
+| Relation | Maximum observé | Moyenne | Cas au-delà de 1 |
+|---|---:|---:|---:|
+| Bâtiment ↔ Parcelle | 37 | 1,682 | 353 999 |
+| Bâtiment BD TOPO ↔ Bâtiment RNB | 18 | 1,054 | 35 148 |
+| Groupe BDNB ↔ Bâtiment RNB | 80 | 1,376 | 94 679 |
 
 ## Validation restante
 
-- exécuter l'import BAN complet et confronter ses compteurs au décompte de l'archive ;
-- importer des releases réelles et checksumées DS-03 et DS-04 ;
-- produire la distribution finale `certain / ambiguous / rejected / unmatched` ;
-- revoir manuellement un échantillon stratifié urbain, périurbain, rural et cas frontières ;
+- revoir manuellement un échantillon stratifié urbain, périurbain, rural et cas frontières —
+  [B4](../backlog/B4-revue-manuelle-appariements.md), qui devra trancher les seuils de **trois**
+  sources d'un coup : DS-02, DS-03 et DS-04 ;
 - accepter puis activer séparément chaque release ayant satisfait ses contrôles bloquants.

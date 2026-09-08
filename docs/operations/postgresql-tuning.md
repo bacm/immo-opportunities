@@ -77,6 +77,32 @@ sur la foi du matériel et de la charge, sans mesure isolée :
 
 Ces quatre valeurs sont donc des **hypothèses documentées**, pas des résultats.
 
+## Les statistiques comptent plus que le réglage
+
+Découvert le 8 septembre 2026 en réalisant [B3](../backlog/B3-rapport-appariements.md), et de
+loin l'effet le plus violent observé sur cette base.
+
+Après insertion de 566 248 relations adresse ↔ bâtiment, la métrique par commune qui les lit a
+tourné **4 h 44 sans aboutir**. Statistiques rafraîchies, la même requête rend en **2,2 s**. Le
+planificateur ignorait les lignes fraîchement insérées — il estimait 5 000 lignes là où il y en
+avait 437 441, un facteur 87 — et choisissait un plan catastrophique.
+
+Autovacuum finit par le faire, mais son seuil par défaut — 10 % des lignes — le déclenche bien
+après la requête qui suit immédiatement l'insertion. Or c'est précisément l'enchaînement de tous
+les imports : insérer en masse, puis lire.
+
+**`ANALYZE` exige d'être propriétaire de la table, et `pipeline_rw` ne l'est pas** : il se
+contente d'un avertissement et saute la table. `pipelines/scripts/refresh_spatial_matching.py`
+endosse donc `migration_owner`, dont le rôle de connexion est déjà membre, dans ce script de
+maintenance et nulle part ailleurs.
+
+**Ce qui reste à faire :** les trois autres importeurs — cadastre, BAN, RNB — n'analysent pas
+après leur import. Ils sont exposés au même défaut, et le lent `UPDATE` de 20 minutes rencontré
+pendant [B2b](../backlog/B2b-import-bdtopo-ds04.md) en venait probablement. Le corriger demande de
+rejouer chaque import pour le vérifier, ce qui n'a pas été fait ici — à rattacher à
+[BUG-02](../backlog/BUG-02-scripts-import-hors-dagster.md), dont le passage à Dagster est
+l'occasion naturelle d'y placer un `ANALYZE` de fin d'asset.
+
 ## Où le réglage vit
 
 Dans `compose.yaml`, en arguments `-c` du service `postgres`, chacun surchargeable par variable

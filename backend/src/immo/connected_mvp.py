@@ -648,6 +648,67 @@ def list_import_runs(principal: Principal, request_id: str, limit: int) -> list[
         ]
 
 
+def list_match_metrics(
+    principal: Principal,
+    request_id: str,
+    limit: int,
+    relation_type: str | None = None,
+    commune_code: str | None = None,
+) -> list[dict[str, Any]]:
+    """Distribution en quatre classes par commune — exigence FR-012.
+
+    Les quatre classes sont exposées telles quelles, jamais additionnées : « non apparié » est
+    une absence de décision, « rejeté » une décision motivée. `coverage` distingue de surcroît
+    une commune sans aucun enregistrement source d'une commune où rien n'apparie — les quatre
+    classes à zéro identifient exactement le premier cas.
+    """
+    with actor_connection(principal) as (connection, actor):
+        require_role(actor, "organization_admin")
+        rows = connection.execute(
+            text(
+                """
+                SELECT metric.release_id, metric.commune_code, commune.name AS commune_name,
+                       metric.relation_type, metric.algorithm_code, metric.algorithm_version,
+                       metric.certain_count, metric.ambiguous_count,
+                       metric.rejected_count, metric.unmatched_count,
+                       metric.certain_count + metric.ambiguous_count
+                         + metric.rejected_count + metric.unmatched_count AS total_count,
+                       metric.measured_at
+                  FROM meta.entity_match_metric AS metric
+                  LEFT JOIN reference.area AS commune
+                         ON commune.area_type = 'commune'
+                        AND commune.code = metric.commune_code
+                 WHERE (:relation_type IS NULL OR metric.relation_type = :relation_type)
+                   AND (:commune_code IS NULL OR metric.commune_code = :commune_code)
+                 ORDER BY metric.relation_type, metric.commune_code
+                 LIMIT :limit
+                """
+            ),
+            {
+                "limit": limit,
+                "relation_type": relation_type,
+                "commune_code": commune_code,
+            },
+        ).mappings()
+        _audit(
+            connection, actor, request_id, "admin.match_metrics.read", "entity_match_metric", None
+        )
+        results: list[dict[str, Any]] = []
+        for row in rows:
+            total = int(row["total_count"])
+            results.append(
+                {
+                    **dict(row),
+                    "total_count": total,
+                    # Un taux ne se publie jamais sans son volume, et n'existe pas sans lui.
+                    "certain_rate": (int(row["certain_count"]) / total) if total else None,
+                    "coverage": "source_absent" if total == 0 else "covered",
+                    "measured_at": _iso(row["measured_at"]),
+                }
+            )
+        return results
+
+
 def list_data_quality(principal: Principal, request_id: str, limit: int) -> list[dict[str, Any]]:
     with actor_connection(principal) as (connection, actor):
         require_role(actor, "organization_admin")

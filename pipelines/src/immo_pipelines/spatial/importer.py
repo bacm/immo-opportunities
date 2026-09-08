@@ -729,6 +729,140 @@ class BanImporter:
             parameters,
         )
 
+    def refresh_address_building_relations(self, release_id: str) -> int:
+        """Recalculer la relation adresse <-> batiment, sans dependre de l'ordre d'import.
+
+        Cette relation joint les adresses BAN aux observations RNB par la cle
+        d'interoperabilite que le RNB transporte dans `addresses`. Elle etait calculee dans
+        `_publish_stage`, donc **au moment de l'import BAN et contre les seules donnees RNB
+        presentes a cet instant** : importer le RNB apres la BAN la laissait vide en silence,
+        la jointure ne produisant aucune ligne sans echouer. C'est exactement ce qui s'est
+        produit sur cette base, ou la relation valait zero alors que les deux sources etaient
+        la.
+
+        La recalculer ici la rend independante de l'ordre : B3 en avait besoin pour pouvoir
+        seulement la rapporter.
+        """
+        self.connection.execute("SET LOCAL ROLE pipeline_rw")
+        self.connection.execute(
+            """
+            INSERT INTO meta.entity_match (
+                candidate_group_key, left_entity_type, left_entity_id,
+                right_entity_type, right_entity_id, method, algorithm_code,
+                algorithm_version, confidence, decision, critical,
+                blocks_publication, rationale, evidence, release_ids
+            )
+            SELECT 'rnb-ban:' || observation.entity_id || ':' || address.id,
+                   'building', observation.entity_id,
+                   'address', address.id,
+                   'source_relation', 'rnb-ban-identifier', '1', 1,
+                   'certain', true, false,
+                   'RNB address relation uses the exact BAN interoperability key',
+                   jsonb_build_object(
+                       'cle_interop_ban', rnb_address->>'cle_interop_ban',
+                       'recomputed_independently_of_import_order', true
+                   ),
+                   jsonb_build_array(observation.release_id, %(release_id)s::text)
+              FROM meta.entity_source_observation AS observation
+              CROSS JOIN LATERAL jsonb_array_elements(
+                  observation.properties->'addresses'
+              ) AS rnb_address
+              JOIN reference.address AS address
+                ON address.id = 'address:ban:' || (rnb_address->>'cle_interop_ban')
+              JOIN meta.entity_source_identifier AS identifier
+                ON identifier.entity_type = 'address'
+               AND identifier.entity_id = address.id
+               AND identifier.data_source_id = 'DS-05'
+               AND identifier.last_release_id = %(release_id)s
+             WHERE observation.entity_type = 'building'
+               AND observation.source_entity_type = 'rnb_building'
+               AND observation.entity_id IS NOT NULL
+               AND nullif(rnb_address->>'cle_interop_ban', '') IS NOT NULL
+            ON CONFLICT (
+                candidate_group_key, left_entity_type, left_entity_id,
+                right_entity_type, right_entity_id, algorithm_code, algorithm_version
+            ) DO NOTHING
+            """,
+            {"release_id": release_id},
+        )
+        created = self.connection.execute(
+            """
+            SELECT count(*) FROM meta.entity_match
+             WHERE algorithm_code = 'rnb-ban-identifier' AND algorithm_version = '1'
+            """
+        ).fetchone()
+        self.connection.execute("RESET ROLE")
+        self.connection.commit()
+        return int(created[0]) if created else 0
+
+    def refresh_address_building_metrics(self, release_id: str, department_code: str) -> None:
+        """Metrique par commune de la relation adresse <-> batiment, quatre classes."""
+        self.connection.execute("SET LOCAL ROLE pipeline_rw")
+        self.connection.execute(
+            """
+            WITH addresses AS (
+                SELECT address.id, address.commune_code
+                  FROM reference.address AS address
+                  JOIN meta.entity_source_identifier AS identifier
+                    ON identifier.entity_type = 'address'
+                   AND identifier.entity_id = address.id
+                   AND identifier.data_source_id = 'DS-05'
+                   AND identifier.last_release_id = %(release_id)s
+                 WHERE address.department_code = %(department_code)s
+            ), classified AS (
+                SELECT addresses.id, addresses.commune_code,
+                       coalesce(bool_or(matched.decision = 'certain'), false) AS certain,
+                       coalesce(bool_or(matched.decision = 'ambiguous'), false) AS ambiguous,
+                       coalesce(bool_or(matched.decision = 'rejected'), false) AS rejected
+                  FROM addresses
+                  LEFT JOIN meta.entity_match AS matched
+                         ON matched.right_entity_type = 'address'
+                        AND matched.right_entity_id = addresses.id
+                        AND matched.algorithm_code = 'rnb-ban-identifier'
+                        AND matched.algorithm_version = '1'
+                 GROUP BY addresses.id, addresses.commune_code
+            ), aggregate AS (
+                SELECT commune.code,
+                       count(*) FILTER (WHERE classified.certain) AS certain_count,
+                       count(*) FILTER (
+                           WHERE NOT classified.certain AND classified.ambiguous
+                       ) AS ambiguous_count,
+                       count(*) FILTER (
+                           WHERE NOT classified.certain AND NOT classified.ambiguous
+                             AND classified.rejected
+                       ) AS rejected_count,
+                       count(classified.id) FILTER (
+                           WHERE NOT classified.certain AND NOT classified.ambiguous
+                             AND NOT classified.rejected
+                       ) AS unmatched_count
+                  FROM reference.area AS commune
+                  LEFT JOIN classified ON classified.commune_code = commune.code
+                 WHERE commune.area_type = 'commune'
+                   AND commune.department_code = %(department_code)s
+                 GROUP BY commune.code
+            )
+            INSERT INTO meta.entity_match_metric (
+                release_id, commune_code, relation_type, algorithm_code,
+                algorithm_version, certain_count, ambiguous_count,
+                rejected_count, unmatched_count
+            )
+            SELECT %(release_id)s, code, 'address_building', 'rnb-ban-identifier', '1',
+                   certain_count, ambiguous_count, rejected_count, unmatched_count
+              FROM aggregate
+            ON CONFLICT (
+                release_id, commune_code, relation_type, algorithm_code, algorithm_version
+            ) DO UPDATE SET
+                certain_count = EXCLUDED.certain_count,
+                ambiguous_count = EXCLUDED.ambiguous_count,
+                rejected_count = EXCLUDED.rejected_count,
+                unmatched_count = EXCLUDED.unmatched_count,
+                measured_at = clock_timestamp()
+            """,
+            {"release_id": release_id, "department_code": department_code},
+        )
+        self.connection.execute("RESET ROLE")
+        self.connection.commit()
+
     def refresh_match_metrics(self, release_id: str, department_code: str) -> None:
         self.connection.execute("SET LOCAL ROLE pipeline_rw")
         self.connection.execute(
