@@ -22,48 +22,110 @@ BLIND_CASE_SELECT = """
     SELECT review_case.id,
            review_case.sample_id,
            review_case.territorial_stratum,
+           review_case.matching_stratum,
            review_case.commune_code,
            commune.name AS commune_name,
            review_case.drawn_rank,
-           -- Le côté gauche : l'observation ou l'entité qui porte la relation.
+           -- Un libelle lisible par un humain, jamais l'identifiant technique seul :
+           -- « 7 Avenue Georges Pian 35800 Dinard » se juge, `address:ban:35093_0850_00007`
+           -- ne se juge pas.
            coalesce(
+               left_address.display_label,
+               left_building.id,
                source_observation.source_identifier,
                matched.left_entity_id
            ) AS left_label,
+           coalesce(source_observation.source_identifier, matched.left_entity_id) AS left_id,
            coalesce(
                source_observation.source_entity_type,
                matched.left_entity_type
            ) AS left_kind,
-           -- Le côté droit : l'entité canonique visée.
-           coalesce(link.entity_id, matched.right_entity_id) AS right_label,
+           round(ST_Area(coalesce(
+               source_observation.geometry, left_building.geom
+           ))::numeric) AS left_area_m2,
+           coalesce(
+               right_parcel.cadastral_id,
+               right_building.id,
+               link.entity_id,
+               matched.right_entity_id
+           ) AS right_label,
+           coalesce(link.entity_id, matched.right_entity_id) AS right_id,
            coalesce(link.entity_type, matched.right_entity_type) AS right_kind,
-           ST_X(ST_Transform(ST_PointOnSurface(
-               coalesce(source_observation.geometry, address.geom, parcel_geometry.geom)
-           ), 4326)) AS longitude,
-           ST_Y(ST_Transform(ST_PointOnSurface(
-               coalesce(source_observation.geometry, address.geom, parcel_geometry.geom)
-           ), 4326)) AS latitude,
-           EXISTS (
-               SELECT 1 FROM meta.matching_review_verdict AS recorded
-                WHERE recorded.case_id = review_case.id
-           ) AS already_judged
+           round(ST_Area(coalesce(
+               right_parcel_geometry.geom, right_building.geom
+           ))::numeric) AS right_area_m2,
+           -- Les deux geometries, en WGS84. Montrer OU sont les objets n'est pas montrer ce
+           -- que le moteur en a conclu : c'est la donnee, et sans elle la question posee est
+           -- litteralement sans reponse.
+           ST_AsGeoJSON(ST_Transform(coalesce(
+               source_observation.geometry, left_building.geom, left_address.geom
+           ), 4326)) AS left_geojson,
+           ST_AsGeoJSON(ST_Transform(coalesce(
+               right_parcel_geometry.geom, right_building.geom
+           ), 4326)) AS right_geojson,
+           ST_X(ST_Transform(ST_PointOnSurface(coalesce(
+               right_parcel_geometry.geom, right_building.geom,
+               source_observation.geometry, left_address.geom
+           )), 4326)) AS longitude,
+           ST_Y(ST_Transform(ST_PointOnSurface(coalesce(
+               right_parcel_geometry.geom, right_building.geom,
+               source_observation.geometry, left_address.geom
+           )), 4326)) AS latitude
       FROM meta.matching_review_case AS review_case
       LEFT JOIN meta.entity_match AS matched ON matched.id = review_case.match_id
       LEFT JOIN meta.entity_observation_link AS link
              ON link.id = review_case.observation_link_id
       LEFT JOIN meta.entity_source_observation AS source_observation
              ON source_observation.id = link.observation_id
-      LEFT JOIN reference.address AS address
-             ON address.id = matched.left_entity_id AND matched.left_entity_type = 'address'
-      LEFT JOIN reference.parcel AS parcel
-             ON parcel.id = matched.right_entity_id AND matched.right_entity_type = 'parcel'
-      LEFT JOIN reference.parcel_geometry AS parcel_geometry ON parcel_geometry.id = parcel.id
+      LEFT JOIN reference.address AS left_address
+             ON left_address.id = matched.left_entity_id
+            AND matched.left_entity_type = 'address'
+      LEFT JOIN reference.building AS left_building
+             ON left_building.id = matched.left_entity_id
+            AND matched.left_entity_type = 'building'
+      LEFT JOIN reference.parcel AS right_parcel
+             ON right_parcel.id = coalesce(link.entity_id, matched.right_entity_id)
+      LEFT JOIN reference.parcel_geometry AS right_parcel_geometry
+             ON right_parcel_geometry.id = right_parcel.id
+      LEFT JOIN reference.building AS right_building
+             ON right_building.id = coalesce(link.entity_id, matched.right_entity_id)
       LEFT JOIN reference.area AS commune
              ON commune.area_type = 'commune' AND commune.code = review_case.commune_code
 """
 
 
+# La question posee, mot pour mot, selon la strate. Deux identifiants cote a cote et une carte
+# se pretent a toutes les interpretations : un relecteur qui repond a la mauvaise question
+# produit des verdicts pires qu'aucun verdict, parce qu'ils ont l'air valides.
+STRATUM_QUESTIONS: dict[str, str] = {
+    "certain_official_identifier": (
+        "Ce bâtiment BD TOPO et ce bâtiment RNB sont-ils le même bâtiment ?"
+    ),
+    "certain_source_relation": "Ces deux objets se correspondent-ils sur le terrain ?",
+    "ambiguous": "Ces deux objets se correspondent-ils sur le terrain ?",
+}
+
+OUT_OF_SCOPE = (
+    "Vous ne jugez que l'identité : ces deux objets désignent-ils la même chose ? "
+    "Ni l'accès à la rue, ni l'état du bâti, ni la qualité de la donnée source n'entrent "
+    "dans ce verdict."
+)
+
+
+def _question(stratum: str, left_kind: str | None, right_kind: str | None) -> str:
+    """Formuler la question dans les termes des objets réellement comparés."""
+    if left_kind == "address" and right_kind == "parcel":
+        return "Cette adresse est-elle bien l'adresse de cette parcelle ?"
+    if left_kind == "building" and right_kind == "parcel":
+        return "Ce bâtiment est-il bien situé sur cette parcelle ?"
+    if right_kind == "building":
+        return "Ces deux objets désignent-ils le même bâtiment ?"
+    return STRATUM_QUESTIONS.get(stratum, "Ces deux objets se correspondent-ils sur le terrain ?")
+
+
 def _blind_record(row: Any) -> dict[str, Any]:
+    left_kind = str(row["left_kind"]) if row["left_kind"] else None
+    right_kind = str(row["right_kind"]) if row["right_kind"] else None
     return {
         "id": int(row["id"]),
         "sample_id": str(row["sample_id"]),
@@ -71,10 +133,18 @@ def _blind_record(row: Any) -> dict[str, Any]:
         "commune_code": str(row["commune_code"]) if row["commune_code"] else None,
         "commune_name": str(row["commune_name"]) if row["commune_name"] else None,
         "drawn_rank": int(row["drawn_rank"]),
+        "question": _question(str(row["matching_stratum"]), left_kind, right_kind),
+        "out_of_scope": OUT_OF_SCOPE,
         "left_label": str(row["left_label"]) if row["left_label"] else None,
-        "left_kind": str(row["left_kind"]) if row["left_kind"] else None,
+        "left_id": str(row["left_id"]) if row["left_id"] else None,
+        "left_kind": left_kind,
+        "left_area_m2": float(row["left_area_m2"]) if row["left_area_m2"] is not None else None,
+        "left_geojson": str(row["left_geojson"]) if row["left_geojson"] else None,
         "right_label": str(row["right_label"]) if row["right_label"] else None,
-        "right_kind": str(row["right_kind"]) if row["right_kind"] else None,
+        "right_id": str(row["right_id"]) if row["right_id"] else None,
+        "right_kind": right_kind,
+        "right_area_m2": float(row["right_area_m2"]) if row["right_area_m2"] is not None else None,
+        "right_geojson": str(row["right_geojson"]) if row["right_geojson"] else None,
         "longitude": float(row["longitude"]) if row["longitude"] is not None else None,
         "latitude": float(row["latitude"]) if row["latitude"] is not None else None,
     }
@@ -136,6 +206,15 @@ def review_progress(sample_id: str) -> dict[str, Any] | None:
 
 def next_blind_case(sample_id: str) -> dict[str, Any] | None:
     """Le prochain cas non encore jugé, dans l'ordre du tirage."""
+    # Ordre entrelace : le 1er cas de chacune des 12 cellules, puis le 2e, et ainsi de suite.
+    # L'ordre naturel du tirage aurait fait juger 60 cas ambigus littoraux avant le premier
+    # certain — or ce sont les certains qui decident de la publication, et un probleme de
+    # methode se serait vu au soixantieme cas au lieu du dixieme.
+    #
+    # La position est calculee depuis `drawn_rank`, fige au tirage, et non depuis un rang
+    # recalcule sur les cas restants : un rang recalcule redonnerait la premiere place a la
+    # meme cellule apres chaque verdict, et n'entrelacerait donc rien. Le tirage attribue 15
+    # rangs par territoire dans chaque strate, d'ou le modulo.
     statement = text(
         BLIND_CASE_SELECT
         + """
@@ -144,13 +223,108 @@ def next_blind_case(sample_id: str) -> dict[str, Any] | None:
                SELECT 1 FROM meta.matching_review_verdict AS verdict
                 WHERE verdict.case_id = review_case.id
            )
-         ORDER BY review_case.matching_stratum, review_case.drawn_rank
+         ORDER BY (review_case.drawn_rank - 1) % 15,
+                  review_case.matching_stratum,
+                  review_case.territorial_stratum
          LIMIT 1
         """
     )
     with get_engine().connect() as connection:
         row = connection.execute(statement, {"sample_id": sample_id}).mappings().one_or_none()
     return _blind_record(row) if row is not None else None
+
+
+def case_context(case_id: int) -> dict[str, Any]:
+    """Le voisinage du cas, pour lever les doutes que la seule paire ne permet pas de trancher.
+
+    Deux doutes sont revenus dans la revue réelle du 9 septembre 2026, et la base savait y
+    répondre alors que l'écran ne le montrait pas :
+
+    - « c'est peut-être un *bis* » — les adresses au même numéro dans la même voie, ou leur
+      **absence explicite**, qui est l'information utile ;
+    - « cette adresse couvre plusieurs parcelles » — les autres parcelles rattachées à la même
+      adresse.
+
+    Aucune décision du moteur n'est exposée ici : savoir qu'un objet fait partie d'un ensemble
+    n'est pas savoir ce que le moteur a conclu de chacun.
+    """
+    with get_engine().connect() as connection:
+        siblings = list(
+            connection.execute(
+                text(
+                    """
+                    WITH target AS (
+                        SELECT address.commune_code, address.street_name,
+                               address.house_number, address.id
+                          FROM meta.matching_review_case AS review_case
+                          JOIN meta.entity_match AS matched
+                            ON matched.id = review_case.match_id
+                          JOIN reference.address AS address
+                            ON address.id = matched.left_entity_id
+                         WHERE review_case.id = :case_id
+                    )
+                    SELECT address.display_label,
+                           coalesce(address.repetition_index, '') AS repetition_index,
+                           address.id = target.id AS is_case
+                      FROM reference.address AS address, target
+                     WHERE address.commune_code = target.commune_code
+                       AND address.street_name IS NOT DISTINCT FROM target.street_name
+                       AND address.house_number IS NOT DISTINCT FROM target.house_number
+                     ORDER BY coalesce(address.repetition_index, '')
+                     LIMIT 12
+                    """
+                ),
+                {"case_id": case_id},
+            ).mappings()
+        )
+        related = list(
+            connection.execute(
+                text(
+                    """
+                    WITH target AS (
+                        SELECT matched.left_entity_id AS address_id,
+                               matched.right_entity_id AS parcel_id
+                          FROM meta.matching_review_case AS review_case
+                          JOIN meta.entity_match AS matched
+                            ON matched.id = review_case.match_id
+                         WHERE review_case.id = :case_id
+                    )
+                    SELECT parcel.cadastral_id,
+                           round(ST_Area(parcel_geometry.geom)::numeric) AS area_m2,
+                           sibling.right_entity_id = target.parcel_id AS is_case
+                      FROM target
+                      JOIN meta.entity_match AS sibling
+                        ON sibling.left_entity_id = target.address_id
+                       AND sibling.algorithm_code = 'ban-cad-parcelles'
+                      JOIN reference.parcel AS parcel ON parcel.id = sibling.right_entity_id
+                      JOIN reference.parcel_geometry AS parcel_geometry
+                        ON parcel_geometry.id = parcel.id
+                     ORDER BY parcel.cadastral_id
+                     LIMIT 12
+                    """
+                ),
+                {"case_id": case_id},
+            ).mappings()
+        )
+    return {
+        "case_id": case_id,
+        "sibling_addresses": [
+            {
+                "display_label": str(row["display_label"]),
+                "repetition_index": str(row["repetition_index"]),
+                "is_case": bool(row["is_case"]),
+            }
+            for row in siblings
+        ],
+        "related_parcels": [
+            {
+                "cadastral_id": str(row["cadastral_id"]),
+                "area_m2": float(row["area_m2"]) if row["area_m2"] is not None else None,
+                "is_case": bool(row["is_case"]),
+            }
+            for row in related
+        ],
+    }
 
 
 def record_verdict(

@@ -34,6 +34,7 @@ import {
   loadSession,
   publishBrittany,
   loadAddressContext,
+  loadCaseContext,
   loadNextReviewCase,
   loadReviewProgress,
   loadReviewResults,
@@ -51,6 +52,7 @@ import {
   type ScenarioRequest,
   type AddressContext,
   type BlindCase,
+  type CaseContext,
   type CommuneCoverage,
   type ReviewProgress,
   type StratumResult,
@@ -728,6 +730,82 @@ function AddressSheet({ context, onClose, onRelated }: { context: AddressContext
 }
 
 /**
+ * Les deux objets du cas, superposés à la même échelle.
+ *
+ * L'écran précédent centrait la carte sur **un seul** des deux et laissait deviner l'autre :
+ * un décalage se lisait alors comme un signal, alors qu'il ne disait rien. Ici les deux formes
+ * sont dessinées ensemble, dans le même repère, avec une échelle — la question « se
+ * correspondent-elles ? » devient regardable.
+ *
+ * Montrer où sont les objets n'est pas montrer ce que le moteur en a conclu : la décision et la
+ * confiance restent absentes de la réponse d'API.
+ */
+function CasePreview({ leftGeoJson, rightGeoJson }: { leftGeoJson: string | null; rightGeoJson: string | null }) {
+  const shapes = useMemo(() => {
+    const collect = (raw: string | null): number[][][] => {
+      if (!raw) return []
+      try {
+        const parsed = JSON.parse(raw) as { type: string; coordinates: unknown }
+        const rings: number[][][] = []
+        const walk = (node: unknown, depth: number) => {
+          if (!Array.isArray(node)) return
+          if (depth === 0 && typeof node[0] === 'number') return
+          if (Array.isArray(node[0]) && typeof (node[0] as unknown[])[0] === 'number') {
+            rings.push(node as number[][])
+            return
+          }
+          for (const child of node) walk(child, depth + 1)
+        }
+        if (parsed.type === 'Point') {
+          const point = parsed.coordinates as number[]
+          rings.push([point])
+        } else walk(parsed.coordinates, 0)
+        return rings
+      } catch { return [] }
+    }
+    return { left: collect(leftGeoJson), right: collect(rightGeoJson) }
+  }, [leftGeoJson, rightGeoJson])
+
+  const all = [...shapes.left, ...shapes.right].flat()
+  if (all.length === 0) return <p className="detail-note">Aucune géométrie exploitable pour ce cas : il faut consulter les sources directement.</p>
+
+  const xs = all.map((point) => point[0])
+  const ys = all.map((point) => point[1])
+  const minX = Math.min(...xs), maxX = Math.max(...xs)
+  const minY = Math.min(...ys), maxY = Math.max(...ys)
+  // Marge de 12 % pour que rien ne touche le bord, et garde-fou sur un cas ponctuel où
+  // l'étendue serait nulle.
+  const spanX = Math.max(maxX - minX, 1e-6) * 1.24
+  const spanY = Math.max(maxY - minY, 1e-6) * 1.24
+  const centreX = (minX + maxX) / 2, centreY = (minY + maxY) / 2
+  const span = Math.max(spanX, spanY)
+  const project = (point: number[]) => [
+    ((point[0] - (centreX - span / 2)) / span) * 300,
+    300 - ((point[1] - (centreY - span / 2)) / span) * 300,
+  ]
+  // Un degré de latitude vaut ~111 km ; l'échelle affichée est donc indicative mais suffit à
+  // savoir si l'on regarde 20 m ou 200 m.
+  const metres = Math.round(span * 111_320)
+
+  const draw = (rings: number[][][], className: string) => rings.map((ring, index) =>
+    ring.length === 1
+      ? <circle key={`${className}-${index}`} className={className} cx={project(ring[0])[0]} cy={project(ring[0])[1]} r={5} />
+      : <polygon key={`${className}-${index}`} className={className} points={ring.map((point) => project(point).join(',')).join(' ')} />)
+
+  return <figure className="case-preview">
+    <svg viewBox="0 0 300 300" role="img" aria-label="Les deux objets du cas, superposés">
+      {draw(shapes.right, 'shape-right')}
+      {draw(shapes.left, 'shape-left')}
+    </svg>
+    <figcaption>
+      <span className="legend-left" /> objet de gauche
+      <span className="legend-right" /> objet de droite
+      <em>largeur ≈ {metres} m</em>
+    </figcaption>
+  </figure>
+}
+
+/**
  * Écran de revue manuelle — B4.
  *
  * Le relecteur ne voit **jamais** la décision du moteur : l'API ne la lui envoie pas. Ce n'est
@@ -742,6 +820,7 @@ function AddressSheet({ context, onClose, onRelated }: { context: AddressContext
 function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; reviewer: string; onClose: () => void }) {
   const [progress, setProgress] = useState<ReviewProgress | null>(null)
   const [current, setCurrent] = useState<BlindCase | null>(null)
+  const [context, setContext] = useState<CaseContext | null>(null)
   const [results, setResults] = useState<StratumResult[]>([])
   const [verdict, setVerdict] = useState<'correct' | 'incorrect' | 'undecidable' | ''>('')
   const [rationale, setRationale] = useState('')
@@ -760,11 +839,16 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
       setProgress(nextProgress)
       setResults(nextResults)
       try {
-        setCurrent(await loadNextReviewCase(sampleId))
+        const nextCase = await loadNextReviewCase(sampleId)
+        setCurrent(nextCase)
         setFinished(false)
+        // Le voisinage lève les doutes que la seule paire ne permet pas de trancher :
+        // « c'est peut-être un bis », « cette adresse couvre plusieurs parcelles ».
+        try { setContext(await loadCaseContext(nextCase.id)) } catch { setContext(null) }
       } catch {
         // 404 : plus aucun cas à juger. C'est une fin normale, pas une erreur.
         setCurrent(null)
+        setContext(null)
         setFinished(true)
       }
     } catch (caught) {
@@ -817,14 +901,26 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
 
         {current && <section className="detail-section">
           <h3>Cas {current.drawn_rank} · {current.territorial_stratum}</h3>
+          <p className="review-question">{current.question}</p>
+          <p className="detail-note">{current.out_of_scope}</p>
+          <CasePreview leftGeoJson={current.left_geojson} rightGeoJson={current.right_geojson} />
           <dl className="facts">
             <div><dt>Commune</dt><dd>{current.commune_name ?? current.commune_code}</dd></div>
-            <div><dt>{current.left_kind}</dt><dd>{current.left_label}</dd></div>
-            <div><dt>{current.right_kind}</dt><dd>{current.right_label}</dd></div>
+            <div><dt>Objet de gauche</dt><dd>{current.left_label}{current.left_area_m2 ? ` · ${Math.round(current.left_area_m2)} m²` : ''}</dd></div>
+            <div><dt>Objet de droite</dt><dd>{current.right_label}{current.right_area_m2 ? ` · ${Math.round(current.right_area_m2)} m²` : ''}</dd></div>
           </dl>
-          {mapHref
-            ? <p className="detail-note"><a href={mapHref} target="_blank" rel="noreferrer">Ouvrir sur la carte, zoom 18</a> — puis comparer aux sources d’origine.</p>
-            : <p className="detail-note">Ce cas n’a pas de position exploitable : le juger demande de consulter les sources directement.</p>}
+          {context && context.sibling_addresses.length > 0 && <div className="case-context">
+            <h4>Adresses au même numéro</h4>
+            {context.sibling_addresses.length === 1
+              ? <p className="detail-note">Aucun <em>bis</em> ni <em>ter</em> à ce numéro : une seule adresse y existe.</p>
+              : <ul>{context.sibling_addresses.map((sibling) => <li key={sibling.display_label} className={sibling.is_case ? 'is-case' : ''}>{sibling.display_label}{sibling.repetition_index ? ` (${sibling.repetition_index})` : ''}{sibling.is_case ? ' ← le cas' : ''}</li>)}</ul>}
+          </div>}
+          {context && context.related_parcels.length > 1 && <div className="case-context">
+            <h4>Parcelles rattachées à cette adresse</h4>
+            <ul>{context.related_parcels.map((parcel) => <li key={parcel.cadastral_id} className={parcel.is_case ? 'is-case' : ''}>{parcel.cadastral_id}{parcel.area_m2 ? ` · ${Math.round(parcel.area_m2)} m²` : ''}{parcel.is_case ? ' ← le cas' : ''}</li>)}</ul>
+            <p className="detail-note">Cette adresse en couvre {context.related_parcels.length}. Être l’une d’elles n’est pas une erreur.</p>
+          </div>}
+          {mapHref && <p className="detail-note"><a href={mapHref} target="_blank" rel="noreferrer">Ouvrir sur la carte, zoom 18</a> — pour situer dans son environnement.</p>}
 
           <form className="review-form" onSubmit={submit}>
             <div className="review-verdicts" role="group" aria-label="Verdict">

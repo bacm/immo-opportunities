@@ -176,6 +176,39 @@
             ],
             "title": "Latitude"
           },
+          "left_area_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Area M2"
+          },
+          "left_geojson": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Geojson"
+          },
+          "left_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Id"
+          },
           "left_kind": {
             "anyOf": [
               {
@@ -208,6 +241,47 @@
               }
             ],
             "title": "Longitude"
+          },
+          "out_of_scope": {
+            "title": "Out Of Scope",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "right_area_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Area M2"
+          },
+          "right_geojson": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Geojson"
+          },
+          "right_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Id"
           },
           "right_kind": {
             "anyOf": [
@@ -247,10 +321,18 @@
           "commune_code",
           "commune_name",
           "drawn_rank",
+          "question",
+          "out_of_scope",
           "left_label",
+          "left_id",
           "left_kind",
+          "left_area_m2",
+          "left_geojson",
           "right_label",
+          "right_id",
           "right_kind",
+          "right_area_m2",
+          "right_geojson",
           "longitude",
           "latitude"
         ],
@@ -389,6 +471,36 @@
           "updated_at"
         ],
         "title": "CandidateStateResponse",
+        "type": "object"
+      },
+      "CaseContextResponse": {
+        "description": "Le voisinage du cas. Aucune décision du moteur n'y figure.\n\nSavoir qu'une adresse couvre trois parcelles n'est pas savoir ce que le moteur a conclu de\nchacune — c'est le fait qui permet de juger.",
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "integer"
+          },
+          "related_parcels": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedParcelResponse"
+            },
+            "title": "Related Parcels",
+            "type": "array"
+          },
+          "sibling_addresses": {
+            "items": {
+              "$ref": "#/components/schemas/SiblingAddressResponse"
+            },
+            "title": "Sibling Addresses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "case_id",
+          "sibling_addresses",
+          "related_parcels"
+        ],
+        "title": "CaseContextResponse",
         "type": "object"
       },
       "CommuneCoverageResponse": {
@@ -1418,6 +1530,36 @@
         "title": "PublicationRequest",
         "type": "object"
       },
+      "RelatedParcelResponse": {
+        "properties": {
+          "area_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area M2"
+          },
+          "cadastral_id": {
+            "title": "Cadastral Id",
+            "type": "string"
+          },
+          "is_case": {
+            "title": "Is Case",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cadastral_id",
+          "area_m2",
+          "is_case"
+        ],
+        "title": "RelatedParcelResponse",
+        "type": "object"
+      },
       "ReviewOutcomeRequest": {
         "properties": {
           "details": {
@@ -2280,6 +2422,29 @@
           "role"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SiblingAddressResponse": {
+        "properties": {
+          "display_label": {
+            "title": "Display Label",
+            "type": "string"
+          },
+          "is_case": {
+            "title": "Is Case",
+            "type": "boolean"
+          },
+          "repetition_index": {
+            "title": "Repetition Index",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_label",
+          "repetition_index",
+          "is_case"
+        ],
+        "title": "SiblingAddressResponse",
         "type": "object"
       },
       "SourceCoverageResponse": {
@@ -4100,6 +4265,48 @@
         "summary": "Property Unit Market Context",
         "tags": [
           "market-data"
+        ]
+      }
+    },
+    "/api/v1/review/cases/{case_id}/context": {
+      "get": {
+        "operationId": "case_neighbourhood_api_v1_review_cases__case_id__context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Case Neighbourhood",
+        "tags": [
+          "matching-review"
         ]
       }
     },

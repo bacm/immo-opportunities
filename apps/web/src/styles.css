@@ -194,6 +194,19 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .related-list { display: grid; gap: 6px; }
 .related-list button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; }
 .related-list button:hover { background: var(--soft); }
+.review-question { margin: 0 0 6px; font: 700 13px Manrope; line-height: 1.4; }
+.case-preview { margin: 10px 0; display: grid; gap: 6px; }
+.case-preview svg { width: 100%; max-width: 300px; height: auto; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; }
+.case-preview .shape-right { fill: rgba(31,138,76,.16); stroke: #1f8a4c; stroke-width: 1.5; }
+.case-preview .shape-left { fill: rgba(183,121,31,.28); stroke: #b7791f; stroke-width: 1.5; }
+.case-preview figcaption { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--muted); flex-wrap: wrap; }
+.case-preview .legend-left, .case-preview .legend-right { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.case-preview .legend-left { background: rgba(183,121,31,.28); border: 1px solid #b7791f; }
+.case-preview .legend-right { background: rgba(31,138,76,.16); border: 1px solid #1f8a4c; }
+.case-context { margin: 10px 0; }
+.case-context h4 { margin: 0 0 5px; font: 700 10px Manrope; text-transform: uppercase; color: var(--muted); }
+.case-context ul { margin: 0; padding-left: 16px; font-size: 10px; display: grid; gap: 3px; }
+.case-context li.is-case { font-weight: 700; }
 .review-form { display: grid; gap: 10px; margin-top: 12px; }
 .review-form label { display: grid; gap: 4px; font-size: 9px; color: var(--muted); text-transform: uppercase; }
 .review-form textarea { min-height: 60px; resize: vertical; }

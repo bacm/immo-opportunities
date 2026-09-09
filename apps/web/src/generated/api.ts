@@ -463,6 +463,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/review/cases/{case_id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case Neighbourhood */
+        get: operations["case_neighbourhood_api_v1_review_cases__case_id__context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/review/samples/{sample_id}": {
         parameters: {
             query?: never;
@@ -750,12 +767,28 @@ export interface components {
             id: number;
             /** Latitude */
             latitude: number | null;
+            /** Left Area M2 */
+            left_area_m2: number | null;
+            /** Left Geojson */
+            left_geojson: string | null;
+            /** Left Id */
+            left_id: string | null;
             /** Left Kind */
             left_kind: string | null;
             /** Left Label */
             left_label: string | null;
             /** Longitude */
             longitude: number | null;
+            /** Out Of Scope */
+            out_of_scope: string;
+            /** Question */
+            question: string;
+            /** Right Area M2 */
+            right_area_m2: number | null;
+            /** Right Geojson */
+            right_geojson: string | null;
+            /** Right Id */
+            right_id: string | null;
             /** Right Kind */
             right_kind: string | null;
             /** Right Label */
@@ -802,6 +835,21 @@ export interface components {
             status: "new" | "to_analyze" | "retained" | "contact_to_prepare" | "contacted" | "visit" | "offer" | "acquired" | "lost" | "rejected" | "ignored";
             /** Updated At */
             updated_at: string | null;
+        };
+        /**
+         * CaseContextResponse
+         * @description Le voisinage du cas. Aucune décision du moteur n'y figure.
+         *
+         *     Savoir qu'une adresse couvre trois parcelles n'est pas savoir ce que le moteur a conclu de
+         *     chacune — c'est le fait qui permet de juger.
+         */
+        CaseContextResponse: {
+            /** Case Id */
+            case_id: number;
+            /** Related Parcels */
+            related_parcels: components["schemas"]["RelatedParcelResponse"][];
+            /** Sibling Addresses */
+            sibling_addresses: components["schemas"]["SiblingAddressResponse"][];
         };
         /** CommuneCoverageResponse */
         CommuneCoverageResponse: {
@@ -1144,6 +1192,15 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** RelatedParcelResponse */
+        RelatedParcelResponse: {
+            /** Area M2 */
+            area_m2: number | null;
+            /** Cadastral Id */
+            cadastral_id: string;
+            /** Is Case */
+            is_case: boolean;
+        };
         /** ReviewOutcomeRequest */
         ReviewOutcomeRequest: {
             /** Details */
@@ -1420,6 +1477,15 @@ export interface components {
             role: "platform_admin" | "organization_admin" | "analyst" | "viewer";
             /** User Id */
             user_id: string;
+        };
+        /** SiblingAddressResponse */
+        SiblingAddressResponse: {
+            /** Display Label */
+            display_label: string;
+            /** Is Case */
+            is_case: boolean;
+            /** Repetition Index */
+            repetition_index: string;
         };
         /** SourceCoverageResponse */
         SourceCoverageResponse: {
@@ -2423,6 +2489,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketContextResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    case_neighbourhood_api_v1_review_cases__case_id__context_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseContextResponse"];
                 };
             };
             /** @description Validation Error */

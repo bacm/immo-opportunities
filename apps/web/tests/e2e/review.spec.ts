@@ -18,7 +18,7 @@ test('le cas à juger ne révèle ni décision ni confiance, dans la réponse r�
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()
   await expect(page.getByRole('heading', { name: /Échantillon b4-/ })).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByText(/Cas 1 ·/)).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })
 
   expect(payloads.length).toBeGreaterThan(0)
   for (const body of payloads) {
@@ -31,7 +31,7 @@ test('le cas à juger ne révèle ni décision ni confiance, dans la réponse r�
 test('un verdict exige un motif et la mention de ce qui a été consulté', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()
-  await expect(page.getByText(/Cas 1 ·/)).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })
 
   const submit = page.getByRole('button', { name: 'Enregistrer et passer au suivant' })
   await expect(submit).toBeDisabled()
@@ -49,7 +49,7 @@ test('un verdict exige un motif et la mention de ce qui a été consulté', asyn
 test('« indécidable » est proposé au même rang que les deux autres verdicts', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()
-  await expect(page.getByText(/Cas 1 ·/)).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })
 
   const group = page.getByRole('group', { name: 'Verdict' })
   await expect(group.getByRole('button', { name: 'Correct', exact: true })).toBeVisible()

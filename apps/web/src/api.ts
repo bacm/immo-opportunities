@@ -22,6 +22,7 @@ export type CommuneCoverage = components['schemas']['CommuneCoverageResponse']
 export type BlindCase = components['schemas']['BlindCaseResponse']
 export type ReviewProgress = components['schemas']['ReviewProgressResponse']
 export type StratumResult = components['schemas']['StratumResultResponse']
+export type CaseContext = components['schemas']['CaseContextResponse']
 
 export type BrittanyReadiness = {
   publishable: boolean
@@ -140,6 +141,10 @@ export function loadReviewProgress(sampleId: string, signal?: AbortSignal) {
 
 export function loadNextReviewCase(sampleId: string, signal?: AbortSignal) {
   return request<BlindCase>(`/api/v1/review/samples/${encodeURIComponent(sampleId)}/next`, { signal })
+}
+
+export function loadCaseContext(caseId: number, signal?: AbortSignal) {
+  return request<CaseContext>(`/api/v1/review/cases/${caseId}/context`, { signal })
 }
 
 export function loadReviewResults(sampleId: string, signal?: AbortSignal) {

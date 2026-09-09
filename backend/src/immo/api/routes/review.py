@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
 from immo.review import (
+    case_context,
     next_blind_case,
     record_verdict,
     review_progress,
@@ -28,10 +29,19 @@ class BlindCaseResponse(BaseModel):
     commune_code: str | None
     commune_name: str | None
     drawn_rank: int
+    # La question posée, dans les termes des objets réellement comparés.
+    question: str
+    out_of_scope: str
     left_label: str | None
+    left_id: str | None
     left_kind: str | None
+    left_area_m2: float | None
+    left_geojson: str | None
     right_label: str | None
+    right_id: str | None
     right_kind: str | None
+    right_area_m2: float | None
+    right_geojson: str | None
     longitude: float | None
     latitude: float | None
 
@@ -97,6 +107,39 @@ def next_case(sample_id: str) -> BlindCaseResponse:
     if record is None:
         raise HTTPException(status_code=404, detail="No unjudged case left in this sample")
     return BlindCaseResponse.model_validate(record)
+
+
+class SiblingAddressResponse(BaseModel):
+    display_label: str
+    repetition_index: str
+    is_case: bool
+
+
+class RelatedParcelResponse(BaseModel):
+    cadastral_id: str
+    area_m2: float | None
+    is_case: bool
+
+
+class CaseContextResponse(BaseModel):
+    """Le voisinage du cas. Aucune décision du moteur n'y figure.
+
+    Savoir qu'une adresse couvre trois parcelles n'est pas savoir ce que le moteur a conclu de
+    chacune — c'est le fait qui permet de juger.
+    """
+
+    case_id: int
+    sibling_addresses: list[SiblingAddressResponse]
+    related_parcels: list[RelatedParcelResponse]
+
+
+@router.get("/cases/{case_id}/context", response_model=CaseContextResponse)
+def case_neighbourhood(case_id: int) -> CaseContextResponse:
+    try:
+        record = case_context(case_id)
+    except (OSError, SQLAlchemyError) as exc:
+        raise HTTPException(status_code=503, detail="Review store is unavailable") from exc
+    return CaseContextResponse.model_validate(record)
 
 
 @router.post("/verdicts", response_model=VerdictResponse, status_code=201)
