@@ -117,6 +117,38 @@ bon score.
 publier — pas d'ajuster le seuil de confiance après coup.** C'est écrit ici, avant de connaître
 le résultat, précisément pour que cette décision ne se négocie pas ensuite.
 
+### Contrôle de cohérence géométrique des verdicts, ajouté le 10 septembre 2026
+
+Un verdict peut contredire un fait mesurable. Sur une relation bâtiment ↔ parcelle, la part du
+bâtiment tombant sur la parcelle du cas se calcule, et se compare à celle de la parcelle qui en
+porte le plus.
+
+**Ce contrôle est déclaré ici parce qu'il est postérieur au tirage.** Un contrôle *a posteriori*
+appliqué aux seuls verdicts qui dérangent trierait les résultats au lieu de les mesurer. Trois
+règles l'en empêchent :
+
+1. il s'applique à **tous** les verdicts de la relation concernée, jamais à une sélection ;
+2. il ne juge pas à la place du relecteur — il déclenche un **rappel**, qui rend le cas à juger
+   et n'efface pas le premier verdict ;
+3. son résultat complet est publié, y compris quand il ne trouve rien.
+
+Premier passage, sur les 12 verdicts bâtiment ↔ parcelle rendus au 10 septembre 2026 :
+
+| Constat | Cas |
+|---|---:|
+| Verdict cohérent avec la géométrie | **11** |
+| Verdict contredit par la géométrie | **1** — cas 90 |
+
+Le cas 90 portait un verdict `correct` sur une parcelle recevant **0,1 %** du bâtiment, alors
+qu'une autre en reçoit **99,4 %** — une parcelle de 16 m² pour un bâtiment de 15,5 m², soit une
+dépendance sur parcelle propre. Le relecteur a lui-même signalé avoir pu mal voir. Le cas a été
+rappelé.
+
+Le contrôle ne s'applique pas aux relations adresse ↔ parcelle : le point BAN est posé côté rue.
+Sur les 20 cas jugés, 18 tombent hors de leur parcelle, de 12,8 m à 306 m, et 16 d'entre eux ont
+été jugés corrects à juste titre. « Le point est dans la parcelle » n'est donc pas un critère —
+ni pour la revue, ni pour une feature à venir.
+
 ## Ce que cet échantillon ne couvre pas
 
 Le ticket impose d'inclure quatre familles de cas :
