@@ -37,6 +37,9 @@ const BASE_STYLE: StyleSpecification = {
   layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eef1eb' } }],
 }
 
+/** Une source vide plutôt qu'aucune source : voir la note d'ordre de pile ci-dessous. */
+const EMPTY = { type: 'FeatureCollection' as const, features: [] }
+
 type Props = {
   leftGeoJson: string | null
   rightGeoJson: string | null
@@ -114,35 +117,43 @@ export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitu
         attributionControl={{ compact: true }}
         style={{ width: '100%', height: '100%' }}
       >
-        {/* `key` distinct sur chaque branche : sans lui React réutilise l'instance et
-            react-map-gl refuse le changement d'identifiant de source. */}
-        {orthophoto
-          ? <Source key="ortho" id="review-base" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="IGN · Géoplateforme">
-              <Layer id="review-base-layer" type="raster" />
-            </Source>
-          : <Source key="parcels" id="review-parcels" type="vector" tiles={['/tiles/v1/parcels/{z}/{x}/{y}.mvt']} minzoom={13} maxzoom={22} attribution="Etalab · DGFiP">
-              <Layer id="review-parcels-fill" source-layer="parcels" type="fill" paint={{ 'fill-color': '#f7f8f3', 'fill-opacity': 0.9 }} />
-              <Layer id="review-parcels-line" source-layer="parcels" type="line" paint={{ 'line-color': '#8b7bb8', 'line-width': 1 }} />
-            </Source>}
+        {/* Les deux fonds restent montés en permanence et on bascule leur visibilité.
+            Monter/démonter une source la place en **fin** de pile : en basculant sur
+            « Parcelles », le remplissage des parcelles passait au-dessus des géométries du cas
+            et n'en laissait voir que la part débordant du parcellaire — un mince trait sur un
+            bord. MapLibre ne charge pas les tuiles d'une couche `visibility: none`, donc rien
+            n'est téléchargé pour le fond caché, et son attribution disparaît avec lui. */}
+        <Source id="review-base" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="IGN · Géoplateforme">
+          <Layer id="review-base-layer" type="raster" layout={{ visibility: orthophoto ? 'visible' : 'none' }} />
+        </Source>
+        <Source id="review-parcels" type="vector" tiles={['/tiles/v1/parcels/{z}/{x}/{y}.mvt']} minzoom={13} maxzoom={22} attribution="Etalab · DGFiP">
+          <Layer id="review-parcels-fill" source-layer="parcels" type="fill" layout={{ visibility: orthophoto ? 'none' : 'visible' }} paint={{ 'fill-color': '#f7f8f3', 'fill-opacity': 0.9 }} />
+          <Layer id="review-parcels-line" source-layer="parcels" type="line" layout={{ visibility: orthophoto ? 'none' : 'visible' }} paint={{ 'line-color': '#8b7bb8', 'line-width': 1 }} />
+        </Source>
 
         {/* L'objet de droite dessous, celui de gauche par-dessus : sur un cas BD TOPO les deux
-            emprises se recouvrent presque, et l'ordre décide de ce qu'on voit. */}
-        {right && <Source id="review-right" type="geojson" data={right}>
+            emprises se recouvrent presque, et l'ordre décide de ce qu'on voit.
+
+            Ces trois sources restent montées même sans géométrie, avec une collection vide.
+            Un `{left && <Source>}` remonterait la source de gauche en fin de pile dès qu'un cas
+            en apporte une après un cas qui n'en avait pas, et le contour de droite passerait
+            alors dessous. */}
+        <Source id="review-right" type="geojson" data={right ?? EMPTY}>
           <Layer id="review-right-fill" type="fill" paint={{ 'fill-color': '#1f8a4c', 'fill-opacity': 0.25 }} />
-        </Source>}
-        {left && <Source id="review-left" type="geojson" data={left}>
+        </Source>
+        <Source id="review-left" type="geojson" data={left ?? EMPTY}>
           <Layer id="review-left-fill" type="fill" paint={{ 'fill-color': '#b7791f', 'fill-opacity': 0.3 }} />
           <Layer id="review-left-line" type="line" paint={{ 'line-color': '#b7791f', 'line-width': 2 }} />
           <Layer id="review-left-point" type="circle" filter={['==', ['geometry-type'], 'Point']} paint={{ 'circle-radius': 7, 'circle-color': '#b7791f', 'circle-stroke-color': 'white', 'circle-stroke-width': 2 }} />
-        </Source>}
+        </Source>
 
         {/* Le contour de droite passe **au-dessus** de la surface de gauche, en tireté large.
             Sur un cas BD TOPO correct les deux emprises sont identiques : dessiné dessous, il
             disparaissait entièrement et le relecteur ne voyait qu'une forme, sans pouvoir dire
             si la seconde était superposée ou absente. */}
-        {right && <Source id="review-right-outline" type="geojson" data={right}>
+        <Source id="review-right-outline" type="geojson" data={right ?? EMPTY}>
           <Layer id="review-right-line" type="line" paint={{ 'line-color': '#0d5c31', 'line-width': 3, 'line-dasharray': [2, 2] }} />
-        </Source>}
+        </Source>
 
         <NavigationControl position="bottom-right" showCompass={false} />
       </MapLibreMap>

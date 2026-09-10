@@ -104,11 +104,13 @@ const RealMap = forwardRef<RealMapHandle, Props>(function RealMap({
       cursor="crosshair"
       reuseMaps
     >
-      {orthophoto && (
-        <Source id="ign-background" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="© IGN · Géoplateforme">
-          <Layer id="ign-background" type="raster" minzoom={0} maxzoom={20} paint={{ 'raster-opacity': 0.88 }} />
-        </Source>
-      )}
+      {/* Monté en permanence, masqué quand on est sur « Parcelles » : une source ajoutée
+          après coup se place en fin de pile et l'orthophoto recouvrirait alors les vecteurs.
+          Une couche `visibility: none` ne télécharge aucune tuile et n'affiche pas son
+          attribution. */}
+      <Source id="ign-background" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="© IGN · Géoplateforme">
+        <Layer id="ign-background" type="raster" minzoom={0} maxzoom={20} layout={{ visibility: orthophoto ? 'visible' : 'none' }} paint={{ 'raster-opacity': 0.88 }} />
+      </Source>
       <Source id="parcels" type="vector" tiles={['/tiles/v1/parcels/{z}/{x}/{y}.mvt']} minzoom={13} maxzoom={22} attribution="Etalab · DGFiP">
         <Layer id="parcels-fill" source-layer="parcels" type="fill" minzoom={13} paint={{ 'fill-color': '#d8e6c7', 'fill-opacity': orthophoto ? 0.24 : 0.6 }} />
         <Layer id="parcels-line" source-layer="parcels" type="line" minzoom={13} paint={{ 'line-color': '#547564', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 18, 1.4], 'line-opacity': orthophoto ? 0.9 : 1 }} />
