@@ -261,6 +261,10 @@
             "title": "Out Of Scope",
             "type": "string"
           },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
           "question": {
             "title": "Question",
             "type": "string"
@@ -339,6 +343,7 @@
           "case_ref",
           "question",
           "out_of_scope",
+          "purpose",
           "left_label",
           "left_id",
           "left_kind",

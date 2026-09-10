@@ -153,6 +153,46 @@ OUT_OF_SCOPE = (
 )
 
 
+# A quoi sert le verdict. La question seule ne suffit pas : « ces deux objets designent-ils le
+# meme batiment ? » a ete lue pendant la revue comme « s'agit-il du meme bien, du meme
+# proprietaire ? », et le relecteur a raisonne sur le parcellaire pour y repondre.
+#
+# Dire ce que la reponse alimente n'est pas dire ce que le moteur a conclu : c'est le sens de la
+# tache, pas son resultat.
+PURPOSES: dict[tuple[str | None, str | None], str] = {
+    ("address", "parcel"): (
+        "Le rapprochement adresse ↔ parcelle est ce qui permet de retrouver une parcelle par "
+        "son adresse, et d'attribuer à un terrain ce que l'on sait de l'adresse. Vous "
+        "confirmez que ce rapprochement-là est juste, pas qu'il est le seul possible : une "
+        "adresse peut couvrir plusieurs parcelles."
+    ),
+    ("building", "parcel"): (
+        "Le rapprochement bâtiment ↔ parcelle sert à compter le bâti d'un terrain et à mesurer "
+        "son emprise. Vous jugez la localisation, rien d'autre — ni la propriété, ni l'usage."
+    ),
+}
+
+# Toute paire dont l'objet de droite est un batiment : deux inventaires du meme bati.
+BUILDING_PURPOSE = (
+    "Deux inventaires indépendants recensent le même bâti, chacun avec ses identifiants. Le "
+    "moteur a rapproché un enregistrement de chacun ; vous confirmez qu'ils décrivent bien le "
+    "même bâtiment physique. C'est ce rapprochement qui permet de réunir sur un bâtiment ce "
+    "que chaque source en sait — sans lui, les deux restent étrangères l'une à l'autre.\n\n"
+    "Le découpage parcellaire n'entre pas dans ce jugement : un bâtiment peut être à cheval "
+    "sur deux parcelles et rester un seul bâtiment. Les limites de parcelle du fond de plan ne "
+    "sont ni l'un ni l'autre des deux objets comparés."
+)
+
+
+def _purpose(left_kind: str | None, right_kind: str | None) -> str:
+    if right_kind == "building":
+        return BUILDING_PURPOSE
+    return PURPOSES.get(
+        (left_kind, right_kind),
+        "Vous confirmez que le rapprochement établi entre ces deux enregistrements est juste.",
+    )
+
+
 def _question(stratum: str, left_kind: str | None, right_kind: str | None) -> str:
     """Formuler la question dans les termes des objets réellement comparés."""
     if left_kind == "address" and right_kind == "parcel":
@@ -177,6 +217,7 @@ def _blind_record(row: Any) -> dict[str, Any]:
         "case_ref": int(row["case_ref"]),
         "question": _question(str(row["matching_stratum"]), left_kind, right_kind),
         "out_of_scope": OUT_OF_SCOPE,
+        "purpose": _purpose(left_kind, right_kind),
         "left_label": str(row["left_label"]) if row["left_label"] else None,
         "left_id": str(row["left_id"]) if row["left_id"] else None,
         "left_kind": left_kind,

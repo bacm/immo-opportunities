@@ -785,6 +785,8 @@ export interface components {
             longitude: number | null;
             /** Out Of Scope */
             out_of_scope: string;
+            /** Purpose */
+            purpose: string;
             /** Question */
             question: string;
             /** Right Area M2 */

@@ -34,6 +34,8 @@ class BlindCaseResponse(BaseModel):
     # La question posée, dans les termes des objets réellement comparés.
     question: str
     out_of_scope: str
+    # A quoi sert la reponse. Le sens de la tache, jamais le resultat du moteur.
+    purpose: str
     left_label: str | None
     left_id: str | None
     left_kind: str | None

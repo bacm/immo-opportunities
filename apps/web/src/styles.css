@@ -278,3 +278,12 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
   .admin-panel { width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; }
   .admin-content { grid-template-columns: 1fr; }
 }
+
+/* Legende de la carte de revue. Sans elle, les limites de parcelle du fond etaient lues comme
+   l'un des deux objets compares : « ce n'est pas la meme parcelle donc pas le meme batiment ». */
+.review-legend { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.review-legend li { display: flex; align-items: center; gap: 6px; }
+.review-legend .swatch { width: 18px; height: 0; border-top-width: 3px; border-top-style: solid; flex: none; }
+.review-legend .swatch-left { border-top-color: #b7791f; }
+.review-legend .swatch-right { border-top-color: #0d5c31; border-top-style: dashed; }
+.review-legend .swatch-parcel { border-top-color: #8b7bb8; border-top-width: 2px; }

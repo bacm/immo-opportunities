@@ -912,6 +912,7 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
         {current && <section className="detail-section">
           <h3>Cas {current.case_ref} · {current.territorial_stratum}</h3>
           <p className="review-question">{current.question}</p>
+          <p className="detail-note">{current.purpose}</p>
           <p className="detail-note">{current.out_of_scope}</p>
           {current.longitude !== null && current.latitude !== null
             ? <>
@@ -920,6 +921,15 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
                   longitude={current.longitude} latitude={current.latitude}
                   orthophoto={reviewOrthophoto}
                 />
+                <ul className="review-legend">
+                  <li><span className="swatch swatch-left" /> Objet de gauche</li>
+                  <li><span className="swatch swatch-right" /> Objet de droite</li>
+                  {!reviewOrthophoto && <li><span className="swatch swatch-parcel" /> Parcelles — fond de plan, hors jugement</li>}
+                </ul>
+                {current.left_on_right_ratio !== null && current.left_on_right_ratio > 0.99 && <p className="detail-note">
+                  Les deux emprises coïncident à {(current.left_on_right_ratio * 100).toFixed(0)} % :
+                  une seule forme est visible, les deux contours se superposent.
+                </p>}
                 <div className="map-mode review-map-mode" role="group" aria-label="Fond de la carte de revue">
                   <button className={!reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(false)}>Parcelles</button>
                   <button className={reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(true)}>Orthophoto IGN</button>
