@@ -757,6 +757,8 @@ export interface components {
          *     le protocole de B4 interdit explicitement.
          */
         BlindCaseResponse: {
+            /** Case Ref */
+            case_ref: number;
             /** Commune Code */
             commune_code: string | null;
             /** Commune Name */

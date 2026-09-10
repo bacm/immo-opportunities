@@ -135,6 +135,10 @@
       "BlindCaseResponse": {
         "description": "Un cas à juger, **sans** la décision du moteur.\n\nAucun champ de ce modèle ne porte la décision, la confiance ou la justification. Les\nexposer ferait mesurer à la revue l'accord avec le moteur au lieu de l'exactitude, ce que\nle protocole de B4 interdit explicitement.",
         "properties": {
+          "case_ref": {
+            "title": "Case Ref",
+            "type": "integer"
+          },
           "commune_code": {
             "anyOf": [
               {
@@ -332,6 +336,7 @@
           "commune_code",
           "commune_name",
           "drawn_rank",
+          "case_ref",
           "question",
           "out_of_scope",
           "left_label",

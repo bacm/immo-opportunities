@@ -26,6 +26,23 @@ BLIND_CASE_SELECT = """
            review_case.commune_code,
            commune.name AS commune_name,
            review_case.drawn_rank,
+           -- Une reference unique **et neutre** pour designer un cas a l'oral et a l'ecrit.
+           --
+           -- `drawn_rank` ne l'est pas : il est unique dans sa strate d'appariement, pas dans
+           -- l'echantillon. « Cas 3 · littoral » designe trois cas differents, et la revue du
+           -- 10 septembre a produit plusieurs signalements — « le cas 47 », « le cas 32 » —
+           -- qu'on ne peut plus rattacher a un cas precis.
+           --
+           -- Le completer par la strate d'appariement reglerait l'unicite en revelant la
+           -- classe de confiance du moteur, ce que le protocole interdit. La numerotation est
+           -- donc tiree d'un hachage de l'identifiant : unique, stable, reproductible, et
+           -- sans ordre lisible qui trahirait la strate.
+           (SELECT numbered.reference
+              FROM (SELECT sibling.id,
+                           dense_rank() OVER (ORDER BY md5(sibling.id::text)) AS reference
+                      FROM meta.matching_review_case AS sibling
+                     WHERE sibling.sample_id = review_case.sample_id) AS numbered
+             WHERE numbered.id = review_case.id) AS case_ref,
            -- Un libelle lisible par un humain, jamais l'identifiant technique seul :
            -- « 7 Avenue Georges Pian 35800 Dinard » se juge, `address:ban:35093_0850_00007`
            -- ne se juge pas.
@@ -157,6 +174,7 @@ def _blind_record(row: Any) -> dict[str, Any]:
         "commune_code": str(row["commune_code"]) if row["commune_code"] else None,
         "commune_name": str(row["commune_name"]) if row["commune_name"] else None,
         "drawn_rank": int(row["drawn_rank"]),
+        "case_ref": int(row["case_ref"]),
         "question": _question(str(row["matching_stratum"]), left_kind, right_kind),
         "out_of_scope": OUT_OF_SCOPE,
         "left_label": str(row["left_label"]) if row["left_label"] else None,

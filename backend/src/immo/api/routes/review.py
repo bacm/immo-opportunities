@@ -29,6 +29,8 @@ class BlindCaseResponse(BaseModel):
     commune_code: str | None
     commune_name: str | None
     drawn_rank: int
+    # Unique dans l'echantillon, contrairement a `drawn_rank`, et sans ordre revelant la strate.
+    case_ref: int
     # La question posée, dans les termes des objets réellement comparés.
     question: str
     out_of_scope: str

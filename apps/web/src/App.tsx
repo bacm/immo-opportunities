@@ -910,7 +910,7 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
         {finished && <State icon={<CheckCircle2 />} title="Échantillon entièrement jugé" text="Tous les cas tirés portent un verdict. Le dépouillement par strate est ci-dessous." />}
 
         {current && <section className="detail-section">
-          <h3>Cas {current.drawn_rank} · {current.territorial_stratum}</h3>
+          <h3>Cas {current.case_ref} · {current.territorial_stratum}</h3>
           <p className="review-question">{current.question}</p>
           <p className="detail-note">{current.out_of_scope}</p>
           {current.longitude !== null && current.latitude !== null
