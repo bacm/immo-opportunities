@@ -142,6 +142,58 @@ reste le pivot d'identité, et **LAND-002 / LAND-009 se calculent sur la géomé
 Ce n'est pas une préférence de source, c'est la seule combinaison qui ne demande pas de seuil
 inventé.
 
+## Le critère humain est un rang, pas un seuil — et cela change la solution
+
+Treize verdicts bâtiment ↔ parcelle rendus au 10 septembre 2026, comparés à la part du bâtiment
+tombant sur la parcelle du cas et à celle de la parcelle qui en porte le plus :
+
+| Cas | Verdict | Part sur la parcelle du cas | Part sur la meilleure parcelle | Parcelles touchées |
+|---|---|---:|---:|---:|
+| 90 | `incorrect` | 0,1 % | 99,4 % | 1 |
+| 44 | `incorrect` | 8,0 % | 92,0 % | 2 |
+| 126 | `incorrect` | 12,4 % | 87,6 % | 2 |
+| 163 | `undecidable` | 13,5 % | 72,3 % | 3 |
+| **173** | **`correct`** | **15,6 %** | **15,6 %** | 1 |
+| 56 | `correct` | 98,4 % | 98,4 % | 2 |
+| 8 autres | `correct` | 100 % | 100 % | 1 |
+
+**Le relecteur dit non à 12,4 % et oui à 15,6 %.** Aucun seuil sur le recouvrement ne reproduit
+ces verdicts : l'ordre des deux cas est inversé par rapport à l'ordre des taux.
+
+Une seule règle les reproduit tous les treize :
+
+> La relation est juste si la parcelle est **celle qui porte la plus grande part du bâtiment**.
+
+Le cas 173 le montre à l'état pur — un cabanon de 15,2 m² dont 84,4 % tombe hors de tout
+parcellaire, sur le domaine public. Il ne touche qu'une parcelle, à 15,6 %. Il n'y a pas de
+meilleur candidat, donc c'est la bonne. À l'inverse le cas 126, avec un recouvrement plus fort,
+est faux parce qu'une autre parcelle en porte 87,6 %.
+
+### Pourquoi c'est la bonne nouvelle du ticket
+
+Un rang ne demande **aucun seuil**. La règle non négociable « aucun seuil territorial inventé »
+n'est pas seulement respectée : elle devient sans objet pour cette relation. Il n'y a plus rien
+à calibrer, donc plus rien à faire attendre [E1](./E1-profiling-distributions.md) — ce que la
+première version de ce ticket supposait.
+
+### Ce que cette lecture ne prouve pas encore
+
+Treize verdicts, dont **huit triviaux** — un bâtiment entièrement sur une parcelle unique. Les
+cas informatifs sont au nombre de **six**. L'accord est parfait sur ces six, ce qui est
+encourageant et insuffisant : un ajustement parfait sur six points se produit aussi par hasard.
+
+Trois questions restent ouvertes, et les 41 cas non jugés de cette relation les trancheraient :
+
+1. **Le partage réel.** Un bâtiment mitoyen à 55 % / 45 % est sur les deux parcelles. La règle du
+   rang en désignerait une seule. Aucun cas de ce type n'est encore jugé — tous les cas observés
+   sont franchement déséquilibrés.
+2. **L'ex æquo et le quasi-ex æquo.** Que faire à 51 % / 49 % ? Le rang tranche, la réalité non.
+3. **Le bâti majoritairement hors parcellaire.** Le cas 173 est accepté à 15,6 %. Un bâtiment à
+   2 % de sa seule parcelle le serait aussi. Est-ce voulu ?
+
+Ces trois questions portent sur la **relation secondaire**, pas sur la principale. La règle du
+rang suffit à désigner la parcelle principale, ce qui est ce dont LAND-002 et LAND-009 ont besoin.
+
 ## Ce que ce ticket ne doit pas faire
 
 **Choisir un seuil.** Aucun seuil observé ne dit à partir de quel recouvrement un bâtiment est
@@ -152,9 +204,13 @@ distribution suggère qu'un seuil existe et qu'il est mesurable — c'est à
 ## Travail à réaliser
 
 1. Cesser de plancheriser la confiance à 0,9 : reporter le recouvrement observé tel quel.
-2. Cesser d'écrire `certain` en dur. En attendant un seuil calibré, la décision juste est
-   `ambiguous` avec le recouvrement en preuve — c'est le traitement déjà appliqué à DS-04 pour
-   la même raison, et il est cohérent.
+2. Cesser d'écrire `certain` en dur. **Une seule relation par bâtiment est `certain` : celle de
+   la parcelle qui en porte la plus grande part.** Les autres restent enregistrées — un bâtiment
+   à cheval touche réellement plusieurs parcelles — avec leur recouvrement en preuve et une
+   décision qui n'est pas `certain`.
+
+   C'est la règle du rang établie ci-dessus, et elle n'invente aucun seuil. Si les 41 cas
+   restants la démentent, revenir à `ambiguous` pour toutes, comme DS-04.
 3. Publier la distribution des recouvrements comme entrée du profiling de E1.
 4. Corriger la lecture de la cardinalité dans le rapport B3.
 5. Trancher, avec E1, la géométrie de référence de LAND-002 et LAND-009, et l'écrire dans
@@ -164,7 +220,9 @@ distribution suggère qu'un seuil existe et qu'il est mesurable — c'est à
 
 ## Tests obligatoires
 
-- une relation à faible recouvrement n'est pas `certain` sans seuil calibré ;
+- une relation à faible recouvrement n'est pas `certain` **si une autre parcelle en porte
+  davantage** — le cas 126, faux à 12,4 %, et le cas 173, juste à 15,6 %, servent tous deux de
+  cas de référence, précisément parce qu'aucun seuil ne les sépare ;
 - le recouvrement observé est reporté sans plancher ;
 - la distribution en quatre classes de cette relation cesse d'être dégénérée.
 
