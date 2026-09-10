@@ -149,6 +149,64 @@ Sur les 20 cas jugés, 18 tombent hors de leur parcelle, de 12,8 m à 306 m, et 
 été jugés corrects à juste titre. « Le point est dans la parcelle » n'est donc pas un critère —
 ni pour la revue, ni pour une feature à venir.
 
+### Résultat négatif : la relation adresse ↔ parcelle n'est pas vérifiable géométriquement
+
+Le cas 17 — « 11 Rue Nina Companeez 35690 Acigné », jugé `incorrect`, motif « cela semble être
+un lotissement mais c'était bien un champ auparavant » — a d'abord paru désigner un défaut de
+grande ampleur. Il n'en est rien, et la démonstration mérite d'être conservée parce qu'elle
+montre comment une statistique juste conduit à une conclusion fausse.
+
+**Le fait de départ.** L'appariement adresse ↔ parcelle repose sur le champ expérimental
+`cad_parcelles` de la BAN, vérifié contre la géométrie. Sur les 325 934 relations produites :
+
+| Point dans la parcelle | À moins de 10 m | Décision | Confiance | Relations |
+|---|---|---|---|---:|
+| oui | oui | `certain` | 0,99 | 231 675 |
+| non | oui | `certain` | 0,95 | 41 020 |
+| **non** | **non** | `ambiguous` | 0,80 | **49 479** |
+| — | — | `rejected` | 0,00 | 3 760 |
+
+Sur les 49 479 qui échouent aux deux contrôles, **47 468 — soit 95,9 %** — ont une parcelle qui
+contient réellement le point d'adresse. La conclusion s'imposait : le moteur ignore la bonne
+réponse, qui est là, et il faudrait préférer la parcelle contenante.
+
+**Ce que les verdicts en disent.** Vingt-et-un cas jugés appartiennent exactement à cette
+catégorie « échec aux deux contrôles » :
+
+| Verdict | Cas |
+|---|---:|
+| `correct` | **16** |
+| `incorrect` | 3 |
+| `undecidable` | 2 |
+
+Seize sur dix-neuf tranchés sont **justes**. Préférer la parcelle contenante casserait seize
+relations pour en réparer trois. La statistique était exacte et l'inférence fausse : le point
+BAN est posé côté rue, donc la parcelle qui le contient est souvent la voirie ou le voisin.
+
+**La distance ne sépare pas davantage.** Sur ces mêmes cas :
+
+| Distance adresse → parcelle | Verdict |
+|---:|---|
+| 446 m | `incorrect` |
+| 306 m | `undecidable` |
+| **145,7 m** | **`correct`** |
+| **102,6 m** | **`correct`** |
+| **61,7 m** | **`incorrect`** |
+| 50,6 · 50,3 · 40,9 m | `correct` |
+| **38,0 m** | **`incorrect`** |
+| 36,6 m à 12,8 m | `correct`, sauf un `undecidable` à 15,7 m |
+
+Aucun seuil ne sépare : faux à 38 m, juste à 145,7 m.
+
+**Conclusion.** Ni la containment, ni la proximité à 10 m, ni la distance ne distinguent une
+relation adresse ↔ parcelle juste d'une fausse. Les trois erreurs ont été trouvées par jugement
+humain sur contexte externe — nom de rue récent, lotissement visible, vue aérienne. Le taux
+d'erreur de cette relation est réel, de l'ordre de 15 %, et **aucune règle dont nous disposons
+ne le réduit**.
+
+C'est un résultat négatif, et il est consigné comme tel. Il vaut mieux qu'un correctif qui
+aurait dégradé seize relations sur vingt-et-une.
+
 ## Ce que cet échantillon ne couvre pas
 
 Le ticket impose d'inclure quatre familles de cas :
