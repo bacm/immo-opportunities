@@ -142,4 +142,3 @@ dérivée du graphe de dépendances.
 ### NICE — après un score publié
 
 Rien ci-dessous ne démarre avant E3. Détail dans [NICE-backlog.md](./NICE-backlog.md).
-
