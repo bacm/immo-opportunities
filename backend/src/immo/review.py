@@ -74,18 +74,19 @@ BLIND_CASE_SELECT = """
            -- Sans ce chiffre, un batiment qui touche une parcelle a 3 % se juge a l'oeil sur
            -- deux formes presque superposees a l'ecran. BUG-09 montre que 32 % des relations
            -- sont dans ce cas.
-           CASE
-             WHEN coalesce(source_observation.geometry, left_building.geom) IS NOT NULL
-              AND right_parcel_geometry.geom IS NOT NULL
-             THEN round(
-                 (ST_Area(ST_Intersection(
-                      coalesce(source_observation.geometry, left_building.geom),
-                      right_parcel_geometry.geom
-                  ))
-                  / nullif(ST_Area(coalesce(
-                      source_observation.geometry, left_building.geom
-                  )), 0))::numeric, 4)
-           END AS left_on_right_ratio,
+           --
+           -- Vaut aussi pour une paire batiment <-> batiment : deux emprises identiques se
+           -- superposent exactement a l'ecran, et le relecteur ne voit qu'une seule forme
+           -- sans savoir si la seconde est la ou absente. Le chiffre le lui dit.
+           round(
+               (ST_Area(ST_Intersection(
+                    coalesce(source_observation.geometry, left_building.geom),
+                    coalesce(right_parcel_geometry.geom, right_building.geom)
+                ))
+                / nullif(ST_Area(coalesce(
+                    source_observation.geometry, left_building.geom
+                )), 0))::numeric, 4
+           ) AS left_on_right_ratio,
            ST_X(ST_Transform(ST_PointOnSurface(coalesce(
                right_parcel_geometry.geom, right_building.geom,
                source_observation.geometry, left_address.geom

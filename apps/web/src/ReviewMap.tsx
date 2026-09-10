@@ -52,16 +52,48 @@ export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitu
   const left = useMemo(() => feature(leftGeoJson), [leftGeoJson])
   const right = useMemo(() => feature(rightGeoJson), [rightGeoJson])
 
+  // L'étendue des deux objets réunis, pour cadrer dessus.
+  const bounds = useMemo(() => {
+    const points: number[][] = []
+    const walk = (node: unknown) => {
+      if (!Array.isArray(node)) return
+      if (typeof node[0] === 'number' && typeof node[1] === 'number') {
+        points.push(node as number[])
+        return
+      }
+      for (const child of node) walk(child)
+    }
+    for (const shape of [left, right]) if (shape) walk((shape.geometry as { coordinates: unknown }).coordinates)
+    if (points.length === 0) return null
+    const xs = points.map((point) => point[0])
+    const ys = points.map((point) => point[1])
+    return [
+      [Math.min(...xs), Math.min(...ys)],
+      [Math.max(...xs), Math.max(...ys)],
+    ] as [[number, number], [number, number]]
+  }, [left, right])
+
   // `initialViewState` ne s'applique qu'au montage. Comme la carte reste montée d'un cas au
   // suivant — remonter un contexte WebGL à chaque verdict serait coûteux — la caméra restait
-  // sur le cas précédent pendant que les emprises, elles, changeaient : le relecteur voyait
-  // l'ancien lieu et cherchait des formes désormais hors écran.
+  // sur le cas précédent pendant que les emprises, elles, changeaient.
   //
-  // `jumpTo` plutôt qu'une animation : d'un cas à l'autre il n'y a aucune continuité à
-  // montrer, et un vol de 700 ms entre deux communes ne ferait qu'attendre.
+  // Cadrer sur l'étendue des deux objets plutôt qu'à un zoom fixe : un abri de 57 m² et une
+  // parcelle de 3 616 m² n'appellent pas le même cadrage, et un zoom 18 imposé obligeait le
+  // relecteur à dézoomer à la main — quand il y pensait.
+  //
+  // `duration: 0` : d'un cas à l'autre il n'y a aucune continuité à montrer, et une animation
+  // ne ferait qu'attendre.
   useEffect(() => {
-    mapRef.current?.jumpTo({ center: [longitude, latitude], zoom: 18 })
-  }, [longitude, latitude])
+    const map = mapRef.current
+    if (!map) return
+    if (bounds) {
+      // `maxZoom` évite de coller au ras d'un objet minuscule ; le padding laisse voir le
+      // voisinage, qui est souvent ce qui permet de trancher.
+      map.fitBounds(bounds, { padding: 60, maxZoom: 19, duration: 0 })
+    } else {
+      map.jumpTo({ center: [longitude, latitude], zoom: 18 })
+    }
+  }, [bounds, longitude, latitude])
 
   return (
     <div className="review-map">
@@ -80,12 +112,19 @@ export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitu
             emprises se recouvrent presque, et l'ordre décide de ce qu'on voit. */}
         {right && <Source id="review-right" type="geojson" data={right}>
           <Layer id="review-right-fill" type="fill" paint={{ 'fill-color': '#1f8a4c', 'fill-opacity': 0.25 }} />
-          <Layer id="review-right-line" type="line" paint={{ 'line-color': '#1f8a4c', 'line-width': 2 }} />
         </Source>}
         {left && <Source id="review-left" type="geojson" data={left}>
           <Layer id="review-left-fill" type="fill" paint={{ 'fill-color': '#b7791f', 'fill-opacity': 0.3 }} />
           <Layer id="review-left-line" type="line" paint={{ 'line-color': '#b7791f', 'line-width': 2 }} />
           <Layer id="review-left-point" type="circle" filter={['==', ['geometry-type'], 'Point']} paint={{ 'circle-radius': 7, 'circle-color': '#b7791f', 'circle-stroke-color': 'white', 'circle-stroke-width': 2 }} />
+        </Source>}
+
+        {/* Le contour de droite passe **au-dessus** de la surface de gauche, en tireté large.
+            Sur un cas BD TOPO correct les deux emprises sont identiques : dessiné dessous, il
+            disparaissait entièrement et le relecteur ne voyait qu'une forme, sans pouvoir dire
+            si la seconde était superposée ou absente. */}
+        {right && <Source id="review-right-outline" type="geojson" data={right}>
+          <Layer id="review-right-line" type="line" paint={{ 'line-color': '#0d5c31', 'line-width': 3, 'line-dasharray': [2, 2] }} />
         </Source>}
 
         <NavigationControl position="bottom-right" showCompass={false} />
