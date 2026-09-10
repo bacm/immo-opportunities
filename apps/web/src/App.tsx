@@ -875,8 +875,15 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
     } finally { setBusy(false) }
   }
 
-  const mapHref = current && current.longitude !== null && current.latitude !== null
-    ? `/?lon=${current.longitude.toFixed(6)}&lat=${current.latitude.toFixed(6)}&z=18.00`
+  const located = current && current.longitude !== null && current.latitude !== null
+  const mapHref = located
+    ? `/?lon=${current.longitude!.toFixed(6)}&lat=${current.latitude!.toFixed(6)}&z=18.00`
+    : null
+  // Le relecteur va systématiquement vérifier sur une vue aérienne : lui faire chercher le
+  // lieu à la main était le principal coût par cas, et pour un bâtiment BD TOPO — qui n'a ni
+  // adresse ni libellé humain — c'était tout simplement impossible.
+  const aerialHref = located
+    ? `https://www.google.com/maps/@${current.latitude!.toFixed(6)},${current.longitude!.toFixed(6)},19z/data=!3m1!1e3`
     : null
 
   return <div className="admin-overlay" role="dialog" aria-modal="true" aria-labelledby="review-title">
@@ -920,7 +927,16 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
             <ul>{context.related_parcels.map((parcel) => <li key={parcel.cadastral_id} className={parcel.is_case ? 'is-case' : ''}>{parcel.cadastral_id}{parcel.area_m2 ? ` · ${Math.round(parcel.area_m2)} m²` : ''}{parcel.is_case ? ' ← le cas' : ''}</li>)}</ul>
             <p className="detail-note">Cette adresse en couvre {context.related_parcels.length}. Être l’une d’elles n’est pas une erreur.</p>
           </div>}
-          {mapHref && <p className="detail-note"><a href={mapHref} target="_blank" rel="noreferrer">Ouvrir sur la carte, zoom 18</a> — pour situer dans son environnement.</p>}
+          {context && context.nearby_addresses.length > 0 && <div className="case-context">
+            <h4>Adresses proches — repères, pas appariements</h4>
+            <ul>{context.nearby_addresses.map((nearby) => <li key={nearby.display_label}>{nearby.display_label} · {Math.round(nearby.distance_m)} m</li>)}</ul>
+            <p className="detail-note">Aucune n’est déclarée correspondre à cet objet. Elles servent à le situer, comme un nom de rue sur une carte.</p>
+          </div>}
+          <p className="detail-note review-links">
+            {mapHref && <a href={mapHref} target="_blank" rel="noreferrer">Explorer, zoom 18</a>}
+            {aerialHref && <a href={aerialHref} target="_blank" rel="noreferrer">Vue aérienne</a>}
+            {located && <span>{current.latitude!.toFixed(6)}, {current.longitude!.toFixed(6)}</span>}
+          </p>
 
           <form className="review-form" onSubmit={submit}>
             <div className="review-verdicts" role="group" aria-label="Verdict">

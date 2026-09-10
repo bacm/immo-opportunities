@@ -480,6 +480,13 @@
             "title": "Case Id",
             "type": "integer"
           },
+          "nearby_addresses": {
+            "items": {
+              "$ref": "#/components/schemas/NearbyAddressResponse"
+            },
+            "title": "Nearby Addresses",
+            "type": "array"
+          },
           "related_parcels": {
             "items": {
               "$ref": "#/components/schemas/RelatedParcelResponse"
@@ -497,6 +504,7 @@
         },
         "required": [
           "case_id",
+          "nearby_addresses",
           "sibling_addresses",
           "related_parcels"
         ],
@@ -1058,6 +1066,25 @@
           "reviewed_at"
         ],
         "title": "MatchReviewResponse",
+        "type": "object"
+      },
+      "NearbyAddressResponse": {
+        "description": "Un repère, pas un appariement : aucune de ces adresses n'est déclarée correspondre.",
+        "properties": {
+          "display_label": {
+            "title": "Display Label",
+            "type": "string"
+          },
+          "distance_m": {
+            "title": "Distance M",
+            "type": "number"
+          }
+        },
+        "required": [
+          "display_label",
+          "distance_m"
+        ],
+        "title": "NearbyAddressResponse",
         "type": "object"
       },
       "NoteRequest": {

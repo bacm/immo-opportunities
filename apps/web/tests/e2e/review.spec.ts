@@ -16,9 +16,15 @@ test('le cas à juger ne révèle ni décision ni confiance, dans la réponse r�
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Revue' }).click()
+  // Attendre la réponse elle-même, et non un élément qu'elle finit par produire : sinon le
+  // listener peut n'avoir rien collecté au moment de l'assertion, et le test échoue pour une
+  // raison de timing qui n'a rien à voir avec ce qu'il vérifie.
+  const [response] = await Promise.all([
+    page.waitForResponse((candidate) => candidate.url().includes('/api/v1/review/samples/') && candidate.url().endsWith('/next')),
+    page.getByRole('button', { name: 'Revue' }).click(),
+  ])
   await expect(page.getByRole('heading', { name: /Échantillon b4-/ })).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })
+  payloads.push(await response.text())
 
   expect(payloads.length).toBeGreaterThan(0)
   for (const body of payloads) {

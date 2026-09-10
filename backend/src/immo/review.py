@@ -248,7 +248,43 @@ def case_context(case_id: int) -> dict[str, Any]:
     Aucune décision du moteur n'est exposée ici : savoir qu'un objet fait partie d'un ensemble
     n'est pas savoir ce que le moteur a conclu de chacun.
     """
+    # Un batiment BD TOPO n'a ni adresse ni libelle humain : son `cleabs` est introuvable dans
+    # l'application, et le juger sans repere est impossible. La revue reelle du 10 septembre
+    # 2026 l'a montre des le premier cas de cette strate — verdict `undecidable`, motif
+    # « je n'ai pas d'adresse et le code de l'objet de gauche est introuvable sur l'app ».
+    #
+    # Les adresses proches ne sont **pas** un appariement : aucune n'est declaree correspondre
+    # a ce batiment. Ce sont des reperes, au meme titre qu'un nom de rue sur une carte.
+    nearby_statement = text(
+        """
+        WITH target AS (
+            SELECT coalesce(
+                       source_observation.geometry, building.geom, address.geom
+                   ) AS geometry
+              FROM meta.matching_review_case AS review_case
+              LEFT JOIN meta.entity_observation_link AS link
+                     ON link.id = review_case.observation_link_id
+              LEFT JOIN meta.entity_source_observation AS source_observation
+                     ON source_observation.id = link.observation_id
+              LEFT JOIN meta.entity_match AS matched ON matched.id = review_case.match_id
+              LEFT JOIN reference.building AS building
+                     ON building.id = matched.left_entity_id
+              LEFT JOIN reference.address AS address
+                     ON address.id = matched.left_entity_id
+             WHERE review_case.id = :case_id
+        )
+        SELECT address.display_label,
+               round(ST_Distance(address.geom, target.geometry)::numeric) AS distance_m
+          FROM target
+          JOIN reference.address AS address
+            ON target.geometry IS NOT NULL
+           AND ST_DWithin(address.geom, target.geometry, 80)
+         ORDER BY ST_Distance(address.geom, target.geometry)
+         LIMIT 6
+        """
+    )
     with get_engine().connect() as connection:
+        nearby = list(connection.execute(nearby_statement, {"case_id": case_id}).mappings())
         siblings = list(
             connection.execute(
                 text(
@@ -308,6 +344,13 @@ def case_context(case_id: int) -> dict[str, Any]:
         )
     return {
         "case_id": case_id,
+        "nearby_addresses": [
+            {
+                "display_label": str(row["display_label"]),
+                "distance_m": float(row["distance_m"]),
+            }
+            for row in nearby
+        ],
         "sibling_addresses": [
             {
                 "display_label": str(row["display_label"]),

@@ -846,6 +846,8 @@ export interface components {
         CaseContextResponse: {
             /** Case Id */
             case_id: number;
+            /** Nearby Addresses */
+            nearby_addresses: components["schemas"]["NearbyAddressResponse"][];
             /** Related Parcels */
             related_parcels: components["schemas"]["RelatedParcelResponse"][];
             /** Sibling Addresses */
@@ -1034,6 +1036,16 @@ export interface components {
             reviewed_decision: "certain" | "ambiguous" | "rejected";
             /** Reviewer */
             reviewer: string;
+        };
+        /**
+         * NearbyAddressResponse
+         * @description Un repère, pas un appariement : aucune de ces adresses n'est déclarée correspondre.
+         */
+        NearbyAddressResponse: {
+            /** Display Label */
+            display_label: string;
+            /** Distance M */
+            distance_m: number;
         };
         /** NoteRequest */
         NoteRequest: {

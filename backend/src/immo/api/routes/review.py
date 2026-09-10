@@ -109,6 +109,13 @@ def next_case(sample_id: str) -> BlindCaseResponse:
     return BlindCaseResponse.model_validate(record)
 
 
+class NearbyAddressResponse(BaseModel):
+    """Un repère, pas un appariement : aucune de ces adresses n'est déclarée correspondre."""
+
+    display_label: str
+    distance_m: float
+
+
 class SiblingAddressResponse(BaseModel):
     display_label: str
     repetition_index: str
@@ -129,6 +136,7 @@ class CaseContextResponse(BaseModel):
     """
 
     case_id: int
+    nearby_addresses: list[NearbyAddressResponse]
     sibling_addresses: list[SiblingAddressResponse]
     related_parcels: list[RelatedParcelResponse]
 
