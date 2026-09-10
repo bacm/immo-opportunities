@@ -62,6 +62,7 @@ import {
 } from './api'
 import { signOut } from './auth'
 import RealMap, { type MapView, type RealMapHandle } from './RealMap'
+import ReviewMap from './ReviewMap'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const DEFAULT_VIEW: MapView = { longitude: -1.6778, latitude: 48.1173, zoom: 14 }
@@ -828,6 +829,8 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [finished, setFinished] = useState(false)
+  // Orthophoto par défaut : c'est la vue que le relecteur allait chercher ailleurs.
+  const [reviewOrthophoto, setReviewOrthophoto] = useState(true)
 
   const refresh = useCallback(async () => {
     setError('')
@@ -910,7 +913,19 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
           <h3>Cas {current.drawn_rank} · {current.territorial_stratum}</h3>
           <p className="review-question">{current.question}</p>
           <p className="detail-note">{current.out_of_scope}</p>
-          <CasePreview leftGeoJson={current.left_geojson} rightGeoJson={current.right_geojson} />
+          {current.longitude !== null && current.latitude !== null
+            ? <>
+                <ReviewMap
+                  leftGeoJson={current.left_geojson} rightGeoJson={current.right_geojson}
+                  longitude={current.longitude} latitude={current.latitude}
+                  orthophoto={reviewOrthophoto}
+                />
+                <div className="map-mode review-map-mode" role="group" aria-label="Fond de la carte de revue">
+                  <button className={!reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(false)}>Plan clair</button>
+                  <button className={reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(true)}>Orthophoto IGN</button>
+                </div>
+              </>
+            : <CasePreview leftGeoJson={current.left_geojson} rightGeoJson={current.right_geojson} />}
           <dl className="facts">
             <div><dt>Commune</dt><dd>{current.commune_name ?? current.commune_code}</dd></div>
             <div><dt>Objet de gauche</dt><dd>{current.left_label}{current.left_area_m2 ? ` · ${Math.round(current.left_area_m2)} m²` : ''}</dd></div>

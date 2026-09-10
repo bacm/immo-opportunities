@@ -195,6 +195,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .related-list button { border: 1px solid var(--line); border-radius: 7px; background: white; display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 10px; cursor: pointer; }
 .related-list button:hover { background: var(--soft); }
 .review-question { margin: 0 0 6px; font: 700 13px Manrope; line-height: 1.4; }
+.review-map { height: 280px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 10px 0 6px; }
+.review-map-mode { margin-bottom: 8px; }
 .case-preview { margin: 10px 0; display: grid; gap: 6px; }
 .case-preview svg { width: 100%; max-width: 300px; height: auto; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; }
 .case-preview .shape-right { fill: rgba(31,138,76,.16); stroke: #1f8a4c; stroke-width: 1.5; }
