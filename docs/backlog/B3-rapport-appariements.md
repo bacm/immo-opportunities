@@ -84,6 +84,16 @@ en avait 437 441. `ANALYZE` exigeant d'être propriétaire de la table, `pipelin
 d'un avertissement et sautait la table. Détail et portée dans
 [`postgresql-tuning.md`](../operations/postgresql-tuning.md).
 
+## Une lecture du rapport à corriger
+
+La cardinalité publiée — maximum 37 parcelles pour un bâtiment, moyenne 1,682 — ne décrit **pas**
+la réalité foncière. [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md), trouvé pendant la revue
+manuelle de B4, montre que 32 % des relations bâtiment ↔ parcelle ont un recouvrement inférieur à
+10 % : ce sont des échardes géométriques entre cadastre et RNB, pas des rattachements.
+
+La cardinalité mesure donc l'imprécision entre deux référentiels autant que le morcellement réel.
+Le chiffre reste juste ; son interprétation était fausse.
+
 ## Ce qui reste ouvert
 
 - Les trois autres importeurs n'analysent pas après leur import et sont exposés au même défaut.

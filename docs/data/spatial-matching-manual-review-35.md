@@ -135,6 +135,45 @@ mélanger au tirage aléatoire biaiserait les deux.
 Ils feront l'objet d'un second lot, `b4-2026-09-08-inventaire`, dont la taille sera le volume
 entier des familles peu nombreuses et un tirage pour les autres.
 
+## Ce que la revue a déjà produit, hors de son objet
+
+**Au 47e cas, le relecteur a trouvé un défaut que la revue ne cherchait pas.**
+
+La question posée sur ce cas était « ces deux bâtiments sont-ils le même ? » — et ils le sont à
+100 %, même emprise, distance nulle. Mais en regardant la carte, le relecteur a signalé que le
+bâtiment n'était pas sur la bonne parcelle.
+
+Mesure : ce bâtiment de 213 m² chevauche quatre parcelles, dont deux à **3 %** — des échardes de
+7 m² dues au désalignement entre cadastre et RNB. Les quatre relations sont enregistrées
+`certain`.
+
+À l'échelle du département : **400 706 relations sur 1 240 355 — 32 % — ont un recouvrement
+inférieur à 10 %**, et 273 123 sont sous 2 %. Toutes déclarées certaines.
+
+Ouvert en [BUG-09](../backlog/BUG-09-recouvrement-batiment-parcelle.md). Ce défaut était
+invisible depuis les contrôles automatiques, qui vérifient la cohérence et non l'exactitude :
+une relation fausse mais cohérente les traverse sans bruit.
+
+C'est l'argument le plus net en faveur de cette étape : elle a rendu, avant même d'être
+terminée, un résultat qu'aucune métrique n'aurait produit.
+
+## Limite connue de la stratification territoriale
+
+Les strates `urbain` / `periurbain` / `rural` reposent sur les terciles du **nombre** de
+parcelles par commune. Le nombre n'est pas la densité : Saint-Just, commune rurale de
+6 077 parcelles, est classée `urbain` au même titre que Rennes, qui en compte 38 807 sur une
+surface comparable — 776 parcelles/km² contre 164 pour Guipry-Messac, dans la même strate.
+
+L'étiquette est donc trompeuse et le rapport ne pourra pas conclure « taux d'erreur en urbain ».
+Ces strates mesurent un **volume**, pas une urbanité.
+
+Le plan n'est pas modifié en cours de route : réétiqueter après avoir vu des verdicts
+reviendrait à ajuster l'échantillonnage sur ses résultats, ce que le protocole interdit. La
+densité — parcelles par kilomètre carré — est le bon axe pour le prochain tirage, et le
+dépouillement nommera ces strates par ce qu'elles mesurent.
+
+Les verdicts déjà rendus restent valides : ils jugent des appariements, pas des territoires.
+
 ## Résultats
 
 *À compléter à la clôture de la revue. Rien de ce qui précède ne sera modifié.*
