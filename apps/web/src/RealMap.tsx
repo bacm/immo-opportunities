@@ -10,7 +10,16 @@ import MapLibreMap, {
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl'
 import type { Bbox, EntityType } from './api'
 
-const PLAN_IGN = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
+/**
+ * **Pas de Plan IGN sous les vecteurs.** PLANIGNV2 est un produit *cartographique* — généralisé
+ * et déplacé pour la lisibilité — pas une référence géométrique. Superposé à nos géométries il
+ * produisait une translation visible (numéros de parcelle en double, décalés) qui n'existe pas
+ * dans les données. Signalé sur la revue puis sur l'Explorer.
+ *
+ * Le fond « Parcelles » n'est donc plus un raster du tout : ce sont nos propres parcelles et
+ * bâtiments vectoriels, issus de la base qui sert aussi les fiches, donc alignés par
+ * construction. Seule l'orthophoto, orthorectifiée, reste un fond image acceptable.
+ */
 const ORTHOPHOTO_IGN = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
 
 const BASE_STYLE: StyleSpecification = {
@@ -95,18 +104,14 @@ const RealMap = forwardRef<RealMapHandle, Props>(function RealMap({
       cursor="crosshair"
       reuseMaps
     >
-      <Source
-        id="ign-background"
-        type="raster"
-        tiles={[orthophoto ? ORTHOPHOTO_IGN : PLAN_IGN]}
-        tileSize={256}
-        attribution="© IGN · Géoplateforme"
-      >
-        <Layer id="ign-background" type="raster" minzoom={0} maxzoom={20} paint={{ 'raster-opacity': orthophoto ? 0.88 : 0.76 }} />
-      </Source>
+      {orthophoto && (
+        <Source id="ign-background" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="© IGN · Géoplateforme">
+          <Layer id="ign-background" type="raster" minzoom={0} maxzoom={20} paint={{ 'raster-opacity': 0.88 }} />
+        </Source>
+      )}
       <Source id="parcels" type="vector" tiles={['/tiles/v1/parcels/{z}/{x}/{y}.mvt']} minzoom={13} maxzoom={22} attribution="Etalab · DGFiP">
-        <Layer id="parcels-fill" source-layer="parcels" type="fill" minzoom={13} paint={{ 'fill-color': '#d8e6c7', 'fill-opacity': 0.24 }} />
-        <Layer id="parcels-line" source-layer="parcels" type="line" minzoom={13} paint={{ 'line-color': '#547564', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 18, 1.4] }} />
+        <Layer id="parcels-fill" source-layer="parcels" type="fill" minzoom={13} paint={{ 'fill-color': '#d8e6c7', 'fill-opacity': orthophoto ? 0.24 : 0.6 }} />
+        <Layer id="parcels-line" source-layer="parcels" type="line" minzoom={13} paint={{ 'line-color': '#547564', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 18, 1.4], 'line-opacity': orthophoto ? 0.9 : 1 }} />
         <Layer id="parcel-selected" source-layer="parcels" type="line" minzoom={13} filter={selectedParcelFilter} paint={{ 'line-color': '#d17b25', 'line-width': 3.5 }} />
       </Source>
       <Source id="buildings" type="vector" tiles={['/tiles/v1/buildings/{z}/{x}/{y}.mvt']} minzoom={15} maxzoom={22} attribution="Etalab · DGFiP">

@@ -413,7 +413,7 @@ function App() {
             <label>Confiance<select aria-label="Confiance" value={confidence} onChange={(event) => setConfidence(event.target.value as typeof confidence)}><option value="">Toutes</option><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select></label>
             <button className="save-search-button" onClick={() => setSaveSearchOpen((open) => !open)}><Bookmark size={13} /> Sauvegarder</button>
           </div>
-          <div className="map-mode" role="group" aria-label="Fond cartographique"><button className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Plan clair</button><button className={orthophoto ? 'active' : ''} onClick={() => setOrthophoto(true)}>Orthophoto IGN</button></div>
+          <div className="map-mode" role="group" aria-label="Fond cartographique"><button className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Parcelles</button><button className={orthophoto ? 'active' : ''} onClick={() => setOrthophoto(true)}>Orthophoto IGN</button></div>
         </section>
         {saveSearchOpen && <form className="save-search-popover" onSubmit={saveSearch}><label>Nom de la recherche<input autoFocus value={savedSearchName} maxLength={160} onChange={(event) => setSavedSearchName(event.target.value)} /></label><button type="submit">Enregistrer</button></form>}
         {savedSearchMessage && <div className="toast" role="status">{savedSearchMessage}<button aria-label="Fermer le message" onClick={() => setSavedSearchMessage('')}><X size={13} /></button></div>}
@@ -441,7 +441,7 @@ function App() {
             <RealMap ref={mapRef} initialView={view} orthophoto={orthophoto} selected={selectedMapEntity} selectedOpportunity={opportunityId} onViewport={handleViewport} onSelect={(type, id) => { setOpportunityId(null); setSelection({ type, id }) }} onOpportunitySelect={(id) => { setSelection(null); setOpportunityId(id) }} onError={() => setMapError(true)} />
             <div className="layer-badge"><Layers3 size={15} /> Opportunités · Parcelles · Bâtiments</div>
             {mapError && <div className="map-error"><TriangleAlert size={15} /><span>Une couche n’a pas chargé.</span><button onClick={() => { setMapError(false); setRefreshKey((key) => key + 1) }}>Réessayer</button></div>}
-            <div className="source-attribution">Cadastre Etalab · DGFiP · Fond © IGN</div>
+            <div className="source-attribution">Cadastre Etalab · DGFiP{orthophoto ? ' · Orthophoto © IGN' : ''}</div>
           </section>
 
           <aside className="detail-panel" aria-live="polite">
