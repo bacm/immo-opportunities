@@ -1,0 +1,124 @@
+# BUG-11 — L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer
+
+**Version :** v0.3 · **Taille :** L · **État :** À faire
+**Dépend de :** — · **Bloque :** B5, E3
+**Découvert par :** revue manuelle B4, cas 90, 10 septembre 2026
+
+## Contexte à charger
+
+- `SPEC.md` §14.1 (`PropertyUnit`, `PropertyUnitMember`) — cette section seulement
+- `backend/src/immo/explorer.py` (`list_property_units_in_viewport`, `find_property_unit`)
+- `docs/backlog/BUG-09-recouvrement-batiment-parcelle.md`
+- `docs/backlog/D1-import-dvf-ds06.md`
+
+Ne rien charger d'autre sans nécessité démontrée.
+
+## Symptôme
+
+`SPEC.md` définit `PropertyUnit` comme **« l'unité analysée par le moteur ; elle peut contenir
+plusieurs parcelles et bâtiments »**. En base, elle n'en contient jamais plus d'une :
+
+| | Valeur |
+|---|---|
+| Unités foncières | 1 333 327 — soit exactement une par parcelle |
+| `unit_type` | `single_parcel` |
+| `publication_eligible` | `false` |
+| `exclusion_reason` | `entity_resolution_incomplete` |
+
+Le modèle est donc honnête sur son état : il se déclare lui-même inapte à la publication. Ce
+ticket ne signale pas un mensonge, il signale que **personne n'a de plan pour lever cette
+exclusion**, et qu'aucun ticket ne la porte.
+
+### Ce que le cas 90 a montré
+
+Un bâtiment de 15,5 m² occupe 99,4 % de la parcelle `35288000DA0322`, qui fait **16 m²** — une
+dépendance sur parcelle propre, à côté de la `DA0321` de 163 m².
+
+Prises séparément, aucune des deux ne décrit un bien. La 322 seule n'est candidate ni à la
+division ni à l'extension : c'est un garage. La 321 seule paraît un terrain nu de 163 m² alors
+qu'elle est bâtie de fait. Le moteur, qui score par unité, scorerait deux fois du bruit là où il
+y a un bien.
+
+Le relecteur l'a formulé sans connaître le modèle : « ce bâtiment est bien sur la 322 mais pour
+moi elle appartient à la personne qui possède la 321 ».
+
+## La contiguïté ne peut pas servir d'approximation — mesuré
+
+Une unité foncière au sens juridique, ce sont des **parcelles contiguës du même propriétaire**.
+Le propriétaire nous est inaccessible : le scraping de propriétaires et les données type LOVAC
+sont hors périmètre, par décision produit et non par difficulté technique.
+
+Reste la contiguïté seule. Elle ne tient pas. Regroupement des parcelles qui se touchent,
+`ST_ClusterDBSCAN` à 1 cm, sur trois communes de profils différents :
+
+| Commune | Parcelles | Grappes | Taille moyenne | Plus grande grappe | Parcelles isolées |
+|---|---:|---:|---:|---:|---:|
+| Dinard (35093) | 11 188 | 272 | 41,1 | **840** | 0,2 % |
+| Rennes (35238) | 38 807 | 1 049 | 37,0 | **3 494** | 0,3 % |
+| Saint-Malo (35288) | 30 801 | 822 | 37,5 | **1 320** | 0,3 % |
+
+La contiguïté chaîne d'îlot en îlot : un quartier entier devient une seule « unité », et à peine
+0,3 % des parcelles restent isolées. **Ce n'est pas une approximation dégradée, c'est un
+non-sens** — et il vaut mieux l'avoir mesuré que de l'avoir supposé.
+
+## Conséquences
+
+Cinq tables portent `property_unit_id`, et toutes sont en aval :
+
+- `feature.feature_value` — les features LAND-* et BLD-* sont calculées **par unité** ;
+- `scoring.opportunity_snapshot`, `scoring.published_opportunity`,
+  `scoring.opportunity_publication_event` — le produit publie des unités, pas des parcelles ;
+- `market.comparable_selection` — les comparables se choisissent par unité.
+
+Donc :
+
+- **[B5](./B5-features-morphologiques.md)** calculerait LAND-001..010 sur des parcelles isolées.
+  Une parcelle annexe de 16 m² recevrait une emprise bâtie de 97 %, une parcelle bâtie de fait
+  recevrait 0 %.
+- **[E3](./E3-publier-snapshots.md)** publierait des candidats qui ne sont pas des biens.
+- Le défaut se combine avec **[BUG-09](./BUG-09-recouvrement-batiment-parcelle.md)** : l'un
+  attribue le bâti à la mauvaise parcelle, l'autre analyse la parcelle au lieu du bien. Ils
+  doivent être lus ensemble, pas corrigés indépendamment.
+
+## Ce que ce ticket ne doit pas faire
+
+- **Choisir l'approximation.** Les signaux candidats ci-dessous ont des propriétés différentes et
+  aucun n'est évidemment supérieur. Le ticket les instruit et les mesure ; il ne tranche pas seul.
+- **Reprendre la contiguïté nue.** Elle est disqualifiée par la mesure ci-dessus. Toute variante
+  qui y revient doit d'abord expliquer pourquoi les grappes de 3 494 parcelles disparaîtraient.
+- **Chercher le propriétaire.** Hors périmètre, et ce n'est pas négociable dans ce ticket.
+
+## Signaux candidats à instruire
+
+| Signal | Ce qu'il apporte | Ce qu'il coûte |
+|---|---|---|
+| **Mutations DVF+** — parcelles vendues dans la même disposition | preuve d'une propriété commune à une date, la plus proche du sens juridique | ne couvre que les parcelles mutées ; dépend de [D1](./D1-import-dvf-ds06.md) |
+| **Bâtiment partagé** — parcelles reliées par un même bâtiment | capte exactement le motif du cas 90 | la mitoyenneté produit des faux positifs ; dépend de [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) |
+| **Adresse commune** — parcelles portant la même adresse BAN | déjà mesuré, déjà exposé dans la revue | une adresse couvre parfois trois parcelles sans propriétaire commun |
+| **Aucun regroupement** — assumer `single_parcel` | honnête, déjà en place | laisse le bruit décrit ci-dessus dans le score |
+
+La dernière ligne est une option réelle, pas un aveu d'échec : publier des parcelles en le disant
+vaut mieux que publier des unités inventées.
+
+## Travail à réaliser
+
+1. Mesurer, sur le 35, ce que chaque signal regrouperait : nombre d'unités, distribution des
+   tailles, part des parcelles concernées.
+2. Confronter chaque signal au cas 90 et aux motifs relevés en revue.
+3. Documenter le choix, ou l'absence de choix, dans `docs/data/` avant toute implémentation.
+4. Si un regroupement est retenu : `unit_type` en porte le nom, et `exclusion_reason` disparaît
+   seulement pour les unités réellement résolues — jamais globalement.
+5. Si aucun n'est retenu : l'écrire, et rendre visible dans l'Explorer que l'objet analysé est une
+   parcelle et non un bien.
+
+## Tests obligatoires
+
+- une unité regroupant plusieurs parcelles porte un `unit_type` distinct de `single_parcel` ;
+- une unité non résolue conserve `publication_eligible: false` avec son motif ;
+- le cas 90 — `35288000DA0321` et `35288000DA0322` — sert de cas de référence dans les tests.
+
+## Critères d'acceptation
+
+- la mesure des signaux candidats est publiée dans `docs/data/` ;
+- le choix retenu, ou son absence, est écrit et motivé ;
+- aucune unité ne devient publiable sans que sa résolution soit prouvée.
