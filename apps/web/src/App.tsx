@@ -921,7 +921,7 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
                   orthophoto={reviewOrthophoto}
                 />
                 <div className="map-mode review-map-mode" role="group" aria-label="Fond de la carte de revue">
-                  <button className={!reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(false)}>Plan clair</button>
+                  <button className={!reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(false)}>Parcelles</button>
                   <button className={reviewOrthophoto ? 'active' : ''} onClick={() => setReviewOrthophoto(true)}>Orthophoto IGN</button>
                 </div>
               </>

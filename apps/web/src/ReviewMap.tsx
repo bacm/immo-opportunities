@@ -11,8 +11,17 @@ import type { StyleSpecification } from 'maplibre-gl'
  * bâtiment ». Un bâtiment sans adresse ni libellé n'existe pour le relecteur que s'il le voit
  * dans son environnement.
  *
- * Le fond est celui de l'Explorer, orthophoto par défaut : c'est la vue aérienne que le
- * relecteur allait chercher sur Google Maps pour chaque cas.
+ * **Le fond n'est jamais le Plan IGN.** Signalé pendant la revue : « les polygones sont bons
+ * mais le référentiel derrière n'est pas bon, il est décalé, c'est perturbant ». C'est exact —
+ * PLANIGNV2 est un produit *cartographique*, généralisé et déplacé pour la lisibilité, pas une
+ * référence géométrique. Superposer des géométries précises dessus produit un décalage visible
+ * qui n'existe pas dans les données, et qui fait douter d'un appariement pourtant juste.
+ *
+ * Deux fonds seulement, tous deux géométriquement fiables :
+ *
+ * - l'**orthophoto** IGN, orthorectifiée, qui montre le bâtiment réel ;
+ * - nos **propres parcelles**, servies par Martin depuis la même base que les géométries du cas,
+ *   donc alignées par construction.
  *
  * Aucune décision du moteur n'est représentée. Les deux couleurs distinguent les deux objets,
  * elles ne disent rien de ce qu'il en a conclu.
@@ -20,8 +29,6 @@ import type { StyleSpecification } from 'maplibre-gl'
 
 const ORTHOPHOTO_IGN =
   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
-const PLAN_IGN =
-  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
 
 const BASE_STYLE: StyleSpecification = {
   version: 8,
@@ -35,6 +42,7 @@ type Props = {
   rightGeoJson: string | null
   longitude: number
   latitude: number
+  /** `true` : orthophoto IGN. `false` : nos propres parcelles sur fond neutre. */
   orthophoto: boolean
 }
 
@@ -89,7 +97,9 @@ export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitu
     if (bounds) {
       // `maxZoom` évite de coller au ras d'un objet minuscule ; le padding laisse voir le
       // voisinage, qui est souvent ce qui permet de trancher.
-      map.fitBounds(bounds, { padding: 60, maxZoom: 19, duration: 0 })
+      // Marge modérée et zoom max à 20 : sur une carte de 280 px, un bâtiment de 90 m² tenait
+      // dans une trentaine de pixels au zoom 19 avec 60 px de marge de chaque côté.
+      map.fitBounds(bounds, { padding: 36, maxZoom: 20, duration: 0 })
     } else {
       map.jumpTo({ center: [longitude, latitude], zoom: 18 })
     }
@@ -104,9 +114,16 @@ export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitu
         attributionControl={{ compact: true }}
         style={{ width: '100%', height: '100%' }}
       >
-        <Source id="review-base" type="raster" tiles={[orthophoto ? ORTHOPHOTO_IGN : PLAN_IGN]} tileSize={256} attribution="IGN · Géoplateforme">
-          <Layer id="review-base-layer" type="raster" />
-        </Source>
+        {/* `key` distinct sur chaque branche : sans lui React réutilise l'instance et
+            react-map-gl refuse le changement d'identifiant de source. */}
+        {orthophoto
+          ? <Source key="ortho" id="review-base" type="raster" tiles={[ORTHOPHOTO_IGN]} tileSize={256} attribution="IGN · Géoplateforme">
+              <Layer id="review-base-layer" type="raster" />
+            </Source>
+          : <Source key="parcels" id="review-parcels" type="vector" tiles={['/tiles/v1/parcels/{z}/{x}/{y}.mvt']} minzoom={13} maxzoom={22} attribution="Etalab · DGFiP">
+              <Layer id="review-parcels-fill" source-layer="parcels" type="fill" paint={{ 'fill-color': '#f7f8f3', 'fill-opacity': 0.9 }} />
+              <Layer id="review-parcels-line" source-layer="parcels" type="line" paint={{ 'line-color': '#8b7bb8', 'line-width': 1 }} />
+            </Source>}
 
         {/* L'objet de droite dessous, celui de gauche par-dessus : sur un cas BD TOPO les deux
             emprises se recouvrent presque, et l'ordre décide de ce qu'on voit. */}
