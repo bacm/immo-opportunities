@@ -42,6 +42,9 @@ class BlindCaseResponse(BaseModel):
     right_kind: str | None
     right_area_m2: float | None
     right_geojson: str | None
+    # Part de l'objet de gauche tombant sur celui de droite : un fait géométrique, que le
+    # relecteur pourrait mesurer lui-même. Ce n'est pas la décision du moteur.
+    left_on_right_ratio: float | None
     longitude: float | None
     latitude: float | None
 

@@ -205,6 +205,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .case-preview .legend-left, .case-preview .legend-right { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .case-preview .legend-left { background: rgba(183,121,31,.28); border: 1px solid #b7791f; }
 .case-preview .legend-right { background: rgba(31,138,76,.16); border: 1px solid #1f8a4c; }
+.facts dd.value-warning { color: #b23b3b; }
 .review-links { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .review-links span { font-family: ui-monospace, monospace; font-size: 9px; }
 .case-context { margin: 10px 0; }

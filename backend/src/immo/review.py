@@ -63,6 +63,29 @@ BLIND_CASE_SELECT = """
            ST_AsGeoJSON(ST_Transform(coalesce(
                right_parcel_geometry.geom, right_building.geom
            ), 4326)) AS right_geojson,
+           -- La part de l'objet de gauche qui tombe sur celui de droite, recalculee ici a
+           -- partir des deux geometries.
+           --
+           -- C'est une propriete geometrique que le relecteur pourrait mesurer lui-meme sur la
+           -- carte, au meme titre que les surfaces deja affichees — pas la decision du moteur.
+           -- La nuance compte : le moteur a bien utilise un recouvrement pour decider, mais ce
+           -- qui lui est interdit de montrer, c'est sa conclusion, pas le fait mesure.
+           --
+           -- Sans ce chiffre, un batiment qui touche une parcelle a 3 % se juge a l'oeil sur
+           -- deux formes presque superposees a l'ecran. BUG-09 montre que 32 % des relations
+           -- sont dans ce cas.
+           CASE
+             WHEN coalesce(source_observation.geometry, left_building.geom) IS NOT NULL
+              AND right_parcel_geometry.geom IS NOT NULL
+             THEN round(
+                 (ST_Area(ST_Intersection(
+                      coalesce(source_observation.geometry, left_building.geom),
+                      right_parcel_geometry.geom
+                  ))
+                  / nullif(ST_Area(coalesce(
+                      source_observation.geometry, left_building.geom
+                  )), 0))::numeric, 4)
+           END AS left_on_right_ratio,
            ST_X(ST_Transform(ST_PointOnSurface(coalesce(
                right_parcel_geometry.geom, right_building.geom,
                source_observation.geometry, left_address.geom
@@ -145,6 +168,9 @@ def _blind_record(row: Any) -> dict[str, Any]:
         "right_kind": right_kind,
         "right_area_m2": float(row["right_area_m2"]) if row["right_area_m2"] is not None else None,
         "right_geojson": str(row["right_geojson"]) if row["right_geojson"] else None,
+        "left_on_right_ratio": (
+            float(row["left_on_right_ratio"]) if row["left_on_right_ratio"] is not None else None
+        ),
         "longitude": float(row["longitude"]) if row["longitude"] is not None else None,
         "latitude": float(row["latitude"]) if row["latitude"] is not None else None,
     }

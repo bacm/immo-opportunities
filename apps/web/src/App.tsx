@@ -930,7 +930,18 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
             <div><dt>Commune</dt><dd>{current.commune_name ?? current.commune_code}</dd></div>
             <div><dt>Objet de gauche</dt><dd>{current.left_label}{current.left_area_m2 ? ` · ${Math.round(current.left_area_m2)} m²` : ''}</dd></div>
             <div><dt>Objet de droite</dt><dd>{current.right_label}{current.right_area_m2 ? ` · ${Math.round(current.right_area_m2)} m²` : ''}</dd></div>
+            {current.left_on_right_ratio !== null && <div>
+              <dt>Part de gauche sur droite</dt>
+              <dd className={current.left_on_right_ratio < 0.1 ? 'value-warning' : undefined}>
+                {(current.left_on_right_ratio * 100).toFixed(1)} %
+              </dd>
+            </div>}
           </dl>
+          {current.left_on_right_ratio !== null && current.left_on_right_ratio < 0.1 && <p className="detail-note">
+            L’objet de gauche ne touche celui de droite que sur une fraction de sa surface. À vous
+            de juger si cela suffit à dire qu’il y est <em>situé</em> — c’est exactement la
+            question que pose ce cas.
+          </p>}
           {context && context.sibling_addresses.length > 0 && <div className="case-context">
             <h4>Adresses au même numéro</h4>
             {context.sibling_addresses.length === 1

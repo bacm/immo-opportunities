@@ -777,6 +777,8 @@ export interface components {
             left_kind: string | null;
             /** Left Label */
             left_label: string | null;
+            /** Left On Right Ratio */
+            left_on_right_ratio: number | null;
             /** Longitude */
             longitude: number | null;
             /** Out Of Scope */
@@ -1553,6 +1555,8 @@ export interface components {
             judged: number;
             /** Matching Stratum */
             matching_stratum: string;
+            /** Recalled */
+            recalled: number;
             /** Territorial Stratum */
             territorial_stratum: string;
             /** Undecidable */

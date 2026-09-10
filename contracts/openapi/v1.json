@@ -231,6 +231,17 @@
             ],
             "title": "Left Label"
           },
+          "left_on_right_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left On Right Ratio"
+          },
           "longitude": {
             "anyOf": [
               {
@@ -333,6 +344,7 @@
           "right_kind",
           "right_area_m2",
           "right_geojson",
+          "left_on_right_ratio",
           "longitude",
           "latitude"
         ],
@@ -2656,6 +2668,10 @@
             "title": "Matching Stratum",
             "type": "string"
           },
+          "recalled": {
+            "title": "Recalled",
+            "type": "integer"
+          },
           "territorial_stratum": {
             "title": "Territorial Stratum",
             "type": "string"
@@ -2669,6 +2685,7 @@
           "matching_stratum",
           "territorial_stratum",
           "drawn",
+          "recalled",
           "judged",
           "correct",
           "incorrect",
