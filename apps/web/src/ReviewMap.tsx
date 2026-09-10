@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import MapLibreMap, { Layer, NavigationControl, Source } from 'react-map-gl/maplibre'
+import { useEffect, useMemo, useRef } from 'react'
+import MapLibreMap, { Layer, NavigationControl, Source, type MapRef } from 'react-map-gl/maplibre'
 import type { StyleSpecification } from 'maplibre-gl'
 
 /**
@@ -48,12 +48,25 @@ function feature(raw: string | null) {
 }
 
 export default function ReviewMap({ leftGeoJson, rightGeoJson, longitude, latitude, orthophoto }: Props) {
+  const mapRef = useRef<MapRef>(null)
   const left = useMemo(() => feature(leftGeoJson), [leftGeoJson])
   const right = useMemo(() => feature(rightGeoJson), [rightGeoJson])
+
+  // `initialViewState` ne s'applique qu'au montage. Comme la carte reste montée d'un cas au
+  // suivant — remonter un contexte WebGL à chaque verdict serait coûteux — la caméra restait
+  // sur le cas précédent pendant que les emprises, elles, changeaient : le relecteur voyait
+  // l'ancien lieu et cherchait des formes désormais hors écran.
+  //
+  // `jumpTo` plutôt qu'une animation : d'un cas à l'autre il n'y a aucune continuité à
+  // montrer, et un vol de 700 ms entre deux communes ne ferait qu'attendre.
+  useEffect(() => {
+    mapRef.current?.jumpTo({ center: [longitude, latitude], zoom: 18 })
+  }, [longitude, latitude])
 
   return (
     <div className="review-map">
       <MapLibreMap
+        ref={mapRef}
         mapStyle={BASE_STYLE}
         initialViewState={{ longitude, latitude, zoom: 18 }}
         attributionControl={{ compact: true }}
