@@ -219,11 +219,32 @@ def next_blind_case(sample_id: str) -> dict[str, Any] | None:
         BLIND_CASE_SELECT
         + """
          WHERE review_case.sample_id = :sample_id
-           AND NOT EXISTS (
-               SELECT 1 FROM meta.matching_review_verdict AS verdict
-                WHERE verdict.case_id = review_case.id
+           AND (
+               -- Jamais juge.
+               NOT EXISTS (
+                   SELECT 1 FROM meta.matching_review_verdict AS verdict
+                    WHERE verdict.case_id = review_case.id
+               )
+               -- Ou rappele depuis, et pas encore rejuge : un rappel redonne le cas a juger
+               -- sans effacer le verdict precedent, qui reste visible au depouillement.
+               OR EXISTS (
+                   SELECT 1 FROM meta.matching_review_recall AS recall
+                    WHERE recall.case_id = review_case.id
+                      AND NOT EXISTS (
+                          SELECT 1 FROM meta.matching_review_verdict AS later
+                           WHERE later.case_id = review_case.id
+                             AND later.recorded_at > recall.recalled_at
+                      )
+               )
            )
-         ORDER BY (review_case.drawn_rank - 1) % 15,
+         ORDER BY
+                  -- Les cas rappeles d'abord : ils bloquent le depouillement de leur strate,
+                  -- et les rendre en fin de file les ferait juger apres les 160 autres.
+                  EXISTS (
+                      SELECT 1 FROM meta.matching_review_recall AS recall
+                       WHERE recall.case_id = review_case.id
+                  ) DESC,
+                  (review_case.drawn_rank - 1) % 15,
                   review_case.matching_stratum,
                   review_case.territorial_stratum
          LIMIT 1
@@ -435,6 +456,12 @@ def review_results(sample_id: str) -> list[dict[str, Any]]:
              ORDER BY verdict.case_id, verdict.recorded_at DESC, verdict.id DESC
         )
         SELECT review_case.matching_stratum, review_case.territorial_stratum,
+               count(*) FILTER (
+                   WHERE EXISTS (
+                       SELECT 1 FROM meta.matching_review_recall AS recall
+                        WHERE recall.case_id = review_case.id
+                   )
+               ) AS recalled,
                count(*) AS drawn,
                count(latest.case_id) AS judged,
                count(*) FILTER (WHERE latest.verdict = 'correct') AS correct,
@@ -460,6 +487,7 @@ def review_results(sample_id: str) -> list[dict[str, Any]]:
                 "matching_stratum": str(row["matching_stratum"]),
                 "territorial_stratum": str(row["territorial_stratum"]),
                 "drawn": int(row["drawn"]),
+                "recalled": int(row["recalled"]),
                 "judged": int(row["judged"]),
                 "correct": int(row["correct"]),
                 "incorrect": int(row["incorrect"]),

@@ -79,6 +79,8 @@ class StratumResultResponse(BaseModel):
     matching_stratum: str
     territorial_stratum: str
     drawn: int
+    # Cas rappelés : jugés deux fois, la première avec moins d'information.
+    recalled: int
     judged: int
     correct: int
     incorrect: int
