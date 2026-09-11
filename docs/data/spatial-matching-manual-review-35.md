@@ -207,6 +207,48 @@ ne le réduit**.
 C'est un résultat négatif, et il est consigné comme tel. Il vaut mieux qu'un correctif qui
 aurait dégradé seize relations sur vingt-et-une.
 
+### Déviation assumée : douze cas rappelés pour une question ambiguë — 11 septembre 2026
+
+La question posée sur la relation bâtiment ↔ parcelle — « Ce bâtiment est-il bien situé sur cette
+parcelle ? » — admettait **deux lectures également justes** :
+
+- *est-ce sa parcelle ?* — une identification, donc exclusive ;
+- *en touche-t-il un bout ?* — une containment, donc inclusive.
+
+La revue a produit les deux, sur des cas géométriquement identiques :
+
+| Cas | Part sur la parcelle du cas | Meilleure parcelle | Verdict | Motif |
+|---|---:|---:|---|---|
+| 90 | 0,10 % | 99,40 % | `incorrect` | « non, pas la bonne parcelle » |
+| 83 | 0,70 % | 99,30 % | `incorrect` | — |
+| **168** | **0,93 %** | **99,07 %** | **`correct`** | « pas entièrement mais une partie est bien là » |
+
+Les trois motifs sont exacts. Ce n'est pas le relecteur qui a varié, c'est la question qui
+admettait deux réponses.
+
+**Reformulation.** « Est-ce la parcelle de ce bâtiment ? », complétée par : un bâtiment déborde
+souvent sur plusieurs parcelles, la question n'est donc pas s'il en touche un morceau mais si
+c'est **la** parcelle à laquelle le rattacher pour compter le bâti du terrain.
+
+Le texte s'arrête là délibérément. Annoncer que la bonne parcelle est celle qui en porte la plus
+grande part rendrait **circulaire** la confirmation de cette règle — c'est elle que la revue est
+en train d'établir.
+
+**Périmètre du rappel.** Douze cas : `39, 44, 55, 64, 75, 83, 90, 92, 126, 163, 168, 179`. Ce
+sont exactement ceux où les deux lectures divergent, c'est-à-dire où la parcelle du cas n'est pas
+celle qui porte le plus du bâtiment.
+
+Les quinze autres ne sont pas rappelés : la parcelle du cas y est la majoritaire, les deux
+lectures y donnent la même réponse, et les rejuger ne mesurerait rien de plus.
+
+**Pourquoi les douze et pas le seul qui dérange.** Le cas 168 est le seul à contredire la règle
+du rang. Ne rappeler que lui aurait trié les résultats en faveur de l'hypothèse en cours de
+test — exactement ce que le contrôle de cohérence géométrique déclaré plus haut s'interdit. Le
+critère de rappel est la divergence des lectures, pas le désaccord avec une hypothèse.
+
+**Effet sur le dépouillement.** Ces douze cas porteront deux verdicts. Le rapport devra dire
+lequel a été rendu sous quelle formulation, et ne pas additionner les deux.
+
 ## Ce que cet échantillon ne couvre pas
 
 Le ticket impose d'inclure quatre familles de cas :
