@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Ouvre l'acces aux deux comptes de developpement — BUG-10.
+#
+# Le realm declare les comptes sans identifiants : un mot de passe versionne serait un secret en
+# clair dans le depot. Ce script pose les mots de passe depuis secrets/dev/ via l'API
+# d'administration, puis ouvre l'acces applicatif de chaque compte a son organisation.
+#
+# Deux organisations distinctes, pas une : l'isolation ne se teste qu'a deux. Voir F3.
+#
+# Idempotent : relancable sans effet de bord.
+set -Eeuo pipefail
+
+project_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+env_file="${COMPOSE_ENV_FILE:-.env.example}"
+compose=(
+  docker compose --env-file "$env_file"
+  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml
+)
+secrets_dir="${SECRETS_DIR:-$project_root/secrets/dev}"
+keycloak_url="${KEYCLOAK_URL:-http://127.0.0.1:18081/auth}"
+
+admin_user="$(cat "$secrets_dir/keycloak_admin_user")"
+admin_password="$(cat "$secrets_dir/keycloak_admin_password")"
+
+# --data-urlencode et non -d : les secrets sont en base64 et un « + » deviendrait une espace
+# dans un corps de formulaire, ce qui produit un « invalid user credentials » trompeur.
+token="$(curl --fail --silent --show-error \
+  -X POST "$keycloak_url/realms/master/protocol/openid-connect/token" \
+  -d client_id=admin-cli -d grant_type=password \
+  --data-urlencode "username=$admin_user" \
+  --data-urlencode "password=$admin_password" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+
+# nom d'utilisateur | secret | nom affiche | organisation | libelle de l'organisation
+accounts=(
+  "dev-alpha|keycloak_dev_alpha_password|Alpha Développement|org:dev-alpha|Organisation Alpha (développement)"
+  "dev-beta|keycloak_dev_beta_password|Beta Développement|org:dev-beta|Organisation Beta (développement)"
+)
+
+for account in "${accounts[@]}"; do
+  IFS='|' read -r username secret_name display_name organization_id organization_name <<<"$account"
+  password="$(cat "$secrets_dir/$secret_name")"
+
+  # `kc.sh --import-realm` n'importe **que** les realms absents : sur une base deja initialisee,
+  # ajouter un compte au fichier de realm ne produit rien. Le fichier reste la declaration de
+  # reference pour une installation neuve, et ce script reconcilie l'existant.
+  #
+  # Keycloak attribue lui-meme l'identifiant et ignore celui qu'on propose sur un realm
+  # existant. On le resout donc par nom d'utilisateur au lieu de le figer — un `sub` fige ne
+  # vaudrait que pour l'import initial, et mentirait partout ailleurs.
+  if ! subject="$(curl --fail --silent --show-error \
+      "$keycloak_url/admin/realms/immo/users?username=$username&exact=true" \
+      -H "Authorization: Bearer $token" \
+      | python3 -c 'import json,sys; users=json.load(sys.stdin); print(users[0]["id"] if users else "")')" \
+      || [ -z "$subject" ]; then
+    python3 -c 'import json,sys; print(json.dumps({"username":sys.argv[1],"email":sys.argv[1]+"@example.test","emailVerified":True,"enabled":True}))' \
+      "$username" \
+      | curl --fail --silent --show-error -X POST "$keycloak_url/admin/realms/immo/users" \
+          -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data-binary @-
+    subject="$(curl --fail --silent --show-error \
+      "$keycloak_url/admin/realms/immo/users?username=$username&exact=true" \
+      -H "Authorization: Bearer $token" \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')"
+    echo "Compte Keycloak créé : $username"
+  fi
+
+  # Profil complet, systematiquement : sans prenom ni nom, Keycloak impose une action
+  # `VERIFY_PROFILE` a la connexion. La connexion reussit alors mais n'emet aucun code
+  # d'autorisation, et l'echec se lit « invalid_request » — un message qui ne designe pas sa
+  # cause. Le fichier de realm portait bien ces champs ; la creation par API les omettait.
+  python3 -c 'import json,sys; print(json.dumps({"firstName":sys.argv[1].split(" ")[0],"lastName":" ".join(sys.argv[1].split(" ")[1:]) or "Développement","email":sys.argv[2]+"@example.test","emailVerified":True,"enabled":True,"requiredActions":[]}))' \
+    "$display_name" "$username" \
+    | curl --fail --silent --show-error -X PUT "$keycloak_url/admin/realms/immo/users/$subject" \
+        -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data-binary @-
+
+  # `temporary: false` : un mot de passe temporaire imposerait un changement a la premiere
+  # connexion, ce qui casserait tout test automatise passant par le vrai chemin OIDC.
+  python3 -c 'import json,sys; print(json.dumps({"type":"password","temporary":False,"value":sys.argv[1]}))' "$password" \
+    | curl --fail --silent --show-error -X PUT \
+        "$keycloak_url/admin/realms/immo/users/$subject/reset-password" \
+        -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data-binary @-
+
+  "${compose[@]}" exec -T api python -m immo.accounts \
+    --subject "$subject" \
+    --display-name "$display_name" \
+    --email "$username@example.test" \
+    --organization-id "$organization_id" \
+    --organization-name "$organization_name"
+done
+
+echo "Comptes de développement prêts. Identifiants dans $secrets_dir."

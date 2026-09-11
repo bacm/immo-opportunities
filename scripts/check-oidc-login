@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Vérifier le vrai chemin d'authentification, de bout en bout — BUG-10.
+
+Ce contrôle existe parce que rien ne l'exerçait. `auth.py` court-circuite OIDC en développement
+et en test, et le front en fait autant (`import.meta.env.DEV`). Tout passait donc par un
+principal fabriqué, et la chaîne réelle — jeton Keycloak, `sub`, `app_user`, appartenance, RLS —
+n'avait jamais servi. La base était vide et personne ne s'en apercevait.
+
+Le flux suivi est celui du navigateur : code d'autorisation avec PKCE sur le client public
+`immo-web`. Aucun assouplissement de configuration n'a été nécessaire — pas de `direct access
+grant` ouvert pour les besoins d'un test, ce qui aurait affaibli le réalm pour prouver qu'il
+fonctionne.
+
+Deux comptes sont vérifiés, pas un : l'isolation entre organisations ne se démontre qu'à deux.
+
+Hors de `make check` : ce contrôle exige la pile locale complète.
+"""
+
+import base64
+import hashlib
+import json
+import os
+import re
+import secrets
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from http.cookiejar import CookieJar, DefaultCookiePolicy
+from pathlib import Path
+
+# Par Caddy, et non par le port direct du conteneur : l'API valide l'emetteur du jeton contre
+# `oidc_issuer`, qui vaut `http://localhost:8080/auth/realms/immo`. Un jeton emis sur une autre
+# adresse est rejete en 401, et a juste titre.
+KEYCLOAK = os.environ.get("KEYCLOAK_URL", "http://localhost:8080/auth")
+API = os.environ.get("API_URL", "http://127.0.0.1:18000")
+REDIRECT = os.environ.get("SITE_ADDRESS", "http://localhost:8080") + "/"
+SECRETS = Path(os.environ.get("SECRETS_DIR", Path(__file__).resolve().parent.parent / "secrets/dev"))
+
+ACCOUNTS = (
+    ("dev-alpha", "keycloak_dev_alpha_password", "org:dev-alpha"),
+    ("dev-beta", "keycloak_dev_beta_password", "org:dev-beta"),
+)
+
+
+def _token_for(username: str, password: str) -> str:
+    """Le flux du navigateur : /auth, formulaire de connexion, code, échange PKCE."""
+    verifier = base64.urlsafe_b64encode(secrets.token_bytes(48)).rstrip(b"=").decode()
+    challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+
+    # Ne pas suivre la redirection finale : elle pointe vers le front, qui repondrait 200 avec
+    # la page du SPA et ferait disparaitre le code d'autorisation de notre vue.
+    class _KeepRedirect(urllib.request.HTTPRedirectHandler):
+        location = ""
+
+        def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001, ANN201
+            if "code=" in newurl or "error=" in newurl:
+                _KeepRedirect.location = newurl
+                return None
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    _KeepRedirect.location = ""
+    # Keycloak pose ses cookies de session en `Secure; SameSite=None`, et un `CookieJar` ne les
+    # renverrait donc jamais sur cette adresse en clair — la connexion echouerait sur un
+    # « cookie_not_found » qui ne designe pas la vraie cause. Un navigateur, lui, traite la
+    # boucle locale comme un contexte sur. C'est le port direct du conteneur qui impose ce
+    # detour, pas le chemin reel de l'utilisateur, qui passe par Caddy.
+    class _LocalhostIsSecure(DefaultCookiePolicy):
+        def return_ok_secure(self, cookie, request):  # noqa: ANN001, ANN201
+            return True
+
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(CookieJar(_LocalhostIsSecure())), _KeepRedirect
+    )
+
+    query = urllib.parse.urlencode(
+        {
+            "client_id": "immo-web",
+            "response_type": "code",
+            "scope": "openid",
+            "redirect_uri": REDIRECT,
+            "state": secrets.token_urlsafe(8),
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        }
+    )
+    with opener.open(f"{KEYCLOAK}/realms/immo/protocol/openid-connect/auth?{query}") as response:
+        page = response.read().decode()
+
+    action = re.search(r'action="([^"]+)"', page)
+    if action is None:
+        raise SystemExit("La page de connexion Keycloak ne contient aucun formulaire.")
+    form = action.group(1).replace("&amp;", "&")
+
+    credentials = urllib.parse.urlencode(
+        {"username": username, "password": password, "credentialId": ""}
+    ).encode()
+    try:
+        opener.open(urllib.request.Request(form, data=credentials))
+    except urllib.error.HTTPError as error:
+        # Une connexion refusee renvoie la page de login, pas une redirection.
+        if not _KeepRedirect.location:
+            raise SystemExit(f"Connexion refusée pour {username} (HTTP {error.code}).") from error
+
+    location = _KeepRedirect.location
+    code = urllib.parse.parse_qs(urllib.parse.urlparse(location).query).get("code", [None])[0]
+    if not code:
+        raise SystemExit(f"Aucun code d'autorisation obtenu pour {username}.")
+
+    exchange = urllib.parse.urlencode(
+        {
+            "grant_type": "authorization_code",
+            "client_id": "immo-web",
+            "code": code,
+            "redirect_uri": REDIRECT,
+            "code_verifier": verifier,
+        }
+    ).encode()
+    with urllib.request.urlopen(
+        f"{KEYCLOAK}/realms/immo/protocol/openid-connect/token", data=exchange
+    ) as response:
+        return json.load(response)["access_token"]
+
+
+def _session(token: str) -> dict:
+    request = urllib.request.Request(
+        f"{API}/api/v1/session", headers={"Authorization": f"Bearer {token}"}
+    )
+    with urllib.request.urlopen(request) as response:
+        return json.load(response)
+
+
+def main() -> int:
+    seen: dict[str, str] = {}
+    for username, secret_name, expected_organization in ACCOUNTS:
+        password = (SECRETS / secret_name).read_text(encoding="utf-8").strip()
+        session = _session(_token_for(username, password))
+        organization = session.get("organization_id") or session.get("organization", {}).get("id")
+        if organization != expected_organization:
+            print(
+                f"{username} : organisation {organization!r}, attendue {expected_organization!r}",
+                file=sys.stderr,
+            )
+            return 1
+        seen[username] = organization
+        print(f"{username} → {organization} · acteur résolu par le vrai chemin OIDC")
+
+    if len(set(seen.values())) != len(seen):
+        print("Les deux comptes partagent une organisation : rien à isoler.", file=sys.stderr)
+        return 1
+    print("Chaîne complète vérifiée : jeton Keycloak → sub → app_user → appartenance → RLS.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

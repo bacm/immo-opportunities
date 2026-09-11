@@ -1,6 +1,6 @@
 # BUG-10 — Personne ne peut se connecter : ni compte, ni inscription, ni administrateur
 
-**Version :** v0.7 · **Taille :** M · **État :** À faire
+**Version :** v0.7 · **Taille :** M · **État :** Terminé
 **Dépend de :** — · **Bloque :** F3, G8
 **Découvert par :** vérification du parcours d'authentification, 10 septembre 2026
 
@@ -35,14 +35,27 @@ Relevé dans `config/keycloak/realm-immo.json` :
 Aucun script ne compense : `scripts/` ne mentionne Keycloak que dans `init-dev-secrets`, qui ne
 crée pas de compte, et dans `smoke-test`, qui vérifie seulement que `/auth/` répond.
 
-### 2. Il n'y a pas non plus d'administrateur pour en créer
+### 2. ~~Il n'y a pas non plus d'administrateur pour en créer~~ — faux, corrigé le 11 septembre 2026
 
-Le conteneur `keycloak` ne porte aucune variable `KC_BOOTSTRAP_ADMIN_*` ni `KEYCLOAK_ADMIN` —
-vérifié sur l'environnement du conteneur en cours d'exécution, qui ne compte que sept variables
-`KC_*`, toutes de configuration base de données, proxy et hostname.
+**Ce point était une erreur de ma part et il est conservé barré plutôt que supprimé.**
 
-La console d'administration est donc inaccessible elle aussi. Le défaut se referme sur lui-même :
-pas de compte, pas d'inscription, et pas de moyen d'en ouvrir un.
+J'avais conclu à l'absence d'administrateur en lisant `docker compose exec keycloak env`. Ce
+contrôle ne prouve rien : `exec` démarre un **nouveau** processus, qui reçoit l'environnement
+déclaré dans le service, pas celui du processus en cours. Or l'entrypoint exporte les variables
+depuis les secrets montés, juste avant `exec kc.sh` :
+
+```bash
+export KC_BOOTSTRAP_ADMIN_USERNAME="$(cat /run/secrets/keycloak_admin_user)"
+export KC_BOOTSTRAP_ADMIN_PASSWORD="$(cat /run/secrets/keycloak_admin_password)"
+```
+
+Relevé sur `/proc/1/environ`, les deux variables sont bien présentes. Le compte
+`immo-dev-admin` existe dans le réalm `master`, créé le 4 septembre 2026, et un jeton
+`admin-cli` s'obtient avec les secrets de `secrets/dev/`.
+
+La console d'administration est donc **accessible**, et le point 1 se corrige avec elle. Ce qui
+reste vrai : rien n'est provisionné, et rien n'est documenté — personne ne sait que ce compte
+existe ni où sont ses identifiants.
 
 ### 3. Même authentifié, l'acteur n'existerait pas côté application
 
@@ -109,8 +122,9 @@ Keycloak. Le chemin réel n'a donc jamais été emprunté par personne.
 
 ## Travail à réaliser
 
-1. Déclarer un administrateur de réalm par variable d'environnement, secret hors dépôt, et le
-   documenter dans `docs/operations/`.
+1. Documenter l'administrateur de réalm existant — `immo-dev-admin`, identifiants dans
+   `secrets/dev/keycloak_admin_*` — dans `docs/operations/`. Il n'est pas à créer, il est à
+   faire connaître.
 2. Provisionner les comptes de développement dans `realm-immo.json` — le fichier est déjà versionné
    et importé, c'est le bon endroit, à condition que les mots de passe soient temporaires et
    marqués comme tels.
@@ -133,3 +147,29 @@ Keycloak. Le chemin réel n'a donc jamais été emprunté par personne.
 - un humain peut se connecter à l'application sans intervention en base ;
 - la procédure de création d'un compte est écrite dans `docs/operations/` ;
 - au moins un test exerce la RLS avec deux acteurs réels issus de Keycloak.
+
+## Résolution — 11 septembre 2026
+
+Livré :
+
+- `backend/src/immo/accounts.py` — commande d'administration `python -m immo.accounts`,
+  idempotente, qui ouvre l'accès d'un `sub` OIDC à une organisation. Elle tourne avec le rôle
+  applicatif ordinaire : les politiques RLS comparant à des variables de session, il suffit de se
+  déclarer être ce qu'on insère. Aucun `BYPASSRLS`, aucune politique désactivée, et un test
+  échoue si quelqu'un les réintroduit.
+- `scripts/provision-dev-accounts` — deux comptes dans **deux** organisations, mots de passe tirés
+  de `secrets/dev/`. Le réalm ne porte aucun identifiant en clair.
+- `scripts/check-oidc-login` — suit le flux du navigateur, code d'autorisation avec PKCE sur
+  `immo-web`, pour les deux comptes, et vérifie que les acteurs résolus relèvent d'organisations
+  différentes. Aucun *direct access grant* n'a été ouvert pour les besoins du contrôle.
+- `docs/operations/comptes-et-acces.md` — la procédure, l'administrateur, et les trois messages
+  d'erreur trompeurs rencontrés en chemin.
+- `backend/tests/test_accounts.py` — dix tests.
+
+Vérifié de bout en bout : `dev-alpha → org:dev-alpha` et `dev-beta → org:dev-beta`, acteurs
+résolus par le vrai chemin OIDC, chaîne jeton → `sub` → `app_user` → appartenance → RLS.
+
+Ce que ce ticket **n'a pas** fait, et qui reste à [F3](./F3-isolation-organisations.md) : prouver
+que deux organisations ne voient pas les données l'une de l'autre. Le contrôle vérifie que les
+acteurs sont distincts, pas que les politiques les cloisonnent — il n'y a encore aucune donnée
+applicative à cloisonner.

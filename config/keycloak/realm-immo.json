@@ -24,8 +24,12 @@
       "protocol": "openid-connect",
       "rootUrl": "${SITE_ADDRESS}",
       "baseUrl": "/",
-      "redirectUris": ["/*"],
-      "webOrigins": ["+"],
+      "redirectUris": [
+        "/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "/*"
@@ -43,6 +47,24 @@
           }
         }
       ]
+    }
+  ],
+  "users": [
+    {
+      "username": "dev-alpha",
+      "email": "dev-alpha@example.test",
+      "emailVerified": true,
+      "firstName": "Alpha",
+      "lastName": "Développement",
+      "enabled": true
+    },
+    {
+      "username": "dev-beta",
+      "email": "dev-beta@example.test",
+      "emailVerified": true,
+      "firstName": "Beta",
+      "lastName": "Développement",
+      "enabled": true
     }
   ]
 }
