@@ -176,23 +176,52 @@ n'est pas seulement respectée : elle devient sans objet pour cette relation. Il
 à calibrer, donc plus rien à faire attendre [E1](./E1-profiling-distributions.md) — ce que la
 première version de ce ticket supposait.
 
-### Ce que cette lecture ne prouve pas encore
+### Confirmation sur 23 verdicts — 11 septembre 2026
 
-Treize verdicts, dont **huit triviaux** — un bâtiment entièrement sur une parcelle unique. Les
-cas informatifs sont au nombre de **six**. L'accord est parfait sur ces six, ce qui est
-encourageant et insuffisant : un ajustement parfait sur six points se produit aussi par hasard.
+La revue a poursuivi. Sur **23 verdicts** bâtiment ↔ parcelle, la règle du rang sépare
+exactement :
 
-Trois questions restent ouvertes, et les 41 cas non jugés de cette relation les trancheraient :
+| Verdict | Cas | La parcelle du cas est la majoritaire | Elle ne l'est pas |
+|---|---:|---:|---:|
+| `correct` | 12 | **12** | 0 |
+| `incorrect` | 10 | 0 | **10** |
+| `undecidable` | 1 | 0 | 1 |
 
-1. **Le partage réel.** Un bâtiment mitoyen à 55 % / 45 % est sur les deux parcelles. La règle du
-   rang en désignerait une seule. Aucun cas de ce type n'est encore jugé — tous les cas observés
-   sont franchement déséquilibrés.
-2. **L'ex æquo et le quasi-ex æquo.** Que faire à 51 % / 49 % ? Le rang tranche, la réalité non.
-3. **Le bâti majoritairement hors parcellaire.** Le cas 173 est accepté à 15,6 %. Un bâtiment à
-   2 % de sa seule parcelle le serait aussi. Est-ce voulu ?
+Vingt-trois sur vingt-trois, dont une douzaine de cas non triviaux — bâtiment réparti sur deux à
+quatre parcelles, ou entièrement hors parcellaire. L'accord ne tient plus à six points.
 
-Ces trois questions portent sur la **relation secondaire**, pas sur la principale. La règle du
-rang suffit à désigner la parcelle principale, ce qui est ce dont LAND-002 et LAND-009 ont besoin.
+### La question du partage réel a trouvé son cas — et la règle y montre sa limite
+
+Le cas 55 est le premier bâtiment réellement partagé de l'échantillon :
+
+| Parcelle | Part du bâtiment |
+|---|---:|
+| `35033000ZS0089` | **48,1 %** |
+| `35033000ZS0091` | **38,8 %** |
+| `35033000ZS0090` | 7,2 % — *la parcelle du cas* |
+| `35033000ZS0092` | 5,8 % |
+
+Le relecteur répond `incorrect`, et écrit : « il est sur `35033000ZS0089` **et**
+`35033000ZS0091` ». La règle du rang rejette bien la parcelle du cas, mais elle ne retiendrait
+que la première des deux autres : **une co-occupation à 38,8 % lui échappe.**
+
+Ce cas tranche donc la question laissée ouverte, et dans les deux sens :
+
+- **Pour la relation principale**, celle dont LAND-002 et LAND-009 ont besoin — « à quelle
+  parcelle rattacher ce bâtiment pour compter » — le rang suffit, et sans seuil.
+- **Pour la relation secondaire**, celle qui dit « ce bâtiment touche aussi », le rang ne suffit
+  pas. Distinguer une co-occupation réelle à 38,8 % d'un contact de bord à 5,8 % demande un
+  seuil, et celui-là revient à [E1](./E1-profiling-distributions.md).
+
+C'est une bonne nouvelle pour ce ticket : le seul seuil nécessaire porte sur une relation
+secondaire dont aucune feature ne dépend aujourd'hui.
+
+### Ce qui reste ouvert
+
+1. **L'ex æquo et le quasi-ex æquo.** Que faire à 51 % / 49 % ? Le rang tranche, la réalité non.
+   Le cas le plus serré observé est à 48,1 % contre 38,8 %.
+2. **Le bâti majoritairement hors parcellaire.** Le cas 173 est accepté à 15,6 % de sa seule
+   parcelle. La règle accepterait 2 % de la même façon. Est-ce voulu ?
 
 ## Ce que ce ticket ne doit pas faire
 
