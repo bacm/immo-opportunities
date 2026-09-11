@@ -169,6 +169,10 @@ PURPOSES: dict[tuple[str | None, str | None], str] = {
     ("building", "parcel"): (
         "Le rapprochement bâtiment ↔ parcelle sert à compter le bâti d'un terrain et à mesurer "
         "son emprise. Vous jugez la localisation, rien d'autre — ni la propriété, ni l'usage."
+        "\n\n"
+        "Un bâtiment déborde souvent sur plusieurs parcelles. La question n'est donc pas s'il "
+        "en touche un morceau, mais si c'est **la** parcelle à laquelle le rattacher pour "
+        "compter le bâti du terrain. À vous de dire ce que « la » veut dire ici."
     ),
 }
 
@@ -198,7 +202,15 @@ def _question(stratum: str, left_kind: str | None, right_kind: str | None) -> st
     if left_kind == "address" and right_kind == "parcel":
         return "Cette adresse est-elle bien l'adresse de cette parcelle ?"
     if left_kind == "building" and right_kind == "parcel":
-        return "Ce bâtiment est-il bien situé sur cette parcelle ?"
+        # « Situé sur » se lit de deux façons, et la revue a produit les deux. Le cas 168 —
+        # 0,93 % du bâtiment sur la parcelle du cas, 99,07 % sur une autre — a recu `correct`,
+        # motif « pas entièrement mais une partie est bien là », ce qui est exact. Les cas 90
+        # et 83, dans la même configuration au dixième près, ont recu `incorrect`.
+        #
+        # La formulation dit désormais qu'il s'agit de **rattacher**, donc de choisir. Elle ne
+        # dit pas comment choisir : annoncer que la bonne parcelle est celle qui porte le plus
+        # du bâtiment rendrait circulaire la confirmation de cette règle même.
+        return "Est-ce la parcelle de ce bâtiment ?"
     if right_kind == "building":
         return "Ces deux objets désignent-ils le même bâtiment ?"
     return STRATUM_QUESTIONS.get(stratum, "Ces deux objets se correspondent-ils sur le terrain ?")
