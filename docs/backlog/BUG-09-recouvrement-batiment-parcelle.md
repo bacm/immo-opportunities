@@ -1,6 +1,6 @@
 # BUG-09 — Un tiers des relations bâtiment ↔ parcelle sont des contacts marginaux déclarés certains
 
-**Version :** v0.3 · **Taille :** M · **État :** À faire
+**Version :** v0.3 · **Taille :** M · **État :** Terminé
 **Dépend de :** — · **Bloque :** B5, et toute feature comptant des bâtiments par parcelle
 **Découvert par :** revue manuelle B4, cas 47 puis cas 3, 10 septembre 2026
 
@@ -312,3 +312,68 @@ relation fausse mais cohérente les traverse sans bruit.
 Il a fallu qu'un humain regarde une carte pour le voir. C'est exactement ce que
 [B4](./B4-revue-manuelle-appariements.md) existe pour produire — et il l'a produit au
 quarante-septième cas, sur une question qui ne portait même pas sur les parcelles.
+
+## Résolution — 13 septembre 2026
+
+Le correctif tient dans `RnbImporter._publish_stage`, en `algorithm_version` **2** :
+
+- la confiance reporte le **recouvrement observé**, sans plancher ;
+- `certain` est réservé à la parcelle de **rang 1** pour ce bâtiment ;
+- une **égalité parfaite** ne produit aucune certitude — `rank()` et non `row_number()`, pour
+  qu'à 50 / 50 aucune des deux ne soit déclarée *la* parcelle ;
+- un recouvrement **nul ou absent** n'est jamais certain, et l'absence garde son motif ;
+- le rang est conservé en preuve, relisible sans refaire le calcul.
+
+La version d'algorithme est incrémentée : sans cela, `ON CONFLICT DO NOTHING` aurait laissé les
+1 240 355 relations fautives en place. Les relations de version 1 subsistent, et l'échantillon de
+[B4](./B4-revue-manuelle-appariements.md) continue de les désigner — les verdicts rendus restent
+donc interprétables.
+
+### Validation contre les verdicts humains
+
+La logique a été simulée sur les relations existantes et confrontée aux 35 verdicts
+bâtiment ↔ parcelle de la revue :
+
+| Décision simulée | Verdict humain | Cas |
+|---|---|---:|
+| `certain` | `correct` | **20** |
+| `ambiguous` | `incorrect` | **14** |
+| `certain` | `incorrect` | **1** |
+
+**34 accords sur 35.**
+
+### Le désaccord restant n'est pas un défaut de la règle
+
+Cas 128, bâtiment `building:rnb:WW8DKXSQAHS5`. Le RNB ne lui déclare **qu'une seule parcelle**,
+`35250000ZC0049`, avec un recouvrement de **4,25 × 10⁻¹²** — un zéro numérique. Elle est donc de
+rang 1, et la règle la déclare certaine. Le relecteur répond « non, c'est `35250000ZC0198` », une
+parcelle que le RNB ne liste pas.
+
+Aucune règle de classement appliquée à une liste fausse ne peut donner un résultat juste. Le
+défaut est en amont : **la liste de parcelles publiée par le RNB est parfois incomplète.**
+
+Mesuré sur 25 communes, 93 237 relations, en recalculant le recouvrement depuis les géométries :
+
+| Écart entre le recouvrement déclaré et le recouvrement réel | Relations | Part |
+|---|---:|---:|
+| moins de 1 point | 92 940 | **99,68 %** |
+| **10 points ou plus** | **297** | **0,32 %** |
+
+Le RNB est donc fiable à 99,7 %, et faux à 0,32 %.
+
+### Suite à instruire : vérifier la relation source contre la géométrie
+
+L'asymétrie mérite d'être relevée. Le chemin BAN **vérifie** sa relation source : l'évidence de
+`ban-cad-parcelles` porte `point_covered` et `within_ten_meters`, et la décision en tient compte.
+Le chemin RNB ne vérifie rien — il reprend la liste publiée telle quelle.
+
+Appliquer au RNB la même vérification détecterait les 0,32 %. Ce n'est pas fait ici : le présent
+ticket avait pour objet de cesser d'écraser une information déjà détenue, et l'élargir à un
+recalcul géométrique sur 1,24 M de relations est un autre travail, à ouvrir séparément.
+
+### Ce qui reste à E1
+
+Distinguer une **co-occupation réelle** — le cas 55, 48,1 % contre 38,8 % — d'un **contact de
+bord** à 5,8 % demande un seuil. Il ne porte que sur la relation secondaire, dont aucune feature
+ne dépend : LAND-002 et LAND-009 n'ont besoin que de la relation principale, que le rang désigne
+sans seuil.

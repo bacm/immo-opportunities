@@ -1409,18 +1409,59 @@ class RnbImporter:
                 algorithm_version, confidence, decision, critical,
                 blocks_publication, rationale, evidence, release_ids
             )
-            SELECT 'rnb-plot:' || stage.rnb_id || ':' || parcel.id,
-                   'building', 'building:rnb:' || stage.rnb_id,
-                   'parcel', parcel.id, 'source_relation', 'rnb-plot-relation', '1',
-                   greatest(0.9, least(1, coalesce((plot->>'bdg_cover_ratio')::numeric, 0.9))),
-                   'certain', true, false,
-                   'RNB explicit plot relation retained with its building coverage ratio',
-                   jsonb_build_object('bdg_cover_ratio', plot->'bdg_cover_ratio'),
+            WITH plot_relation AS (
+                SELECT stage.rnb_id, parcel.id AS parcel_id,
+                       least(1, (plot->>'bdg_cover_ratio')::numeric) AS cover_ratio,
+                       plot->'bdg_cover_ratio' AS raw_ratio
+                  FROM rnb_stage AS stage
+                  CROSS JOIN LATERAL jsonb_array_elements(stage.plots) AS plot
+                  JOIN reference.parcel AS parcel ON parcel.cadastral_id = plot->>'id'
+                 WHERE NOT stage.is_quarantined
+            ),
+            ranked AS (
+                SELECT plot_relation.*,
+                       -- Rang au sein du batiment. `rank()` et non `row_number()` : deux
+                       -- parcelles a egalite parfaite recoivent toutes deux le rang 1, et
+                       -- aucune ne sera donc declaree certaine.
+                       rank() OVER (
+                           PARTITION BY rnb_id ORDER BY cover_ratio DESC NULLS LAST
+                       ) AS cover_rank,
+                       count(*) OVER (PARTITION BY rnb_id, cover_ratio) AS ties
+                  FROM plot_relation
+            )
+            SELECT 'rnb-plot:' || ranked.rnb_id || ':' || ranked.parcel_id,
+                   'building', 'building:rnb:' || ranked.rnb_id,
+                   'parcel', ranked.parcel_id, 'source_relation', 'rnb-plot-relation', '2',
+                   -- Le recouvrement observe, sans plancher. Absent, il vaut 0 : il n'y a
+                   -- alors aucune preuve de recouvrement, et la decision sera `ambiguous`.
+                   coalesce(ranked.cover_ratio, 0),
+                   CASE
+                       WHEN ranked.cover_ratio IS NULL OR ranked.cover_ratio = 0
+                           THEN 'ambiguous'
+                       WHEN ranked.cover_rank = 1 AND ranked.ties = 1 THEN 'certain'
+                       ELSE 'ambiguous'
+                   END,
+                   true, false,
+                   CASE
+                       WHEN ranked.cover_ratio IS NULL
+                           THEN 'RNB plot relation without coverage ratio: kept, never certain'
+                       WHEN ranked.cover_ratio = 0
+                           THEN 'RNB plot relation with zero coverage: boundary contact only'
+                       WHEN ranked.cover_rank = 1 AND ranked.ties = 1
+                           THEN 'Parcel carrying the largest share of this RNB building'
+                       WHEN ranked.cover_rank = 1
+                           THEN 'Tied for the largest share: no parcel can be called certain'
+                       ELSE 'Secondary parcel: another one carries a larger share'
+                   END,
+                   jsonb_build_object(
+                       'bdg_cover_ratio', ranked.raw_ratio,
+                       'cover_rank', ranked.cover_rank,
+                       'missing_reason',
+                       CASE WHEN ranked.cover_ratio IS NULL
+                            THEN 'bdg_cover_ratio absent from the RNB plot entry' END
+                   ),
                    jsonb_build_array(%(release_id)s::text)
-              FROM rnb_stage AS stage
-              CROSS JOIN LATERAL jsonb_array_elements(stage.plots) AS plot
-              JOIN reference.parcel AS parcel ON parcel.cadastral_id = plot->>'id'
-             WHERE NOT stage.is_quarantined
+              FROM ranked
             ON CONFLICT (
                 candidate_group_key, left_entity_type, left_entity_id,
                 right_entity_type, right_entity_id, algorithm_code, algorithm_version
@@ -1439,7 +1480,7 @@ class RnbImporter:
                    (matched.evidence->>'bdg_cover_ratio')::numeric
               FROM meta.entity_match AS matched
              WHERE matched.algorithm_code = 'rnb-plot-relation'
-               AND matched.algorithm_version = '1'
+               AND matched.algorithm_version = '2'
                AND matched.release_ids ? %(release_id)s
             ON CONFLICT (building_id, parcel_id) DO UPDATE SET
                 relation_status = EXCLUDED.relation_status,
