@@ -11,7 +11,7 @@ urbanistique opposable.
 
 **Répondre et documenter en français.**
 
-## État au 4 septembre 2026
+## État au 13 septembre 2026
 
 Le logiciel MVP est largement écrit — API, Explorer carte/liste/fiche, OIDC, RLS, moteur de score,
 administration. **La DoD produit n'est pas atteinte, et le goulot est la donnée réelle, pas l'UI.**
@@ -19,22 +19,39 @@ administration. **La DoD produit n'est pas atteinte, et le goulot est la donnée
 | Version | État |
 |---|---|
 | v0.1 Foundation | Bloquée — preuve CI GitHub manquante |
-| v0.2 Cadastre 35 | Terminée — 1,3 M parcelles |
-| **v0.3 Référentiel spatial** | **En cours — seule version active** |
-| v0.4 → v0.8 | Bloquées en cascade |
+| v0.2 Cadastre 35 | Terminée |
+| v0.3 Référentiel spatial | Terminée le 13 septembre 2026 |
+| **v0.4 Carte réelle** | **En cours — seule version active** |
+| v0.5 → v0.8 | En attente |
 
-DS-01 accepté (35). DS-02 RNB chargé (35). DS-05 BAN archivé, acceptation débloquée par BUG-03.
-DS-03, DS-04, DS-06 à DS-09 : contrats seulement, aucun import réel.
+**Deux releases acceptées** sur le 35 : DS-01 Cadastre et DS-02 RNB. DS-03 BDNB, DS-04 BD TOPO et
+DS-05 BAN sont `display_only`. DS-06 à DS-09 : contrats seulement, aucun import réel.
+
 v0.6 : moteur reproductible, définitions en `publication_eligible: false`.
 v0.7 : entièrement codé, inutilisable faute de candidats publiés.
 
+### Ce que v0.3 a livré, et ce qu'elle a laissé
+
+Features morphologiques matérialisées sur **1 333 327 unités** — `LAND-001..007` et `LAND-009`
+calculées, `LAND-008`, `LAND-010` et `BLD-001..003` absentes avec motif. Bâtiments regroupés en
+**514 859 bâtiments physiques** côté RNB, 517 615 côté cadastre.
+
+La revue manuelle B4 a produit une acceptation — l'identité BD TOPO ↔ RNB, 60 cas sur 60 — et
+**trois défauts structurels qu'aucun contrôle automatique n'avait vus**, tous corrigés : BUG-09
+(1,24 M de relations bâtiment ↔ parcelle toutes déclarées certaines), BUG-10 (personne ne pouvait
+se connecter), BUG-12 (comptage d'enregistrements, faux de 44 %).
+
+Elle a aussi établi un **résultat négatif** à ne pas redécouvrir : la relation adresse ↔ parcelle
+n'est vérifiable par aucune règle géométrique — ni containment, ni proximité, ni distance. Son
+taux d'erreur d'environ 24 % est réel et irréductible avec les sources disponibles.
+
 ### Le chemin critique tient en une phrase
 
-> Débloquer BAN sur le 35, importer DVF+, profiler les distributions réelles, publier un premier
-> score. v0.7 est déjà écrit et n'attend que des candidats.
+> Importer DVF+, profiler les distributions réelles, publier un premier score. v0.7 est déjà
+> écrit et n'attend que des candidats.
 
-Si on demande « le plus important maintenant » : **BAN + DVF+ sur le 35, puis profiling, puis un
-premier score publié.** Tout le reste attend.
+Si on demande « le plus important maintenant » : **D1, l'import DVF+ sur le 35.** Sans
+transactions, pas de comparables, pas de valorisation, et le classement n'a rien à classer.
 
 ## Carte du contexte — à lire avant de charger quoi que ce soit
 
@@ -66,6 +83,9 @@ Sources de vérité, dans cet ordre : `SPEC.md` → `ARCHITECTURE.md` → `docs/
 - **Données simulées interdites** pour satisfaire un critère « données réelles ».
 - Anomalie sur un attribut → l'attribut devient manquant avec motif, l'enregistrement est conservé
   (décision BUG-03, réutilisée par D1 à D4).
+- **La clé d'idempotence et l'identifiant de run d'un import portent la version de
+  transformation.** Sans elle, une release déjà importée est rejouée à vide et un correctif de
+  code n'atteint jamais les données — constaté sur BUG-09.
 
 ## Interdits techniques
 
@@ -109,13 +129,20 @@ Terminé **seulement si** :
 ## Commandes
 
 ```bash
-make dev            # infrastructure locale
-make check          # lint, typecheck, tests, OpenAPI
-make openapi        # régénère le contrat et le client TypeScript
-make migrate        # migrations Alembic
-make backlog        # régénère le tableau de suivi depuis les en-têtes de tickets
-make ban-import     # import BAN   (voir aussi rnb-import, cadastre-fixture)
+make dev                  # infrastructure locale
+make rebuild              # reconstruit les images — obligatoire après tout changement backend
+make check                # lint, typecheck, tests, OpenAPI
+make openapi              # régénère le contrat et le client TypeScript
+make migrate              # migrations Alembic
+make backlog              # régénère le tableau de suivi depuis les en-têtes de tickets
+make ban-import           # import BAN   (voir aussi rnb-import, cadastre-fixture)
+make physical-buildings   # regroupe les enregistrements en bâtiments physiques
+make morphology-features  # matérialise LAND-*/BLD-* sur les releases acceptées
 ```
+
+**Les conteneurs embarquent une copie du code figée au build.** `compose.dev.yaml` ne monte pas
+les sources : un changement backend demande `make rebuild`, pas un `docker compose restart`. Et
+`docker compose` sans les trois `-f` recrée les conteneurs hors configuration de développement.
 
 ## Suivi du backlog
 
