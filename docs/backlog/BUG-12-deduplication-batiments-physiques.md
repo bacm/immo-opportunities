@@ -1,6 +1,6 @@
 # BUG-12 — Compter des enregistrements n'est pas compter des bâtiments
 
-**Version :** v0.3 · **Taille :** M · **État :** À faire
+**Version :** v0.3 · **Taille :** M · **État :** Terminé
 **Dépend de :** — · **Bloque :** B5
 **Découvert par :** revue manuelle B4, cas 39, 13 septembre 2026
 
@@ -102,3 +102,29 @@ Trois conséquences :
 - LAND-009 compte des bâtiments physiques, et le rapport publie l'écart avec le comptage naïf ;
 - l'effet sur LAND-002 est mesuré et documenté, qu'il soit nul ou non ;
 - aucun identifiant source n'est perdu par le regroupement.
+
+## Résolution — 13 septembre 2026
+
+Preuve : [`docs/data/physical-building-grouping-35.md`](../data/physical-building-grouping-35.md).
+
+Livré : les tables `reference.physical_building` et `reference.physical_building_member`, le script
+`pipelines/scripts/build_physical_buildings.py`, la cible `make physical-buildings`, et sept tests.
+
+| Source | Enregistrements | Bâtiments physiques |
+|---|---:|---:|
+| RNB | 741 379 | **514 859** |
+| Cadastre | 865 335 | **517 615** |
+
+Les trois vérifications demandées sont faites :
+
+1. **Convergence commune par commune** — 332 communes, écart médian 2,33 %, 98,5 % sous 10 %,
+   aucune au-delà de 20 %. Le chiffre départemental de 0,5 % ne masque pas de compensation locale.
+2. **Effet réel sur LAND-002** — mesuré et non supposé, sur 20 000 groupes multi-membres :
+   99,33 % d'aire inchangée, **0,009 %** d'aire totale perdue par l'union. La feature est
+   insensible au regroupement. Restent 0,67 % de groupes qui se recouvrent réellement, jusqu'à
+   294 m², ce qui évoque des doublons source et mérite un regard séparé.
+3. **Aucun identifiant source perdu** — un test échoue si le script écrit dans une table source.
+
+Le point 4 du travail à réaliser — porter la règle de rang au niveau du groupe — **n'est pas fait
+ici et c'est délibéré** : rattacher un groupe à une parcelle est un calcul de feature, donc
+[B5](./B5-features-morphologiques.md). Le regroupement lui fournit ce qui manquait.
