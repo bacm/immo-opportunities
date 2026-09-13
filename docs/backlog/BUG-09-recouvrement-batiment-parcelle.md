@@ -223,6 +223,48 @@ secondaire dont aucune feature ne dépend aujourd'hui.
 2. **Le bâti majoritairement hors parcellaire.** Le cas 173 est accepté à 15,6 % de sa seule
    parcelle. La règle accepterait 2 % de la même façon. Est-ce voulu ?
 
+## Le moteur ne calcule rien, et il détient déjà le classement
+
+La question a été posée pendant la revue — « le moteur calcule quoi exactement ? ». La réponse
+change la nature du correctif.
+
+Il ne calcule **rien**. Sa justification le dit : *« RNB explicit plot relation retained with its
+building coverage ratio »*. Le RNB publie lui-même, pour chaque bâtiment, la liste des parcelles
+qu'il touche **et la part qu'il occupe sur chacune**. Le moteur reprend cette liste telle quelle.
+
+Le bâtiment du cas 39, `building:rnb:P7EGXX2HZYB2`, 7,3 m² :
+
+| Relation enregistrée | Recouvrement déclaré par le RNB | Confiance écrite |
+|---|---:|---:|
+| → `35241000AD0054` | **0,9973** | 0,99734 |
+| → `35241000AD0055` — *la parcelle du cas* | **0,0027** | **0,90000** |
+
+Les deux relations existent, avec le bon classement, issu de la source elle-même. Le moteur
+**sait** qu'une parcelle en porte 99,7 % et l'autre 0,27 %. Il déclare les deux `certain`.
+
+### La confiance écrite est une fonction exacte du recouvrement
+
+Vérifié sur les **1 240 355** relations, sans une exception à cinq décimales :
+
+```
+confiance = max(0,90 ; min(1 ; bdg_cover_ratio))
+```
+
+Donc **`confiance = 0,90000` signifie exactement « recouvrement inférieur à 90 % »**. C'est le cas
+de **623 372 relations, soit 50,3 % du total**.
+
+Et c'est ce que la revue manuelle a retrouvé sans le savoir : les 15 verdicts `incorrect` portent
+**tous** sur une relation à 0,90000 pile ; aucune relation au-dessus du plancher n'a été jugée
+fausse. Le plancher ne masque pas seulement l'information — il la marque.
+
+### Ce que cela change pour le correctif
+
+Il n'y a **rien à calculer** et rien à faire attendre. La part de chaque parcelle est déjà en
+base, dans `evidence->>'bdg_cover_ratio'`, et le classement s'en déduit par un `max` par bâtiment.
+
+Le correctif se réduit donc à cesser d'écraser une information qu'on possède : reporter le
+recouvrement observé comme confiance, et réserver `certain` à la relation de rang 1.
+
 ## Ce que ce ticket ne doit pas faire
 
 **Choisir un seuil.** Aucun seuil observé ne dit à partir de quel recouvrement un bâtiment est
