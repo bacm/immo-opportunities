@@ -17,7 +17,7 @@ Ces numéros désignent des **versions d’implémentation**, pas des versions d
 
 Le code livré en avance sur une dépendance ne vaut pas avancement : une version dont les critères
 dépendent d'une donnée absente reste `Bloquée` avec son motif, jamais `En cours`. La seule version
-`En cours` au 4 septembre 2026 est **v0.3 — Référentiel spatial**.
+`En cours` au 13 septembre 2026 est **v0.4 — Carte réelle**, v0.3 ayant été clôturée le même jour.
 
 ## Tableau de suivi
 
@@ -25,9 +25,9 @@ dépendent d'une donnée absente reste `Bloquée` avec son motif, jamais `En cou
 |---|---|---|---|
 | [v0.1 — Foundation](./v0.1-foundation.md) | Bloquée (CI GitHub) | — | Socle backend et data exécutable |
 | [v0.2 — Cadastre 35](./v0.2-cadastre-35.md) | Terminée | v0.1 | Première release réelle importée et auditée |
-| [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | En cours | v0.2 | Parcelles, bâtiments et adresses résolus |
-| [v0.4 — Carte réelle](./v0.4-real-map.md) | Bloquée (DS-05) | v0.3 | Explorer connecté à PostGIS et Martin |
-| [v0.5 — Données métier](./v0.5-market-data.md) | Bloquée (v0.3) | v0.3 | Marché, énergie, urbanisme et risques disponibles |
+| [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | Terminée | v0.2 | Parcelles, bâtiments et adresses résolus |
+| [v0.4 — Carte réelle](./v0.4-real-map.md) | En cours | v0.3 | Explorer connecté à PostGIS et Martin |
+| [v0.5 — Données métier](./v0.5-market-data.md) | À faire | v0.3 | Marché, énergie, urbanisme et risques disponibles |
 | [v0.6 — Scoring](./v0.6-scoring.md) | Bloquée (profiling v0.5) | v0.5 | Deux classements explicables et reproductibles |
 | [v0.7 — MVP connecté](./v0.7-connected-mvp.md) | Bloquée (publication v0.6) | v0.4, v0.6 | Workflow utilisateur complet et multi-tenant |
 | [v0.8 — Pilote Bretagne](./v0.8-brittany-pilot.md) | Bloquée (données 35 et terrain) | v0.7 | Couverture régionale et validation professionnelle |

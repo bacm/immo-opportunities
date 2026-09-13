@@ -315,7 +315,10 @@ est mesurée, et nous l'avons corroboré à 96,4 % sur la population entière, m
 apportent ce que nulle autre source du MVP ne fournit : l'année de construction et le nombre de
 niveaux, sur respectivement 376 206 et 391 416 groupes.
 
-**Ce qui bloque, et ce n'est pas la qualité de DS-03.** Les 422 194 rattachements certains
+> **Levé le 13 septembre 2026.** `DS-02@2026-09-05` est **acceptée** — voir la section ci-dessous.
+> DS-03 n'est donc plus bloquée par son support d'identité et peut recevoir son propre verdict.
+
+**Ce qui bloquait, et ce n'était pas la qualité de DS-03.** Les 422 194 rattachements certains
 désignent des bâtiments dont l'identité vient du RNB — et `DS-02@2026-09-05` n'est pas acceptée :
 elle attend la revue manuelle de [B4](../backlog/B4-revue-manuelle-appariements.md). Faire entrer
 DS-03 dans le périmètre d'analyse pendant que l'identité à laquelle elle s'accroche n'y est pas
@@ -574,3 +577,47 @@ justifiés par une revue manuelle stratifiée.
 - les géométries de parcelles ne sont pas recopiées dans chaque `PropertyUnit` : les vues
   canoniques s'appuient sur la release Cadastre active et ses index.
 
+
+
+## DS-02 RNB — verdict du 13 septembre 2026 : `accepted`
+
+La release `DS-02@2026-09-05` attendait la revue manuelle de
+[B4](../backlog/B4-revue-manuelle-appariements.md). B4 est close, et son résultat est exactement
+la preuve attendue.
+
+### Ce qui fonde l'acceptation
+
+**L'appariement d'identité BD TOPO ↔ RNB est validé.** 60 cas sur 60 jugés corrects, dans les
+quatre territoires — 15 en littoral, périurbain, rural et urbain — sans une seule erreur ni un
+seul indécidable. La règle de trois, pré-enregistrée avant le tirage, autorise donc à affirmer un
+taux d'erreur réel **inférieur à 5 % avec 95 % de confiance**, seuil que le protocole avait fixé
+comme nécessaire.
+
+S'y ajoute ce que l'audit avait déjà acquis : release reproductible et vérifiée par le SHA-256 du
+producteur, import intégralement normalisé et sans quarantaine, cardinalité groupe / bâtiment
+respectée et non aplatie.
+
+### Deux réserves, écrites parce qu'elles subsistent
+
+**Les listes de parcelles publiées par le RNB sont fausses dans 0,32 % des cas.** Mesuré sur
+93 237 relations en recalculant le recouvrement depuis les géométries : 99,68 % s'accordent à
+moins d'un point, 297 s'écartent de plus de dix. Le cas 128 de la revue en est un exemple — le RNB
+n'y déclare qu'une parcelle, avec un recouvrement de 4,25 × 10⁻¹², et omet la bonne.
+
+Le chemin BAN vérifie sa relation source contre la géométrie ; le chemin RNB ne le fait pas.
+Appliquer la même vérification détecterait ces 0,32 %. C'est la suite à instruire notée dans
+[BUG-09](../backlog/BUG-09-recouvrement-batiment-parcelle.md).
+
+**3 864 bâtiments sont de géométrie ponctuelle**, non polygonale. Ils n'ont pas d'emprise et ne
+peuvent pas contribuer à `LAND-002`.
+
+### Ce que cette acceptation ne couvre pas
+
+**La relation bâtiment ↔ parcelle n'en fait pas partie.** B4 y a mesuré **15 erreurs sur 40 cas
+tranchés**, et la strate a été abandonnée avant terme — elle constate un défaut, elle n'affirme
+pas un taux. La cause est établie et corrigée par BUG-09 : `certain` est désormais réservé à la
+parcelle qui porte la plus grande part du bâtiment, ce qui a fait passer **503 001 relations** de
+`certain` à `ambiguous`.
+
+Accepter la release, c'est accepter la donnée et l'identité qu'elle porte. Ce n'est pas déclarer
+justes toutes les relations qu'on en dérive.
