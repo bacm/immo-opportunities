@@ -317,6 +317,13 @@ def next_blind_case(sample_id: str) -> dict[str, Any] | None:
         BLIND_CASE_SELECT
         + """
          WHERE review_case.sample_id = :sample_id
+           -- Une strate abandonnee ne revient pas dans la file. L'abandon est en base, avec
+           -- son motif, et non dans une condition ecrite ici : le rapport doit pouvoir citer
+           -- quels cas ont ete ecartes et pourquoi.
+           AND NOT EXISTS (
+               SELECT 1 FROM meta.matching_review_abandonment AS abandon
+                WHERE abandon.case_id = review_case.id
+           )
            AND (
                -- Jamais juge.
                NOT EXISTS (
@@ -560,6 +567,14 @@ def review_results(sample_id: str) -> list[dict[str, Any]]:
                         WHERE recall.case_id = review_case.id
                    )
                ) AS recalled,
+               -- Les cas abandonnes ont leur propre colonne. Les laisser dans « tires moins
+               -- juges » les ferait lire comme un reste a juger, alors que la strate est close.
+               count(*) FILTER (
+                   WHERE EXISTS (
+                       SELECT 1 FROM meta.matching_review_abandonment AS abandon
+                        WHERE abandon.case_id = review_case.id
+                   )
+               ) AS abandoned,
                count(*) AS drawn,
                count(latest.case_id) AS judged,
                count(*) FILTER (WHERE latest.verdict = 'correct') AS correct,

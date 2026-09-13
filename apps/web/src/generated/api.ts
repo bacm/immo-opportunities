@@ -1547,6 +1547,8 @@ export interface components {
         };
         /** StratumResultResponse */
         StratumResultResponse: {
+            /** Abandoned */
+            abandoned: number;
             /** Accuracy */
             accuracy: number | null;
             /** Correct */

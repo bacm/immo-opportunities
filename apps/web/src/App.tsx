@@ -994,16 +994,18 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
           <h3>Dépouillement par strate</h3>
           <div className="review-results">
             <table>
-              <thead><tr><th>Appariement</th><th>Territoire</th><th>Tirés</th><th>Jugés</th><th>Corrects</th><th>Incorrects</th><th>Indécid.</th><th>Exactitude</th></tr></thead>
+              <thead><tr><th>Appariement</th><th>Territoire</th><th>Tirés</th><th>Jugés</th><th>Abandonnés</th><th>Corrects</th><th>Incorrects</th><th>Indécid.</th><th>Exactitude</th></tr></thead>
               <tbody>{results.map((row) => <tr key={`${row.matching_stratum}:${row.territorial_stratum}`}>
                 <td>{row.matching_stratum}</td><td>{row.territorial_stratum}</td>
-                <td>{row.drawn}</td><td>{row.judged}</td><td>{row.correct}</td>
+                <td>{row.drawn}</td><td>{row.judged}</td>
+                <td className={row.abandoned > 0 ? 'value-warning' : undefined}>{row.abandoned || '—'}</td>
+                <td>{row.correct}</td>
                 <td>{row.incorrect}</td><td>{row.undecidable}</td>
                 <td>{row.accuracy === null ? '—' : `${(row.accuracy * 100).toFixed(1)} %`}</td>
               </tr>)}</tbody>
             </table>
           </div>
-          <p className="detail-note">L’exactitude est calculée sur les seuls cas tranchés. Les indécidables ont leur colonne et ne gonflent aucun taux.</p>
+          <p className="detail-note">L’exactitude est calculée sur les seuls cas tranchés. Les indécidables ont leur colonne et ne gonflent aucun taux. Un cas abandonné n’a jamais été jugé et ne le sera pas : le motif de l’abandon est en base, et une strate abandonnée ne peut plus conclure à un taux d’erreur, seulement le constater.</p>
         </section>}
       </div>
     </section>

@@ -249,6 +249,56 @@ critère de rappel est la divergence des lectures, pas le désaccord avec une hy
 **Effet sur le dépouillement.** Ces douze cas porteront deux verdicts. Le rapport devra dire
 lequel a été rendu sous quelle formulation, et ne pas additionner les deux.
 
+### Déviation assumée : deux strates abandonnées au 122ᵉ cas — 13 septembre 2026
+
+Trente-huit cas non jugés sont **abandonnés**, et ne seront pas jugés. L'abandon est enregistré
+cas par cas dans `meta.matching_review_abandonment`, avec son motif, sous le même append-only que
+les verdicts : une décision de ce poids doit pouvoir être citée, pas déduite d'une condition
+enfouie dans une requête. Un déclencheur interdit d'abandonner un cas déjà jugé — l'écarter après
+coup retirerait un résultat connu du dénominateur, ce qui est la définition du tri.
+
+| Strate abandonnée | Jugés | Erreurs | Taux | Écartés |
+|---|---:|---:|---:|---:|
+| `certain_source_relation` · bâtiment ↔ parcelle | 35 | 15 | **42,9 %** | 18 |
+| `ambiguous` · adresse ↔ parcelle | 45 tranchés | 11 | **24,4 %** | 20 |
+
+Les deux ont perdu le critère « zéro erreur sur 60 » dès leur première erreur, et aucun cas
+restant ne peut y ramener. Surtout, **les deux ont déjà livré leur conclusion** :
+
+- bâtiment ↔ parcelle : la règle du rang sépare exactement les 35 verdicts — la relation est
+  juste si la parcelle est celle qui porte la plus grande part du bâtiment. Aucun seuil n'est
+  nécessaire. Voir [BUG-09](../backlog/BUG-09-recouvrement-batiment-parcelle.md).
+- adresse ↔ parcelle : résultat négatif acquis, ni containment, ni proximité, ni distance ne
+  séparent le juste du faux.
+
+**Le sens de la déviation.** On arrête les deux strates où le moteur a échoué, on poursuit la
+seule où il est propre — `certain_official_identifier`, 40 verdicts, zéro erreur. C'est l'inverse
+d'un tri favorable, et c'est le premier point à vérifier en relisant ce rapport.
+
+**Ce que l'abandon interdit de conclure.** Une strate abandonnée ne peut plus affirmer de taux
+d'erreur au sens de la règle de trois. Elle en **constate** un, sur l'effectif jugé, et le rapport
+devra l'écrire ainsi : « 15 erreurs sur 35 cas tranchés », jamais « taux d'erreur de la strate ».
+
+### « Cohérent » veut dire cohérent avec la géométrie, pas avec le moteur
+
+La confusion mérite d'être levée par écrit, parce qu'elle porte sur ce que cette revue mesure.
+
+Le moteur a déclaré **`certain`** les 35 relations bâtiment ↔ parcelle de l'échantillon. Le
+relecteur en a contredit **15**, soit 43 %.
+
+| Verdict | Cas | Confiance au plancher de 0,90 | Au-dessus |
+|---|---:|---:|---:|
+| `correct` | 20 | 4 | 16 |
+| **`incorrect`** | **15** | **15** | **0** |
+
+Les quinze erreurs sont **toutes** à la confiance exactement 0,90000 — la valeur produite par le
+`greatest(0.9, …)` de `RnbImporter`. Aucune relation dont la confiance dépasse ce plancher n'a été
+jugée fausse.
+
+Dire que les verdicts sont « cohérents » signifie donc qu'un **critère unique les explique tous**,
+appliqué de la même façon à chaque cas. Ce critère contredit le moteur quatre fois sur dix, et il
+désigne précisément la ligne de code qui produit le défaut.
+
 ## Ce que cet échantillon ne couvre pas
 
 Le ticket impose d'inclure quatre familles de cas :

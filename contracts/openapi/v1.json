@@ -2647,6 +2647,10 @@
       },
       "StratumResultResponse": {
         "properties": {
+          "abandoned": {
+            "title": "Abandoned",
+            "type": "integer"
+          },
           "accuracy": {
             "anyOf": [
               {
@@ -2696,6 +2700,7 @@
           "territorial_stratum",
           "drawn",
           "recalled",
+          "abandoned",
           "judged",
           "correct",
           "incorrect",

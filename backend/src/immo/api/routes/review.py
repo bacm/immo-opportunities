@@ -88,6 +88,8 @@ class StratumResultResponse(BaseModel):
     drawn: int
     # Cas rappelés : jugés deux fois, la première avec moins d'information.
     recalled: int
+    # Cas abandonnés : jamais jugés, et ne le seront pas. Le motif est en base.
+    abandoned: int
     judged: int
     correct: int
     incorrect: int
