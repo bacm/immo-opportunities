@@ -61,6 +61,11 @@ La contiguïté chaîne d'îlot en îlot : un quartier entier devient une seule 
 0,3 % des parcelles restent isolées. **Ce n'est pas une approximation dégradée, c'est un
 non-sens** — et il vaut mieux l'avoir mesuré que de l'avoir supposé.
 
+Le contraste avec [BUG-12](./BUG-12-deduplication-batiments-physiques.md) est net et mérite d'être
+retenu : **la même contiguïté, appliquée au bâti, fonctionne** — deux sources indépendantes y
+convergent à 0,5 % sur le nombre de bâtiments physiques. Ce n'est donc pas la méthode qui est
+mauvaise, c'est le parcellaire qui n'a pas de discontinuité naturelle à exploiter.
+
 ## Conséquences
 
 Cinq tables portent `property_unit_id`, et toutes sont en aval :
@@ -93,7 +98,7 @@ Donc :
 | Signal | Ce qu'il apporte | Ce qu'il coûte |
 |---|---|---|
 | **Mutations DVF+** — parcelles vendues dans la même disposition | preuve d'une propriété commune à une date, la plus proche du sens juridique | ne couvre que les parcelles mutées ; dépend de [D1](./D1-import-dvf-ds06.md) |
-| **Bâtiment partagé** — parcelles reliées par un même bâtiment | capte exactement le motif du cas 90 | la mitoyenneté produit des faux positifs ; dépend de [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) |
+| **Bâtiment partagé** — parcelles reliées par un même bâtiment | capte exactement le motif du cas 90 | la mitoyenneté produit des faux positifs ; dépend de [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) et de [BUG-12](./BUG-12-deduplication-batiments-physiques.md), un bâtiment n'étant pas encore défini |
 | **Adresse commune** — parcelles portant la même adresse BAN | déjà mesuré, déjà exposé dans la revue | une adresse couvre parfois trois parcelles sans propriétaire commun |
 | **Aucun regroupement** — assumer `single_parcel` | honnête, déjà en place | laisse le bruit décrit ci-dessus dans le score |
 
