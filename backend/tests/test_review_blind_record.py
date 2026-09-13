@@ -12,6 +12,8 @@ réglerait l'unicité en révélant justement ce qu'il faut taire, donc la réf�
 tirée d'un hachage de l'identifiant.
 """
 
+import re
+
 import pytest
 
 from immo.review import BLIND_CASE_SELECT, _blind_record
@@ -67,3 +69,30 @@ def test_la_reference_ne_derive_pas_du_rang_de_tirage() -> None:
     numbering = BLIND_CASE_SELECT.split("AS case_ref")[0].rsplit("(SELECT numbered.reference", 1)[1]
     for leak in ("matching_stratum", "drawn_rank"):
         assert leak not in numbering, f"la numérotation publique s'appuie sur `{leak}`"
+
+
+def test_le_dictionnaire_couvre_exactement_le_modele_de_reponse() -> None:
+    """Une liste blanche ne se maintient pas toute seule.
+
+    `_blind_record` est une projection explicite, et non un `dict(row)` — c'est ce qui empêche
+    `matching_stratum` de fuiter. Le prix est qu'un champ ajouté au SQL et au modèle, mais pas
+    ici, produit un 500 : Pydantic refuse la réponse pour champ manquant. C'est arrivé deux fois,
+    sur `case_ref` puis sur `abandoned`, et les deux fois l'écran de revue est tombé en erreur.
+
+    La comparaison est faite dans les deux sens : un champ en trop signalerait qu'on expose
+    quelque chose que le modèle ne déclare pas.
+    """
+    from immo.api.routes.review import BlindCaseResponse
+
+    assert set(_blind_record(ROW)) == set(BlindCaseResponse.model_fields)
+
+
+def test_le_depouillement_couvre_exactement_son_modele() -> None:
+    """Même garde sur `review_results`, tombé en 500 sur `abandoned` le 13 septembre 2026."""
+    import inspect
+
+    from immo.api.routes.review import StratumResultResponse
+    from immo.review import review_results
+
+    produced = set(re.findall(r'^\s*"(\w+)":', inspect.getsource(review_results), re.MULTILINE))
+    assert produced == set(StratumResultResponse.model_fields)

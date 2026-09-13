@@ -601,6 +601,7 @@ def review_results(sample_id: str) -> list[dict[str, Any]]:
                 "territorial_stratum": str(row["territorial_stratum"]),
                 "drawn": int(row["drawn"]),
                 "recalled": int(row["recalled"]),
+                "abandoned": int(row["abandoned"]),
                 "judged": int(row["judged"]),
                 "correct": int(row["correct"]),
                 "incorrect": int(row["incorrect"]),
