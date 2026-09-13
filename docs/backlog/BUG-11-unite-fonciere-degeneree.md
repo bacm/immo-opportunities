@@ -1,6 +1,6 @@
 # BUG-11 — L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer
 
-**Version :** v0.3 · **Taille :** L · **État :** À faire
+**Version :** v0.6 · **Taille :** L · **État :** À faire
 **Dépend de :** D1 · **Bloque :** E2, E3
 **Découvert par :** revue manuelle B4, cas 90, 10 septembre 2026
 
@@ -65,6 +65,13 @@ Le contraste avec [BUG-12](./BUG-12-deduplication-batiments-physiques.md) est ne
 retenu : **la même contiguïté, appliquée au bâti, fonctionne** — deux sources indépendantes y
 convergent à 0,5 % sur le nombre de bâtiments physiques. Ce n'est donc pas la méthode qui est
 mauvaise, c'est le parcellaire qui n'a pas de discontinuité naturelle à exploiter.
+
+## Pourquoi ce ticket est en v0.6 et non en v0.3
+
+Il dépend de [D1](./D1-import-dvf-ds06.md), qui est en v0.5, et bloque
+[E2](./E2-publication-eligible.md) et [E3](./E3-publier-snapshots.md), qui sont en v0.6. Une
+étiquette v0.3 le rendait irrésoluble dans sa propre version et bloquait la clôture de celle-ci
+sans raison.
 
 ## Pourquoi ce ticket ne bloque pas B5 — arbitrage du 13 septembre 2026
 
