@@ -24,6 +24,19 @@ def contract_fingerprint() -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+# Version de la transformation, incluse dans la cle d'idempotence.
+#
+# Sans elle, une release deja importee est rejouee a vide : le garde d'idempotence voit un
+# `import_run` reussi pour la meme cle et retourne sans rien faire. Un correctif de code ne
+# peut alors jamais atteindre les donnees, ce qui s'est produit avec BUG-09 — la regle du rang
+# etait ecrite, testee, et les 1 240 355 relations fautives restaient en base.
+#
+# Le script BD TOPO le faisait deja ; celui-ci l'avait oublie.
+#
+# 2 : BUG-09, la relation batiment <-> parcelle cesse d'etre certaine par defaut.
+RNB_TRANSFORMATION_VERSION = "2"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Archive and import one RNB department release")
     parser.add_argument("release")
@@ -65,13 +78,20 @@ def main() -> int:
             )
             importer = RnbImporter(connection)
             outcome = importer.import_archive(
-                import_run_id=f"rnb:{manifest.release_key}:{manifest.department}",
+                # La version entre aussi dans l'identifiant du run, et pas seulement dans la
+                # cle d'idempotence : sans cela la nouvelle cle cree bien un run, qui entre
+                # aussitot en collision de cle primaire avec l'ancien. BD TOPO le faisait deja.
+                import_run_id=(
+                    f"rnb:{manifest.release_key}:{manifest.department}"
+                    f":{RNB_TRANSFORMATION_VERSION}"
+                ),
                 release_id=manifest.release_id,
                 department_code=manifest.department,
                 raw_asset_id=resolved.raw_asset_id,
                 source_path=local_path,
                 idempotency_key=(
-                    f"{manifest.release_id}:{manifest.department}:buildings:{resolved.sha256}"
+                    f"{manifest.release_id}:{manifest.department}:buildings:"
+                    f"{resolved.sha256}:{RNB_TRANSFORMATION_VERSION}"
                 ),
             )
             importer.refresh_match_metrics(manifest.release_id, manifest.department)

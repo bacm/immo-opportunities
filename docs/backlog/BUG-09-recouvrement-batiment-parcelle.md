@@ -377,3 +377,33 @@ Distinguer une **co-occupation réelle** — le cas 55, 48,1 % contre 38,8 % —
 bord** à 5,8 % demande un seuil. Il ne porte que sur la relation secondaire, dont aucune feature
 ne dépend : LAND-002 et LAND-009 n'ont besoin que de la relation principale, que le rang désigne
 sans seuil.
+
+### Appliqué aux données — 13 septembre 2026
+
+L'import RNB relancé en version 2 a produit les relations sur le 35 :
+
+| | Version 1 | Version 2 |
+|---|---:|---:|
+| `certain` | **1 240 355** | **737 354** |
+| `ambiguous` | 0 | **503 001** |
+
+**503 001 relations — 40,6 % — cessent d'être certaines.** Chaque bâtiment conserve exactement
+une relation certaine : 737 354 bâtiments en ont une, et **aucun n'en a zéro**. La quatrième
+classe cesse d'être dégénérée, ce que le ticket signalait comme alerte manquée.
+
+La confiance couvre désormais tout l'intervalle — minimum 0, médiane 0,8965 — et huit relations
+seulement valent encore 0,90, parce que leur recouvrement réel vaut 0,90. Le plancher a disparu.
+
+Confronté aux 35 verdicts de la revue, sur les décisions réellement écrites en base : 20
+`certain`/`correct`, 14 `ambiguous`/`incorrect`, et le seul désaccord connu, le cas 128, dont la
+cause est la liste de parcelles incomplète publiée par le RNB.
+
+### Deux défauts d'idempotence corrigés au passage
+
+La relance a d'abord été refusée deux fois. La clé d'idempotence et l'identifiant de run du script
+RNB ne portaient pas la version de la transformation : le premier essai s'est déclaré idempotent
+et n'a rien fait, le second est tombé sur une collision de clé primaire.
+
+**Un correctif de code ne pouvait donc pas atteindre les données** — la règle du rang était
+écrite, testée, validée, et les 1 240 355 relations fautives seraient restées en place. Le script
+BD TOPO versionnait déjà les deux champs ; celui du RNB les avait oubliés. Ils sont alignés.
