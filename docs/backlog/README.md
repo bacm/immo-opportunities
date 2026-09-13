@@ -84,7 +84,7 @@ dérivée du graphe de dépendances.
 | [BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md) | Une release remplacée n'est jamais retirée | dette transverse | — | M | À faire | **prêt** |
 | [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) | Un tiers des relations bâtiment ↔ parcelle sont des contacts marginaux déclarés certains | v0.3 | — | M | Terminé | — |
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
-| [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.3 | — | L | À faire | **prêt** |
+| [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.3 | D1 | L | À faire | attend D1 |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
 
 ### C — v0.4 Carte réelle
@@ -138,7 +138,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**18/46 terminés.** Prêts à démarrer : A1, B5, BUG-02, BUG-08, BUG-11, G6, G7.
+**18/46 terminés.** Prêts à démarrer : A1, B5, BUG-02, BUG-08, G6, G7.
 
 <!-- END:tickets -->
 
