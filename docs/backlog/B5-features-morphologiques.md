@@ -1,6 +1,6 @@
 # B5 — Calculer LAND-001..010 et BLD-001..003 sur releases acceptées
 
-**Version :** v0.3 · **Taille :** M · **État :** À faire
+**Version :** v0.3 · **Taille :** M · **État :** Terminé
 **Dépend de :** B4 · **Bloque :** C1, D1, clôture de v0.3
 
 ## Contexte à charger
@@ -71,3 +71,35 @@ motif, ce qui est correct mais ne prouve rien sur le calcul réel.
 Ces distributions sont la **première moitié** de l'entrée de [E1](./E1-profiling-distributions.md).
 Les seuils du scoring viendront de là et des distributions métier de D5 — jamais d'une valeur
 choisie a priori.
+
+## Résolution — 13 septembre 2026
+
+Preuve : [`docs/data/morphology-features-35.md`](../data/morphology-features-35.md).
+
+**1 333 327 unités calculées** sur le 35, via `pipelines/scripts/compute_morphology_features.py`
+et la cible `make morphology-features`.
+
+| | Features |
+|---|---|
+| Calculées | `LAND-001` à `LAND-007`, `LAND-009` |
+| Absentes avec motif | `LAND-007` partiellement (`not_applicable`), `LAND-008`
+(`source_not_accepted`), `LAND-010` (`source_value_missing`) |
+| Non matérialisées | `BLD-001..003` — sujet incompatible avec le stockage |
+
+Aucune valeur imputée, aucun zéro de substitution, aucune valeur écrêtée.
+
+### Deux constats qui appellent une suite
+
+**`LAND-010` attend une table de valeurs.** Le cadastre distingue deux types de bâti et 27,1 % des
+enregistrements portent `02`, mais le contrat DS-01 déclare `type` comme `string|null` sans dire
+ce que valent `01` et `02`. Sourcer cette table et l'écrire au contrat est un travail court qui
+débloque une feature entière.
+
+**`BLD-001..003` attendent un changement de schéma.** `feature.feature_value.building_id` réfère
+`reference.building`, donc les enregistrements RNB, alors que
+[BUG-12](./BUG-12-deduplication-batiments-physiques.md) a établi que le sujet du contrat est le
+bâtiment physique. Matérialiser ces features aujourd'hui graverait dans le stockage le sujet que
+BUG-12 vient d'invalider.
+
+Ces deux points ne bloquent pas la clôture de v0.3 : les features concernées sont explicitement
+absentes avec leur motif, ce que les critères d'acceptation demandent.
