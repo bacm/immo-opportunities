@@ -1,0 +1,46 @@
+{
+  "dataset": "DS-06",
+  "release_key": "2026-09-13",
+  "department": "35",
+  "pinned_on": "2026-09-13",
+  "source": "geo-dvf, DGFiP géocodé par Etalab",
+  "licence": "Licence Ouverte 2.0",
+  "note": "Cinq millésimes annuels. 2025 est l'année en cours et son contenu croîtra : son empreinte vaut pour l'instantané du 13 septembre 2026, et un import ultérieur la verra changer, ce qui est le comportement attendu — le checksum le dira au lieu de le taire.",
+  "assets": [
+    {
+      "year": "2021",
+      "url": "https://files.data.gouv.fr/geo-dvf/latest/csv/2021/departements/35.csv.gz",
+      "sha256": "55767aa6307149d740e455e91745c9be5666b501f5785896b1bc87fe070af585",
+      "size_bytes": 2089235,
+      "archive_object_key": "ds-06/2026-09-13/35/2021.csv.gz"
+    },
+    {
+      "year": "2022",
+      "url": "https://files.data.gouv.fr/geo-dvf/latest/csv/2022/departements/35.csv.gz",
+      "sha256": "e1b9434741fc037fde6554005ab5ae8e8bbc2aed68e97c65b860ab46442a992f",
+      "size_bytes": 2220859,
+      "archive_object_key": "ds-06/2026-09-13/35/2022.csv.gz"
+    },
+    {
+      "year": "2023",
+      "url": "https://files.data.gouv.fr/geo-dvf/latest/csv/2023/departements/35.csv.gz",
+      "sha256": "6e24472a6e21043c592f113a202a3f61bf0a941c3f47fc4afdbc05a4236cd46f",
+      "size_bytes": 1846827,
+      "archive_object_key": "ds-06/2026-09-13/35/2023.csv.gz"
+    },
+    {
+      "year": "2024",
+      "url": "https://files.data.gouv.fr/geo-dvf/latest/csv/2024/departements/35.csv.gz",
+      "sha256": "6490cd2e3f71d3492fda9ca326255175cc75ccfd9965dc49216b1da09a30fc5b",
+      "size_bytes": 1646822,
+      "archive_object_key": "ds-06/2026-09-13/35/2024.csv.gz"
+    },
+    {
+      "year": "2025",
+      "url": "https://files.data.gouv.fr/geo-dvf/latest/csv/2025/departements/35.csv.gz",
+      "sha256": "83f194c9d23b5a10c5ba6784381a99d5912d97063ec26bdf71d88caaedb4f624",
+      "size_bytes": 1761813,
+      "archive_object_key": "ds-06/2026-09-13/35/2025.csv.gz"
+    }
+  ]
+}

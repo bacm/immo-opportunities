@@ -2,9 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "contract_id": "DS-06",
   "contract_version": 1,
-  "name": "DVF+ open-data",
-  "producer": "DGFiP / Cerema",
-  "homepage": "https://www.data.gouv.fr/datasets/dvf-open-data",
+  "name": "DVF géolocalisé (geo-dvf)",
+  "producer": "DGFiP, géocodage Etalab",
+  "homepage": "https://files.data.gouv.fr/geo-dvf/",
   "licence": {
     "name": "Licence Ouverte 2.0",
     "spdx_like_id": "etalab-2.0",
@@ -15,18 +15,33 @@
     "personal_data": false
   },
   "release": {
-    "key_format": "YYYY-MM-DD-source-release",
-    "discovery_url": "https://www.data.gouv.fr/datasets/dvf-open-data",
-    "preferred_format": "departmental PostgreSQL/CSV export",
-    "partition_dimensions": ["release", "department"],
+    "key_format": "YYYY-MM-DD-pinned",
+    "discovery_url": "https://files.data.gouv.fr/geo-dvf/latest/csv/",
+    "url_template": "https://files.data.gouv.fr/geo-dvf/latest/csv/{year}/departements/{department}.csv.gz",
+    "preferred_format": "CSV gzip, une ligne par lot de mutation",
+    "partition_dimensions": [
+      "release",
+      "department",
+      "year"
+    ],
     "checksum_algorithm": "sha256",
-    "latest_alias_forbidden_for_reproducible_imports": true
+    "latest_alias_forbidden_for_reproducible_imports": true,
+    "latest_segment_note": "Le chemin contient le segment `latest`, mais ce n'est pas un alias de millésime : les fichiers sont partitionnés par année et une année révolue est figée. L'interdit porte sur un alias qui change de contenu sous le même nom. Le SHA-256 de chaque fichier est relevé au manifeste et vérifié avant import, ce qui rend la question sans objet : un fichier qui changerait ferait échouer l'import."
   },
-  "coverage": {"country": "FR", "initial_departments": ["35"]},
+  "coverage": {
+    "country": "FR",
+    "initial_departments": [
+      "35"
+    ]
+  },
   "spatial": {
     "source_srid": 4326,
     "canonical_srid": 2154,
-    "allowed_geometry_types": ["Point", "Polygon", "MultiPolygon"],
+    "allowed_geometry_types": [
+      "Point",
+      "Polygon",
+      "MultiPolygon"
+    ],
     "normalization": "dvf-plus-normalize@1"
   },
   "layers": {
@@ -44,7 +59,10 @@
     "properties": {
       "target": "observation.transaction_property",
       "source_entity_type": "dvf_disposition_or_local",
-      "required_properties": {"mutation_id": "string", "property_type": "string"},
+      "required_properties": {
+        "mutation_id": "string",
+        "property_type": "string"
+      },
       "optional_properties": {
         "parcel_id": "string|null",
         "local_identifier": "string|null",
@@ -61,13 +79,50 @@
     "comparable_explanation": "retain distance, segment, date, type, surface, transformations and inclusion/exclusion reason"
   },
   "quality_checks": [
-    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "positive_price", "version": "1", "scope": "row", "blocks_publication": true},
-    {"code": "complex_mutation_classification", "version": "1", "scope": "mutation", "blocks_publication": true},
-    {"code": "parcel_match_rate", "version": "1", "scope": "commune", "blocks_publication": false},
-    {"code": "temporal_leakage", "version": "1", "scope": "snapshot", "blocks_publication": true}
+    {
+      "code": "schema",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "checksum",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "positive_price",
+      "version": "1",
+      "scope": "row",
+      "blocks_publication": true
+    },
+    {
+      "code": "complex_mutation_classification",
+      "version": "1",
+      "scope": "mutation",
+      "blocks_publication": true
+    },
+    {
+      "code": "parcel_match_rate",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": false
+    },
+    {
+      "code": "temporal_leakage",
+      "version": "1",
+      "scope": "snapshot",
+      "blocks_publication": true
+    }
   ],
-  "publication": {"atomic_pointer_scope": "department", "acceptance_report_required": true},
-  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+  "publication": {
+    "atomic_pointer_scope": "department",
+    "acceptance_report_required": true
+  },
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "observations": "append-only by release"
+  },
+  "source_change_note": "Amendé le 13 septembre 2026. Le contrat désignait DVF+ open-data (Cerema), dont les deux ressources data.gouv.fr pointent vers un dossier Box partagé et non vers des fichiers : l'API Box répond 401 sans authentification, et un import archivé, checksumé et relançable y est donc impossible. La source retenue est geo-dvf, la même donnée DGFiP géocodée par Etalab, partitionnée par année et par département, avec des fichiers stables et checksumables. Le prix payé est explicite : DVF+ pré-qualifie les mutations complexes, geo-dvf non — leur détection devient notre code, donc testable et vérifiable, ce que le ticket D1 demandait déjà de mesurer et publier."
 }
