@@ -1,6 +1,6 @@
 # B4 — Revue manuelle stratifiée d'un échantillon d'appariements
 
-**Version :** v0.3 · **Taille :** M · **État :** À faire
+**Version :** v0.3 · **Taille :** M · **État :** Terminé
 **Dépend de :** B3 · **Bloque :** B5, clôture de v0.3
 
 ## Contexte à charger

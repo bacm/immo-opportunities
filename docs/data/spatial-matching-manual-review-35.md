@@ -299,6 +299,88 @@ Dire que les verdicts sont « cohérents » signifie donc qu'un **critère uniqu
 appliqué de la même façon à chaque cas. Ce critère contredit le moteur quatre fois sur dix, et il
 désigne précisément la ligne de code qui produit le défaut.
 
+## Résultats — revue close le 13 septembre 2026
+
+**142 cas jugés, 158 verdicts** — quinze cas ont été rappelés et jugés deux fois. **38 cas
+abandonnés**, dans deux strates closes avant terme, motifs enregistrés cas par cas.
+
+### Par cellule
+
+| Strate d'appariement | Territoire | Tirés | Jugés | Corrects | Incorrects | Indéc. | Abandonnés |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `certain_official_identifier` | littoral | 15 | 15 | **15** | 0 | 0 | 0 |
+| `certain_official_identifier` | périurbain | 15 | 15 | **15** | 0 | 0 | 0 |
+| `certain_official_identifier` | rural | 15 | 15 | **15** | 0 | 0 | 0 |
+| `certain_official_identifier` | urbain | 15 | 15 | **15** | 0 | 0 | 0 |
+| `certain_source_relation` | littoral | 15 | 10 | 5 | 5 | 0 | 5 |
+| `certain_source_relation` | périurbain | 15 | 10 | 7 | 3 | 0 | 5 |
+| `certain_source_relation` | rural | 15 | 10 | 6 | 4 | 0 | 5 |
+| `certain_source_relation` | urbain | 15 | 10 | 7 | 3 | 0 | 5 |
+| `ambiguous` | littoral | 15 | 11 | 8 | 2 | 1 | 4 |
+| `ambiguous` | périurbain | 15 | 11 | 7 | 3 | 1 | 4 |
+| `ambiguous` | rural | 15 | 10 | 9 | 1 | 0 | 5 |
+| `ambiguous` | urbain | 15 | 10 | 5 | 5 | 0 | 5 |
+
+### Verdict par strate
+
+| Strate | Relation | Jugés | Tranchés | Erreurs | Conclusion |
+|---|---|---:|---:|---:|---|
+| `certain_official_identifier` | BD TOPO ↔ RNB | **60** | 60 | **0** | **acceptée** |
+| `certain_source_relation` | bâtiment ↔ parcelle | 40 | 40 | 15 | abandonnée — cause établie |
+| `ambiguous` | adresse ↔ parcelle | 42 | 40 | 11 | abandonnée — résultat négatif |
+
+## Conclusions
+
+### 1. L'appariement d'identité BD TOPO ↔ RNB est accepté
+
+**60 cas sur 60 jugés corrects, dans les quatre territoires, sans une seule erreur ni un seul
+indécidable.** La règle de trois, pré-enregistrée avant tirage, autorise donc à affirmer un taux
+d'erreur réel **inférieur à 5 % avec 95 % de confiance**.
+
+C'est le seuil que le protocole avait fixé comme nécessaire, en écrivant que le scoring aval ne
+distingue pas 3 % de 5 %. Il est atteint, et il est atteint sur la relation qui compte le plus :
+c'est elle qui permet de réunir sur un même bâtiment ce que chaque source en sait.
+
+L'équilibre territorial tient : 15 cas par territoire, 15 corrects partout. Aucun territoire ne
+porte l'exactitude d'un autre.
+
+### 2. La relation bâtiment ↔ parcelle est fausse, et la cause est identifiée
+
+15 erreurs sur 40 cas tranchés. Ce n'est **pas** un taux d'erreur au sens de la règle de trois —
+la strate a été abandonnée — c'est un constat sur l'effectif jugé.
+
+La cause est entièrement établie, et elle tient en une ligne de `RnbImporter` :
+
+```sql
+greatest(0.9, least(1, coalesce((plot->>'bdg_cover_ratio')::numeric, 0.9))), 'certain', true, false,
+```
+
+Les 35 verdicts bâtiment ↔ parcelle sont séparés exactement par une règle unique : **la relation
+est juste si la parcelle est celle qui porte la plus grande part du bâtiment.** Un rang, pas un
+seuil — le relecteur dit non à 12,4 % de recouvrement et oui à 15,6 %.
+
+Et les 15 erreurs portent **toutes** sur une relation à la confiance 0,90000 pile, c'est-à-dire au
+plancher du `greatest`. Aucune relation au-dessus n'a été jugée fausse. Voir
+[BUG-09](../backlog/BUG-09-recouvrement-batiment-parcelle.md).
+
+### 3. La relation adresse ↔ parcelle n'est pas vérifiable, et c'est le résultat
+
+11 erreurs sur 40 cas tranchés, et **aucun signal géométrique ne les distingue** — ni la
+containment, ni la proximité à 10 m, ni la distance. Les erreurs ont été trouvées par jugement
+humain sur contexte externe. Le résultat négatif est détaillé plus haut.
+
+## Ce que v0.3 peut cocher, et ce qu'elle ne peut pas
+
+**Peut** : « Métriques et échantillon de validation produits ». L'échantillon est tiré, jugé,
+consigné, et l'exactitude est publiée par strate **y compris quand elle est défavorable** — deux
+strates sur trois le sont.
+
+**Ne peut pas** : déclarer l'appariement spatial bon dans son ensemble. Une relation sur trois est
+acceptée. Les deux autres sont documentées, l'une avec son correctif, l'autre avec sa limite.
+
+Les cas ambigus confirmés restent exclus de la publication, conformément au critère d'acceptation :
+rien dans cette revue ne promeut une relation `ambiguous`.
+
 ## Ce que cet échantillon ne couvre pas
 
 Le ticket impose d'inclure quatre familles de cas :
