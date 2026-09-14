@@ -52,7 +52,10 @@ from immo_pipelines.cadastre.manifest import load_release_manifest, resolve_asse
 from immo_pipelines.cadastre.settings import CadastreSettings
 
 # 1 : premier import geo-dvf, qualification des mutations complexes dans ce script.
-DVF_TRANSFORMATION_VERSION = "1"
+# 2 : le prix ne va plus qu au lot auquel il se rapporte. En version 1, une vente de
+# maison avec terrain donnait le montant entier a chacun des deux lots — 5 410
+# mutations et 13 303 lots concernes sur le 35, soit 8,3 % des mutations simples.
+DVF_TRANSFORMATION_VERSION = "2"
 
 SIMPLE_ALLOCATION = "single_property_full_price"
 
@@ -60,6 +63,21 @@ SIMPLE_ALLOCATION = "single_property_full_price"
 # `geo-dvf` decrit le bati par `type_local` et le non-bati par `nature_culture` et
 # `surface_terrain`. Nommer ce cas plutot que d'ecrire NULL dit ce que la source dit.
 LAND_PROPERTY_TYPE = "Terrain"
+
+
+def _surface(row: dict[str, str]) -> float | None:
+    """La surface du lot : bâtie si le lot est un local, foncière sinon.
+
+    Une surface absente reste absente. La contrainte de schéma refuse une surface nulle ou
+    négative, ce qui est la bonne garde : une surface de zéro n'est pas une surface.
+    """
+    for column in ("surface_reelle_bati", "surface_terrain"):
+        raw = row.get(column) or ""
+        if raw:
+            value = float(raw)
+            if value > 0:
+                return value
+    return None
 
 
 @dataclass
@@ -76,6 +94,20 @@ class Mutation:
     def local_types(self) -> set[str]:
         return {row["type_local"] for row in self.rows if row["type_local"]}
 
+    def priced_lots(self) -> list[dict[str, str]]:
+        """Les lots auxquels le prix peut se rapporter.
+
+        Une vente de maison comporte le lot bâti **et** ses lots de terrain. Le prix au m² d'une
+        maison se rapporte par convention à la surface bâtie, le terrain venant avec : les lots
+        de terrain d'une vente bâtie ne reçoivent donc pas de prix, ils ne sont pas ignorés pour
+        autant — ils restent enregistrés avec leur surface et leur nature de culture.
+
+        S'il n'y a aucun lot bâti, la mutation est une vente de terrain et le prix se rapporte
+        au terrain.
+        """
+        built = [row for row in self.rows if row["type_local"]]
+        return built if built else [row for row in self.rows if _surface(row) is not None]
+
     @property
     def price(self) -> float | None:
         values = {row["valeur_fonciere"] for row in self.rows if row["valeur_fonciere"]}
@@ -91,8 +123,15 @@ class Mutation:
             return "price_missing"
         if len(self.parcels) > 1:
             return "multiple_parcels"
-        if len(self.local_types) > 1:
-            return "multiple_local_types"
+        lots = self.priced_lots()
+        if len(lots) != 1:
+            # Zero lot chiffrable : rien a quoi rapporter le prix. Plusieurs : le montant
+            # couvre l'ensemble sans dire ce qui revient a chacun, et l'attribuer entierement
+            # a l'un d'eux fabriquerait un prix au m2 faux et credible. Une maison avec son
+            # garage tombe ici, et c'est voulu.
+            return "no_priced_lot" if not lots else "multiple_priced_lots"
+        if _surface(lots[0]) is None:
+            return "surface_missing"
         return None
 
 
@@ -103,21 +142,6 @@ def read_mutations(path: Path) -> dict[str, Mutation]:
         for row in csv.DictReader(handle):
             mutations[row["id_mutation"]].rows.append(row)
     return dict(mutations)
-
-
-def _surface(row: dict[str, str]) -> float | None:
-    """La surface du lot : bâtie si le lot est un local, foncière sinon.
-
-    Une surface absente reste absente. La contrainte de schéma refuse une surface nulle ou
-    négative, ce qui est la bonne garde : une surface de zéro n'est pas une surface.
-    """
-    for column in ("surface_reelle_bati", "surface_terrain"):
-        raw = row.get(column) or ""
-        if raw:
-            value = float(raw)
-            if value > 0:
-                return value
-    return None
 
 
 def import_year(
@@ -162,9 +186,11 @@ def import_year(
             )
         )
 
+        priced = {id(row) for row in mutation.priced_lots()} if reason is None else set()
         for index, row in enumerate(mutation.rows):
             surface = _surface(row)
-            allocatable = reason is None and surface is not None
+            # Le prix ne va qu'au lot auquel il se rapporte, jamais a chaque lot de la mutation.
+            allocatable = id(row) in priced and surface is not None
             properties.append(
                 (
                     f"transaction-property:dvf:{release_id}:{mutation_id}:{index}",
@@ -215,10 +241,7 @@ def import_year(
           LEFT JOIN reference.parcel AS parcel ON parcel.cadastral_id = %s
         ON CONFLICT (transaction_id, source_identifier) DO NOTHING
         """,
-        [
-            (row[1], row[2], row[4], row[5], row[6], row[7], row[8], row[3])
-            for row in properties
-        ],
+        [(row[1], row[2], row[4], row[5], row[6], row[7], row[8], row[3]) for row in properties],
     )
     return dict(counters)
 
