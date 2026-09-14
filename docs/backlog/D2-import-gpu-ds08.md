@@ -253,6 +253,17 @@ Le rattachement zone ↔ parcelle est donc **nécessairement spatial** — ce n'
 de conception mais une contrainte de la donnée. `DOC_URBA_COM` donne le périmètre administratif du
 document, pas le rattachement de chaque zone.
 
+### Périmètre : les documents d'urbanisme, pas les servitudes
+
+Les types retenus sont `PLU`, `PLUi`, `CC`, `POS` et `PSMV`.
+
+Les **SUP** — neuf sur le territoire `35` — sont exposées par le même catalogue mais traitées par
+[D3](./D3-import-georisques-ds09.md), décision du 14 septembre 2026 : une SUP ne dit pas ce que la
+collectivité veut faire de son territoire, elle constate une contrainte extérieure qui s'impose au
+document d'urbanisme sans en dépendre. C'est la nature même de ce que D3 traite.
+
+Les **SCoT** sont exclus aussi : ils ne s'appliquent pas à la parcelle.
+
 ## Travail à réaliser
 
 1. Identifier et épingler les documents : **178 communaux** par `territory=35`, plus les PLUi

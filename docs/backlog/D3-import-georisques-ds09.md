@@ -22,6 +22,30 @@ exposition parcellaire. C'est la garantie centrale de ce ticket.
 > **Mécanisme réutilisé :** la quarantaine par attribut de [BUG-03](./BUG-03-quarantaine-par-attribut.md).
 > Une observation communale est une observation valide dont l'exposition parcellaire est absente.
 
+## Les servitudes d'utilité publique relèvent de ce ticket — décision du 14 septembre 2026
+
+Le catalogue du Géoportail de l'urbanisme expose des **SUP** aux côtés des documents d'urbanisme :
+neuf sur le territoire `35` en production. Elles auraient pu entrer par
+[D2](./D2-import-gpu-ds08.md), qui lit déjà ce catalogue et sait en extraire les couches CNIG.
+
+Elles n'y entrent pas, parce qu'une SUP n'est pas un document d'urbanisme :
+
+- un PLU **exprime un projet communal** — ce que la collectivité veut faire de son territoire ;
+- une SUP **constate une contrainte extérieure** — un périmètre de captage, une canalisation, un
+  monument, une servitude aéronautique — qui s'impose au document d'urbanisme sans en dépendre.
+
+C'est la même nature que ce que D3 traite déjà : une contrainte subie, rattachée à un objet
+géographique, avec sa granularité propre. Les ranger avec les PLU aurait mélangé un projet et une
+contrainte dans la même table, et rendu `URB-005` — la complétude des règles d'urbanisme —
+dépendante d'objets qui n'ont pas de règles à valider.
+
+**Conséquence pratique :** la source des SUP est le GPU, pas Géorisques, mais leur traitement est
+celui de D3. Le module `immo_pipelines.market_data.cnig` écrit pour D2 sert donc aux deux, ce qui
+est un effet secondaire heureux et non une raison d'avoir choisi ainsi.
+
+La règle de granularité de ce ticket s'y applique telle quelle : une SUP dont le périmètre est
+communal reste `commune_context_only` et ne devient jamais une exposition parcellaire.
+
 ## Travail à réaliser
 
 1. Traiter chaque famille de risque comme une **release distincte** : elles n'ont ni la même
