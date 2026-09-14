@@ -1,6 +1,6 @@
 # D6a — Voir les mutations d'une parcelle, pour vérifier que DVF tient
 
-**Version :** v0.5 · **Taille :** S · **État :** En cours
+**Version :** v0.5 · **Taille :** S · **État :** Terminé
 **Touche :** backend/src/immo/explorer.py, backend/src/immo/api/routes/explorer.py, apps/web/src/App.tsx, docs/data/dvf-verification-35.md
 **Dépend de :** D1 · **Bloque :** —
 **Scindé de :** [D6](./D6-revue-manuelle-metier.md), 14 septembre 2026
@@ -75,3 +75,25 @@ distingue une donnée manquante d'une donnée oubliée.
 - les mutations d'une parcelle sont consultables sur données réelles, sans fixture ;
 - une mutation sans prix allouable affiche son motif ;
 - le rapport de vérification est écrit, et dit ce qui a été regardé et combien.
+
+## Résolution — 14 septembre 2026
+
+Preuve : [`docs/data/dvf-verification-35.md`](../data/dvf-verification-35.md).
+
+Livré : `list_parcel_transactions`, la route `/parcels/{id}/transactions` sous RLS, et un bloc
+replié dans la fiche parcelle de l'Explorer. Un test de navigation vérifie qu'une fiche ne garde
+pas les mutations de la parcelle précédente.
+
+**Quatre défauts trouvés**, tous en regardant la donnée, aucun détectable par un contrôle
+automatique :
+
+| Défaut | Ampleur |
+|---|---:|
+| Surface bâtie empruntée au terrain | **30 816 lots**, dont 367 avec un prix faux |
+| Versions de transformation coexistantes | **133 066 doublons** |
+| Un bien décrit plusieurs fois compté comme plusieurs lots | **4 666 mutations** |
+| Fiche gardant les mutations de la parcelle précédente | affichage |
+
+Les prix alloués passent de 45 947 à **49 820** après correction.
+
+Le premier a été trouvé **avant que l'écran ait une interface**, sur la première requête de l'API.

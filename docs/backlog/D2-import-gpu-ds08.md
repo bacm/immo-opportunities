@@ -1,6 +1,6 @@
 # D2 — DS-08 GPU : zonage et contraintes, sans interprétation de règlement
 
-**Version :** v0.5 · **Taille :** M · **État :** En cours
+**Version :** v0.5 · **Taille :** M · **État :** Terminé
 **Dépend de :** D1 · **Bloque :** D5
 **Touche :** pipelines/scripts/compute_urban_features.py, pipelines/scripts/import_gpu_release.py, pipelines/src/immo_pipelines/market_data/cnig.py, contracts/datasets/DS-08/, docs/data/gpu-coverage-35.md
 
@@ -473,3 +473,32 @@ Une commune sans document importé sort en `source_not_accepted`, jamais en blan
   livré plutôt qu'à la main ;
 - calculer `URB-*` sur le département entier ;
 - enrichir le rapport de couverture de ce que l'import révèle.
+
+## Résolution — 14 septembre 2026
+
+Preuve : [`docs/data/gpu-coverage-35.md`](../data/gpu-coverage-35.md).
+
+| | |
+|---|---:|
+| Documents épinglés | 184, 707,6 Mo d'empreintes pour 34,2 Go d'archives |
+| Documents importés | **152**, tous `opposable` |
+| Zones | 21 136 · Contraintes | 458 199 |
+| `URB-001` calculée | **554 714 unités** · `URB-003` | 380 679 |
+| `URB-005` | zéro partout, le résultat attendu |
+
+Les **32 documents non importés** sont un arrêt volontaire : le débit du producteur s'effondrait
+en fin de lot, et les rattraper à la main est exactement le travail que
+[BUG-02](./BUG-02-scripts-import-hors-dagster.md) doit rendre inutile. Un lot partiel est un
+résultat exploitable dès lors que sa couverture est publiée — 257 communes portent un zonage sur
+les 300 couvertes par le manifeste, et le rapport le dit.
+
+### Ce que ce ticket a produit au-delà de son périmètre
+
+- `immo_pipelines.market_data.remote_zip` — lire un membre d'un ZIP distant sans le rapatrier :
+  4,56 Go traversés en 1,1 seconde pour 13,92 Mo utiles ;
+- `immo_pipelines.market_data.cnig` — trois générations de norme acceptées, dont la casse des
+  champs qui avait failli faire disparaître le PLUi de Rennes Métropole et ses 43 communes ;
+- `immo_pipelines.progress` — annonce d'avancement par tranche de 10 % ;
+- `ARCHITECTURE.md` §10.6 — la résistance à la variété des sources, tirée des sept variantes
+  rencontrées ici ;
+- un garde-fou sur `make rebuild`, qui avait coupé deux lots en cours.
