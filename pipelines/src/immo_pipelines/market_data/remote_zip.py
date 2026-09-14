@@ -38,7 +38,12 @@ class RemoteFile:
     # membres en une ou deux requetes, assez peu pour ne rien telecharger d'inutile.
     CHUNK = 262_144
 
-    def __init__(self, url: str, *, timeout: int = 120) -> None:
+    # Le GPU sert des archives de plusieurs gigaoctets et une lecture de couche peut demander
+    # plusieurs dizaines de secondes. Un delai court fait echouer l'epinglage au milieu, ce qui
+    # est arrive au 115e document sur 182.
+    TIMEOUT = 300
+
+    def __init__(self, url: str, *, timeout: int = TIMEOUT) -> None:
         self.url = url
         self.timeout = timeout
         self._position = 0
@@ -98,6 +103,14 @@ class RemoteFile:
             stop = min(max(end, start + self.CHUNK), self.size) - 1
             self._buffer = self._fetch(start, stop)
             self._buffer_start = start
+            if len(self._buffer) < end - start:
+                # Le serveur a renvoye moins que la plage demandee. Sans cette garde la lecture
+                # serait silencieusement tronquee, et `zipfile` recevrait un en-tete incomplet
+                # avec un message qui n'en designe pas la cause.
+                raise RuntimeError(
+                    f"{self.url} a renvoyé {len(self._buffer)} octets pour la plage "
+                    f"{start}-{stop} : lecture tronquée."
+                )
         offset = self._position - self._buffer_start
         data = self._buffer[offset : offset + (end - self._position)]
         self._position = end
@@ -125,6 +138,6 @@ class RemoteFile:
         self._buffer = b""
 
 
-def open_remote(url: str, *, timeout: int = 120) -> IO[bytes]:
+def open_remote(url: str, *, timeout: int = RemoteFile.TIMEOUT) -> IO[bytes]:
     """Ouvrir une archive distante comme un fichier, sans la rapatrier."""
     return RemoteFile(url, timeout=timeout)  # type: ignore[return-value]

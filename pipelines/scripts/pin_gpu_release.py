@@ -114,44 +114,13 @@ def layer_digests(document_id: str) -> tuple[dict[str, dict[str, Any]], int]:
     return digests, getattr(remote, "size", 0)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
-    parser.add_argument("--release", required=True, help="clé de release, par exemple 2026-09-14")
-    parser.add_argument("--bounds", default="-2.4,47.5,-0.9,48.9", help="pré-filtre lon/lat")
-    arguments = parser.parse_args()
-    bounds = tuple(float(value) for value in arguments.bounds.split(","))
-
-    assets: list[dict[str, Any]] = []
-    for document in documents_for(arguments.department):
-        if document.get("type") not in DOCUMENT_TYPES:
-            continue
-        try:
-            communes = covers(document, arguments.department, bounds)
-        except Exception as error:
-            print(f"  {document.get('name')} : illisible ({error})", file=sys.stderr)
-            continue
-        if not communes:
-            continue
-        digests, archive_size = layer_digests(document["id"])
-        assets.append(
-            {
-                "document_id": document["id"],
-                "name": document.get("name"),
-                "document_type": document.get("type"),
-                "legal_status": document.get("legalStatus"),
-                "published_at": document.get("publicationDate"),
-                "territory": (document.get("grid") or {}).get("name"),
-                "communes": communes,
-                "url": f"{API}/document/{document['id']}/download",
-                "archive_byte_size": archive_size,
-                "layers": digests,
-            }
-        )
-        print(f"  {document.get('name'):18s} {len(communes):3d} communes, {len(digests)} couches")
-
-    manifest = {
-        "release_id": f"DS-06@{arguments.release}".replace("DS-06", "DS-08"),
+def manifest(
+    arguments: argparse.Namespace,
+    assets: list[dict[str, Any]],
+    unreadable: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "release_id": f"DS-08@{arguments.release}",
         "release_key": arguments.release,
         "source_published_on": arguments.release,
         "department": arguments.department,
@@ -174,7 +143,36 @@ def main() -> int:
             ),
         },
         "assets": assets,
+        # Les documents que le catalogue annonce et que nous ne savons pas lire. Les taire ferait
+        # passer une couverture partielle pour une couverture complète.
+        "unreadable": unreadable,
     }
+
+
+def write(path: Path, document: dict[str, Any]) -> None:
+    """Écrire le manifeste à chaque document relevé, et non à la fin.
+
+    Un épinglage départemental demande une heure et dépend du réseau : un délai dépassé ne doit
+    pas effacer ce qui est déjà relevé. L'écriture passe par un fichier temporaire puis un
+    remplacement atomique, sans quoi une interruption au mauvais moment laisserait un manifeste
+    tronqué — donc un manifeste qui ment sur la couverture.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".json.partial")
+    temporary.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    temporary.replace(path)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
+    parser.add_argument("--release", required=True, help="clé de release, par exemple 2026-09-14")
+    parser.add_argument("--bounds", default="-2.4,47.5,-0.9,48.9", help="pré-filtre lon/lat")
+    arguments = parser.parse_args()
+    bounds = tuple(float(value) for value in arguments.bounds.split(","))
+
     path = (
         Path(__file__).resolve().parents[2]
         / "contracts"
@@ -183,10 +181,61 @@ def main() -> int:
         / "releases"
         / f"{arguments.release}-{arguments.department}.json"
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # Reprise. Un epinglage de 182 documents demande une heure et depend du reseau : un delai
+    # depasse ne doit pas effacer ce qui est deja releve. Sur la France et ses 12 795 documents,
+    # repartir de zero a chaque interruption serait redhibitoire.
+    previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    assets: list[dict[str, Any]] = list(previous.get("assets", []))
+    unreadable: list[dict[str, Any]] = list(previous.get("unreadable", []))
+    done = {asset["document_id"] for asset in assets} | {
+        entry.get("document_id") for entry in unreadable
+    }
+    if done:
+        print(f"reprise : {len(done)} documents déjà relevés", flush=True)
+    for document in documents_for(arguments.department):
+        if document.get("type") not in DOCUMENT_TYPES or document["id"] in done:
+            continue
+        try:
+            communes = covers(document, arguments.department, bounds)
+        except Exception as error:
+            unreadable.append(
+                {
+                    "document_id": document["id"],
+                    "name": document.get("name"),
+                    "reason": str(error),
+                }
+            )
+            write(path, manifest(arguments, assets, unreadable))
+            print(f"  {document.get('name')} : illisible ({error})", flush=True)
+            continue
+        if not communes:
+            continue
+        digests, archive_size = layer_digests(document["id"])
+        assets.append(
+            {
+                "document_id": document["id"],
+                "name": document.get("name"),
+                "document_type": document.get("type"),
+                "legal_status": document.get("legalStatus"),
+                "published_at": document.get("publicationDate"),
+                "territory": (document.get("grid") or {}).get("name"),
+                "communes": communes,
+                "url": f"{API}/document/{document['id']}/download",
+                "archive_byte_size": archive_size,
+                "layers": digests,
+            }
+        )
+        write(path, manifest(arguments, assets, unreadable))
+        print(
+            f"  {document.get('name'):18s} {len(communes):3d} communes, {len(digests)} couches",
+            flush=True,
+        )
+
+    write(path, manifest(arguments, assets, unreadable))
     communes = {code for asset in assets for code in asset["communes"]}
     print(f"\n{len(assets)} documents, {len(communes)} communes couvertes → {path}")
+    if unreadable:
+        print(f"{len(unreadable)} document(s) illisible(s), consignés au manifeste")
     return 0
 
 

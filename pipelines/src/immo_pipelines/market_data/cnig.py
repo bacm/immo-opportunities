@@ -90,8 +90,18 @@ def find_layers(archive: zipfile.ZipFile) -> dict[str, LayerMembers]:
         if suffix not in SHAPEFILE_SUFFIXES:
             continue
         for layer in LAYERS:
-            # Le nom de couche, eventuellement precede d'un prefixe et suivi d'une date.
-            if re.search(rf"(^|[_\W]){layer}(_\d{{8}})?\{suffix}$", base):
+            # Le nom de couche, eventuellement precede d'un prefixe et suivi d'une date, elle
+            # meme eventuellement suivie d'une lettre de version de procedure. Trois formes
+            # observees sur des documents reels du 35 :
+            #
+            #   ZONE_URBA.shp                              PLU communal, norme ancienne
+            #   243500139_zone_urba_20251218.shp           PLUi Rennes Metropole
+            #   200070688_DOC_URBA_20250930_A.dbf          PLUi Couesnon, version A
+            #
+            # La troisieme a fait disparaitre Couesnon Marches de Bretagne et ses huit communes
+            # du premier manifeste, sans aucune erreur : l'archive semblait ne contenir aucune
+            # couche. Un import qui n'accepte pas une variante perd le document en silence.
+            if re.search(rf"(^|[_\W]){layer}(_\d{{8}})?(_[A-Za-z0-9]{{1,3}})?\{suffix}$", base):
                 found.setdefault(layer, {})[suffix] = member
                 break
     return {layer: LayerMembers(layer, files) for layer, files in found.items()}
