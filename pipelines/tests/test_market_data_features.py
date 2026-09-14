@@ -248,3 +248,91 @@ def test_commune_risk_is_context_only_and_never_parcel_exposure() -> None:
     profile = features["RISK-101"].json_value
     assert isinstance(profile, dict)
     assert profile["commune_context_only"][0]["source_id"] == "commune-clay"
+
+
+def test_un_echange_porte_un_prix_mais_n_est_pas_un_comparable() -> None:
+    """Un échange valorise une soulte, pas une transaction entre acheteur et vendeur.
+
+    Relevé pendant D1 : `Transaction` n'avait pas de champ `mutation_nature`, et la chaîne
+    d'exclusion n'en connaissait aucun motif. Les 237 échanges et 22 adjudications du 35 en 2024
+    portent un prix et seraient donc entrés dans les comparables comme des ventes ordinaires.
+
+    Le prix existe, la surface existe, la distance et l'âge conviennent : seule la nature de
+    l'acte écarte la transaction, et elle doit l'écarter avec son motif.
+    """
+    from immo_pipelines.market_data.features import (
+        Transaction,
+        TransactionProperty,
+        select_comparables,
+    )
+
+    def transaction(nature: str) -> Transaction:
+        return Transaction(
+            source_id=f"dvf:{nature}",
+            mutation_date=date(2024, 6, 1),
+            price_eur=250_000,
+            segment_code="urbain",
+            distance_m=400,
+            mutation_nature=nature,
+            properties=(
+                TransactionProperty(
+                    source_id=f"dvf:{nature}:lot",
+                    property_type="Maison",
+                    surface_m2=90,
+                    allocated_price_eur=None,
+                ),
+            ),
+        )
+
+    decisions = select_comparables(
+        [transaction("Vente"), transaction("Echange"), transaction("Adjudication")],
+        snapshot_at=date(2025, 1, 1),
+        target_segment="urbain",
+        target_property_type="Maison",
+        target_surface_m2=90,
+    )
+    by_nature = {decision.transaction_id.removeprefix("dvf:"): decision for decision in decisions}
+    assert by_nature["Vente"].included is True
+    for nature in ("Echange", "Adjudication"):
+        assert by_nature[nature].included is False
+        assert by_nature[nature].reason == "mutation_nature_not_market"
+
+
+def test_une_nature_inconnue_est_ecartee_et_non_admise_par_defaut() -> None:
+    """La liste des natures de marché est fermée, et c'est délibéré.
+
+    Un millésime qui introduirait un libellé nouveau le ferait savoir en écartant ses
+    transactions avec un motif, au lieu de les faire entrer sans bruit dans les comparables.
+    """
+    from immo_pipelines.market_data.features import (
+        Transaction,
+        TransactionProperty,
+        select_comparables,
+    )
+
+    decisions = select_comparables(
+        [
+            Transaction(
+                source_id="dvf:inconnue",
+                mutation_date=date(2024, 6, 1),
+                price_eur=250_000,
+                segment_code="urbain",
+                distance_m=400,
+                mutation_nature="Nature introduite par un millésime futur",
+                properties=(
+                    TransactionProperty(
+                        source_id="dvf:inconnue:lot",
+                        property_type="Maison",
+                        surface_m2=90,
+                        allocated_price_eur=None,
+                    ),
+                ),
+            )
+        ],
+        snapshot_at=date(2025, 1, 1),
+        target_segment="urbain",
+        target_property_type="Maison",
+        target_surface_m2=90,
+    )
+    assert decisions[0].included is False
+    assert decisions[0].reason == "mutation_nature_not_market"

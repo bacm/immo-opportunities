@@ -66,6 +66,9 @@ class Transaction:
     properties: tuple[TransactionProperty, ...]
     is_complex: bool = False
     release_id: str = "DS-06:unknown"
+    # La nature de l'acte, telle que la source la declare. Par defaut une vente, parce que
+    # c'est le cas de 90 % des mutations et que le champ a ete ajoute apres coup.
+    mutation_nature: str = "Vente"
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +95,25 @@ def _months_between(earlier: date, later: date) -> int:
     return max(months, 0)
 
 
+# Les natures dont le prix reflete un marche libre entre acheteur et vendeur.
+#
+# Un echange valorise une soulte, pas une transaction ; une adjudication est une vente forcee,
+# dont le prix depend des conditions de l'enchere. Les deux portent pourtant un prix, et sans
+# ce filtre ils entraient dans les comparables exactement comme une vente ordinaire — releve
+# pendant D1, sur 237 echanges et 22 adjudications pour la seule annee 2024 dans le 35.
+#
+# La liste est **fermee** et non une liste d'exclusions : une nature inconnue est ecartee avec
+# son motif plutot qu'admise par defaut. Un millesime qui introduirait un libelle nouveau le
+# ferait donc savoir, au lieu de le faire entrer sans bruit.
+MARKET_MUTATION_NATURES = frozenset(
+    {
+        "Vente",
+        "Vente en l'état futur d'achèvement",
+        "Vente terrain à bâtir",
+    }
+)
+
+
 def select_comparables(
     transactions: list[Transaction],
     *,
@@ -116,6 +138,8 @@ def select_comparables(
 
             if transaction.mutation_date > snapshot_at:
                 reason = "after_snapshot"
+            elif transaction.mutation_nature not in MARKET_MUTATION_NATURES:
+                reason = "mutation_nature_not_market"
             elif transaction.price_eur <= 0:
                 reason = "invalid_transaction_price"
             elif transaction.segment_code != target_segment:
