@@ -1,6 +1,6 @@
 # D1 — DS-06 DVF+ : archive, import relançable, comparables explicables
 
-**Version :** v0.5 · **Taille :** XL · **État :** À faire
+**Version :** v0.5 · **Taille :** XL · **État :** Terminé
 **Dépend de :** B5 · **Bloque :** D2, D5, E1
 
 > Avec [B1](./B1-audit-ban-ds05.md), c'est la moitié du chemin critique. Sans DVF+, aucune feature
@@ -107,3 +107,54 @@ de support minimal vient du profiling, pas d'une valeur choisie.
 - section DS-06 de [`market-data-sources-audit.md`](../data/market-data-sources-audit.md) ;
 - rapport `docs/data/dvf-quality-35.md` : rattachement, mutations complexes, distributions,
   couverture des comparables par commune.
+
+## Résolution — 14 septembre 2026
+
+Preuve : [`docs/data/dvf-quality-35.md`](../data/dvf-quality-35.md) · verdict dans
+[`market-data-sources-audit.md`](../data/market-data-sources-audit.md).
+
+**133 066 mutations et 337 019 lots** importés sur le 35, millésimes 2021 à 2025, release
+`DS-06@2026-09-13` archivée et checksumée.
+
+### Ce que le ticket demandait, et où c'en est
+
+| Point | État |
+|---|---|
+| 1. Release archivée et reproductible | fait — cinq empreintes SHA-256, archivage MinIO avant import |
+| 2. Import relançable | fait — reprise depuis l'archive vérifiée, clé d'idempotence versionnée |
+| 3. Rattachement des transactions | fait — **97,49 %**, ventilation par commune et par millésime publiée |
+| 4. Mutations complexes | fait — **65,5 %** sans prix allouable, cinq motifs distincts |
+| 5. Comparables explicables | fait — chaque exclusion porte son motif, dont le nouveau `mutation_nature_not_market` |
+| 6. Segments de marché | **renvoyé à E1** — voir ci-dessous |
+| 7. Métriques MKT | **renvoyé à E1** — dépend des segments et du seuil de support |
+
+### La source a changé, et le contrat le dit
+
+DVF+ du Cerema n'est distribué que par un dossier Box authentifié : l'API répond 401, donc ni
+archivage ni checksum ni import relançable. La release importée est `geo-dvf` d'Etalab, la même
+donnée DGFiP géocodée, dont l'`id_parcelle` est directement notre `cadastral_id` — un appariement
+de moins, donc une source d'erreur de moins.
+
+### Une erreur d'allocation trouvée et corrigée
+
+La première version de la règle donnait le prix entier à plusieurs lots d'une même mutation :
+5 410 mutations, 13 303 lots, 8,3 % des mutations alors jugées simples. Une vente de maison avec
+terrain produisait deux lots portant chacun le montant total. C'est très exactement le risque de
+fausse précision que ce ticket met en garde contre, fabriqué par l'implémentation.
+
+Corrigée en version 2 : le prix ne va qu'au lot auquel il se rapporte, et plusieurs lots
+chiffrables rendent la mutation complexe. Les mutations allouables tombent de 48,8 % à 34,5 %, et
+la médiane du prix au m² d'une maison monte de 2 471 € à 2 586 €.
+
+### Pourquoi les points 6 et 7 ne sont pas faits ici
+
+Le ticket impose que les frontières de segment viennent de la donnée observée, et que le seuil de
+support minimal vienne du profiling. Les deux mesures sont publiées pour que E1 les tranche :
+
+- l'étendue du prix du terrain, de 1 € à 181 € entre quartiles, mêle terres agricoles et terrains
+  à bâtir — un segment mal tracé produirait des comparables absurdes ;
+- 305 communes ont au moins 5 ventes de maison exploitables sur cinq ans, 267 au moins 10, et
+  **152 au moins 30**.
+
+Retenir l'un de ces seuils ici serait le choix a priori que le produit s'interdit. C'est aussi
+pourquoi le verdict est `display_only` et non `accepted`.
