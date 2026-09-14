@@ -1,0 +1,36 @@
+{
+  "release_id": "DS-09@flood-atlas--2026-09-14",
+  "release_key": "flood-atlas--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "flood-atlas",
+  "key_derivation": "Date d'épinglage. Géorisques ne publie pas d'édition datée par famille : la clé identifie les octets relevés ce jour-là, pas une édition amont. Le format suit `key_format: risk-family--YYYY-MM-DD` du contrat.",
+  "discovery": {
+    "catalog_entry": "https://www.georisques.gouv.fr/api/v1/gaspar/azi",
+    "access_mode": "commune",
+    "territory_parameter": "code_insee",
+    "granularity": "commune",
+    "api_is_not_a_path_back": "L'URL rejouée demain rendrait d'autres octets. Seule l'archive nommée ci-dessous permet de retrouver les octets importés, et le SHA-256 la contraint.",
+    "silent_national_fallback": "Un paramètre territorial inconnu n'est pas rejeté : il est ignoré, et la réponse couvre la France entière avec un statut 200. Le filtre est donc vérifié ligne à ligne à l'épinglage, pas déduit du code HTTP.",
+    "canonical_bytes": "Enregistrements triés et clés ordonnées : l'ordre de pagination d'une API n'est pas garanti stable, et sans canonicalisation le checksum ne prouverait rien."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://www.georisques.gouv.fr/api/v1/gaspar/azi?code_insee=…",
+      "sha256": "aa46265f608c26ca2d20cfa312051766a9f49f345322a7e1ead30f5c3e0466f3",
+      "byte_size": 4304,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/flood-atlas/flood-atlas--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 273,
+        "uncompressed_byte_size": 155191,
+        "territories": 332
+      }
+    }
+  ]
+}

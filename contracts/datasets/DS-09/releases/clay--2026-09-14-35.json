@@ -1,0 +1,39 @@
+{
+  "release_id": "DS-09@clay--2026-09-14",
+  "release_key": "clay--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "clay",
+  "key_derivation": "Date d'épinglage de l'extrait départemental. Le fichier national ne porte pas de version dans son URL ; son empreinte et son `Last-Modified` — 16 juin 2021 — sont relevés pour qu'un changement se constate.",
+  "discovery": {
+    "catalog_entry": "https://www.georisques.gouv.fr/donnees/bases-de-donnees/retrait-gonflement-des-argiles-version-2020",
+    "access_mode": "download",
+    "granularity": "zone",
+    "extract_rationale": "623 Mo nationaux pour 789 polygones départementaux : on archive l'extrait, pas la couche entière, et le manifeste porte l'empreinte du fichier national pour la provenance. Même arbitrage que D2 sur les archives CNIG.",
+    "selection": "Champ `DPT` de la couche. Aucun filtre géométrique n'est nécessaire, et aucun n'est appliqué.",
+    "commune_split": "Un polygone d'aléa traverse les communes ; il est découpé par intersection réelle. Les contacts réduits à une ligne ou un point sont écartés : un contact de frontière n'est pas une exposition."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://files.georisques.fr/argiles/AleaRG_Fxx_L93.zip",
+      "sha256": "c321d93ed7f81625addf906c476ff722758fbba9368b5c4dbb1bf79c2bd8d92c",
+      "byte_size": 15915286,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/clay/clay--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 1428,
+        "source_features": 789,
+        "uncompressed_byte_size": 39686702,
+        "national_archive_sha256": "632fed7e435eb9f845e21bd897931b41074e4144d93fd9db1e5f41f9b3bb28b1",
+        "national_archive_url": "https://files.georisques.fr/argiles/AleaRG_Fxx_L93.zip",
+        "source_layer": "ExpoArgile_Fxx_L93",
+        "source_srid": 2154
+      }
+    }
+  ]
+}

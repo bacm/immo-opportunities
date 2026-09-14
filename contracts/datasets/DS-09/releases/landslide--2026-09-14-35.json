@@ -1,0 +1,36 @@
+{
+  "release_id": "DS-09@landslide--2026-09-14",
+  "release_key": "landslide--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "landslide",
+  "key_derivation": "Date d'épinglage. Géorisques ne publie pas d'édition datée par famille : la clé identifie les octets relevés ce jour-là, pas une édition amont. Le format suit `key_format: risk-family--YYYY-MM-DD` du contrat.",
+  "discovery": {
+    "catalog_entry": "https://www.georisques.gouv.fr/api/v1/mvt",
+    "access_mode": "department",
+    "territory_parameter": "departement",
+    "granularity": "point",
+    "api_is_not_a_path_back": "L'URL rejouée demain rendrait d'autres octets. Seule l'archive nommée ci-dessous permet de retrouver les octets importés, et le SHA-256 la contraint.",
+    "silent_national_fallback": "Un paramètre territorial inconnu n'est pas rejeté : il est ignoré, et la réponse couvre la France entière avec un statut 200. Le filtre est donc vérifié ligne à ligne à l'épinglage, pas déduit du code HTTP.",
+    "canonical_bytes": "Enregistrements triés et clés ordonnées : l'ordre de pagination d'une API n'est pas garanti stable, et sans canonicalisation le checksum ne prouverait rien."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://www.georisques.gouv.fr/api/v1/mvt?departement=…",
+      "sha256": "14a8c517571faa9bd9fca59880376c9e321258ec55794652baebbc4571dd5ebb",
+      "byte_size": 12292,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/landslide/landslide--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 372,
+        "uncompressed_byte_size": 182225,
+        "territories": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "release_id": "DS-09@sup--2026-09-14",
+  "release_key": "sup--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "sup",
+  "key_derivation": "Date d'épinglage du catalogue. Chaque servitude a sa propre date d'approbation, portée par son nom normalisé ; la clé identifie l'instantané du catalogue à cette date.",
+  "discovery": {
+    "catalog_entry": "https://www.geoportail-urbanisme.gouv.fr/api/document",
+    "access_mode": "download",
+    "granularity": "zone",
+    "checksum_scope": "Une empreinte par couche `ASSIETTE_SUP_S`, pas par archive : l'archive change dès qu'une pièce écrite est remplacée, la couche ne change que si les périmètres bougent. Même arbitrage que D2.",
+    "why_here_and_not_d2": "Une SUP constate une contrainte extérieure ; un PLU exprime un projet communal. Les ranger ensemble aurait rendu `URB-005` dépendante d'objets sans règle à valider."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://www.geoportail-urbanisme.gouv.fr/api/document?documentFamily[]=SUP&territory=35",
+      "sha256": "40f17afd56cd92b1bb1e0ae0eb2dd3d3c68138473e205502e5df561c63ed644e",
+      "byte_size": 6713546,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/sup/sup--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 1248,
+        "source_features": 824,
+        "documents": [
+          {
+            "document": "130010937_SUP_35_PM3",
+            "document_id": "6395a8b8b0ec0751064e6a5a489dec63",
+            "category": "PM3",
+            "legal_status": "APPROVED",
+            "published_at": "24/03/2021 20:32:35",
+            "layer_sha256": "3c80ffed8cae2f67fa3f2f0b83a4cd3bc9b23ebc92e7456da7780234c3c0e620",
+            "layer_byte_size": 20651,
+            "assiettes": 4
+          },
+          {
+            "document": "130010937_SUP_35_PM1",
+            "document_id": "b341f5f08447c5c52919e812c992a0be",
+            "category": "PM1",
+            "legal_status": "APPROVED",
+            "published_at": "26/08/2021 17:30:53",
+            "layer_sha256": "41a1b76c40d247b205f93669ddb538138cf2706786ff820903e3222f30f0499c",
+            "layer_byte_size": 6203439,
+            "assiettes": 8
+          },
+          {
+            "document": "552049447_SUP_35_T1",
+            "document_id": "adc203c6192800abac3ef8b0985dc580",
+            "category": "T1",
+            "legal_status": "APPROVED",
+            "published_at": "24/01/2024 10:01:57",
+            "layer_sha256": "b26b25e94cd22d772944ff8e91c90f65f24a7b6616f4e48dd5cb776ab2d26cbc",
+            "layer_byte_size": 349520,
+            "assiettes": 1
+          },
+          {
+            "document": "172014607_SUP_35_AC4",
+            "document_id": "5a3b5241a97c3f31a7a1ae86a077a27f",
+            "category": "AC4",
+            "legal_status": "APPROVED",
+            "published_at": "08/09/2026 03:37:41",
+            "layer_sha256": "35276077a01fca5c7fede1c116e74f3b30798301b6aad710ea7ac49943afa47c",
+            "layer_byte_size": 203330,
+            "assiettes": 15
+          },
+          {
+            "document": "172014607_SUP_35_AC1",
+            "document_id": "51949e1430153946f457abae0e6aa3f4",
+            "category": "AC1",
+            "legal_status": "APPROVED",
+            "published_at": "08/09/2026 03:37:48",
+            "layer_sha256": "81b88bb2748e21c6f659234c2781c08a4c7899de0880f1a7ea458d3101988ea7",
+            "layer_byte_size": 3065031,
+            "assiettes": 796
+          }
+        ],
+        "uncompressed_byte_size": 25216482
+      }
+    }
+  ],
+  "unreadable": [
+    {
+      "document": "120068051_SUP_35_I1",
+      "reason": "3 tentatives échouées : HTTP Error 403: Forbidden"
+    },
+    {
+      "document": "120064019_SUP_35_T5",
+      "reason": "3 tentatives échouées : HTTP Error 403: Forbidden"
+    },
+    {
+      "document": "120064019_SUP_35_PT1",
+      "reason": "3 tentatives échouées : HTTP Error 403: Forbidden"
+    },
+    {
+      "document": "120064019_SUP_35_PT2",
+      "reason": "3 tentatives échouées : HTTP Error 403: Forbidden"
+    }
+  ]
+}

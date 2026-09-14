@@ -12,7 +12,7 @@ encore acceptée ou publiable.
 | DS-06 DVF (geo-dvf) | **oui** | oui | **`display_only`** — release réelle importée et auditée, segments et seuil de support à calibrer par E1 |
 | DS-07 DPE ADEME | **oui** | oui | **`display_only`** — release réelle importée et auditée, revue manuelle D6 requise pour accepter |
 | DS-08 GPU/CNIG | non | oui | **rejeté pour publication** — documents opposables et profils validés absents |
-| DS-09 Géorisques | non | oui | **rejeté pour publication** — releases par famille de risque absentes |
+| DS-09 Géorisques | **oui** | oui | **`display_only`** — dix familles importées et auditées, revue manuelle D6 requise pour accepter |
 
 Le verdict « rejeté pour publication » ne porte pas sur la qualité intrinsèque de la source. Il
 indique qu'aucun fichier réel, immuable et checksumé n'est présent pour exécuter les contrôles
@@ -135,7 +135,67 @@ attend [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md).
 - `URB-004` n'est calculé que si toutes les règles indispensables sont structurées et validées ;
 - aucun texte libre de règlement n'est interprété automatiquement.
 
-### DS-09 — Géorisques
+### DS-09 — verdict du 14 septembre 2026 : `display_only` sur dix familles
+
+**Preuves :** [`georisques-source-inventory-35.md`](./georisques-source-inventory-35.md) —
+l'inventaire écrit avant le premier lot — et
+[`georisques-coverage-35.md`](./georisques-coverage-35.md).
+
+**10 824 observations**, dont **6 985 à granularité fine**. Une release par famille : elles n'ont
+ni la même granularité, ni la même fraîcheur, ni le même producteur.
+
+| Famille | Accès | Granularité | Observations |
+|---|---|---|---:|
+| Installations classées | API départementale | `point` | 3 588 |
+| Arrêtés de catastrophe naturelle | API communale | `commune` | 1 485 |
+| Exposition aux argiles | téléchargement national | `zone` | 1 428 |
+| Risques recensés GASPAR | API communale | `commune` | 1 730 |
+| Servitudes d'utilité publique | GPU | `zone` | 1 248 |
+| Mouvements de terrain | API départementale | `point` | 372 |
+| Potentiel radon | API communale | `commune` | 332 |
+| Atlas des zones inondables | API communale | `commune` | 273 |
+| Sites et sols pollués | API départementale | `zone` + `commune` | 189 |
+| Cavités souterraines | API départementale | `point` | 179 |
+
+**La source a trois modes d'accès, et le ticket en supposait un.** Aucun téléchargement daté par
+famille et par département n'existe : quatre familles s'obtiennent par une API départementale,
+quatre par 332 appels communaux, une par un fichier national de 623 Mo, et les servitudes par le
+Géoportail de l'urbanisme. Le contrat l'avait prévu — `archived API response only when no
+download exists`.
+
+**Quatre pièges relevés, tous consignés.**
+
+- **Un paramètre territorial inconnu est ignoré, pas rejeté.**
+  `installations_classees?code_departement=35` répond `200` avec **138 248 résultats** — la France
+  entière — parce que le paramètre attendu s'appelle `departement`. Sur `ssp/instructions`, c'est
+  l'inverse. Le filtre est donc vérifié **ligne à ligne**, jamais déduit du code HTTP.
+- **Le lien de pagination pointe une machine interne du producteur**,
+  `api-georisques.bike-prod.brgm.fr`, injoignable et en clair. Les pages sont reconstruites sur
+  l'hôte public.
+- **Un `500` peut vouloir dire « paramètre manquant ».** La temporisation se décide sur le corps
+  de la réponse, sans quoi une requête mal formée serait rejouée cinq fois.
+- **Un `403` du GPU n'est pas toujours un refus.** Un document a échoué une fois puis répondu ;
+  quatre autres le refusent aux trois tentatives. La distinction est mesurée, pas supposée.
+
+**Ce que ces données fondent.** `RISK-001` (argiles), `RISK-003` (sites pollués), `RISK-004`
+(cavités) et `RISK-101` sont calculables sur données réelles.
+
+**`RISK-002` reste absente avec motif, et c'est un résultat.** Aucune source du 35 ne donne une
+zone inondable **typée**. GASPAR et l'atlas disent qu'une commune est concernée — c'est communal.
+La servitude `PM1` donne bien des géométries de zone, seul zonage opposable du département, mais
+elle porte les risques naturels prévisibles **sans dire lequel** : son assiette est une
+« enveloppe des zonages réglementaires ». En déduire « inondation » serait la faute commise sur le
+champ `ETAT` du CNIG pendant D2 — interpréter de mémoire un code non documenté. Les périmètres
+restent visibles dans `RISK-101` sous `sup_PM1`.
+
+**Couverture partielle des servitudes, et le manifeste le dit.** Cinq des neuf servitudes du 35
+sont lisibles, dont `PM1` et `PM3`. Les quatre autres — canalisations, aéronautique, télécoms —
+sont refusées au téléchargement par le producteur. Aucune feature RISK ne les consulte.
+
+**Pourquoi `display_only` et non `accepted`.** La revue manuelle stratifiée relève de
+[D6](../backlog/D6-revue-manuelle-metier.md), étape 4 de la procédure ci-dessous.
+
+### DS-09 — Géorisques (audit initial, avant import)
 
 - la granularité `point`, `zone`, `parcel` ou `commune` est obligatoire et persistée ;
 - une observation communale reste dans `commune_context_only` et ne devient jamais une exposition

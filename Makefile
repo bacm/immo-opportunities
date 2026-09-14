@@ -134,6 +134,43 @@ dpe-report:
 		-v $(PWD)/docs/data:/workspace/docs/data \
 		dagster-code python pipelines/scripts/dpe_matching_report.py --department $(DEPARTMENT)
 
+georisques-pin:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/contracts:/workspace/contracts \
+		dagster-code python pipelines/scripts/pin_georisques_release.py \
+		--release $(RELEASE) --department $(DEPARTMENT) $(if $(FAMILY),--family $(FAMILY),)
+
+georisques-pin-clay:
+	test -n "$(ARCHIVE)"
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/contracts:/workspace/contracts -v $(dir $(abspath $(ARCHIVE))):/archives:ro \
+		dagster-code python pipelines/scripts/pin_clay_release.py \
+		--release $(RELEASE) --department $(DEPARTMENT) \
+		--archive /archives/$(notdir $(ARCHIVE))
+
+georisques-pin-sup:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/contracts:/workspace/contracts \
+		dagster-code python pipelines/scripts/pin_sup_release.py \
+		--release $(RELEASE) --department $(DEPARTMENT)
+
+georisques-import:
+	test -n "$(RELEASE)"
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_georisques_release.py $(RELEASE) \
+		--department $(DEPARTMENT)
+
+georisques-report:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/georisques_coverage_report.py \
+		--department $(DEPARTMENT)
+
 urban-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

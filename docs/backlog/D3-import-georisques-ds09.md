@@ -1,6 +1,6 @@
 # D3 — DS-09 Géorisques : granularité conservée
 
-**Version :** v0.5 · **Taille :** L · **État :** À faire
+**Version :** v0.5 · **Taille :** L · **État :** Terminé
 **Dépend de :** D1 · **Bloque :** D5
 **Touche :** pipelines/scripts/import_georisques_release.py, contracts/datasets/DS-09/, docs/data/georisques-quality-35.md
 
@@ -100,3 +100,82 @@ communal reste `commune_context_only` et ne devient jamais une exposition parcel
 - manifestes `contracts/datasets/DS-09/releases/…` par famille ;
 - section DS-09 de [`market-data-sources-audit.md`](../data/market-data-sources-audit.md) ;
 - rapport `docs/data/georisques-coverage-35.md`.
+
+## Résultat — 14 septembre 2026, `display_only` sur dix familles
+
+**Preuves :** [`georisques-source-inventory-35.md`](../data/georisques-source-inventory-35.md) ·
+[`georisques-coverage-35.md`](../data/georisques-coverage-35.md) · §DS-09 de
+[`market-data-sources-audit.md`](../data/market-data-sources-audit.md) · dix manifestes dans
+`contracts/datasets/DS-09/releases/`.
+
+**10 824 observations, dont 6 985 à granularité fine.** Une release par famille, comme le ticket
+le demandait.
+
+### L'inventaire avant le premier lot a changé la forme du ticket
+
+`ARCHITECTURE.md` §10.6 impose d'inventorier la variété d'une source avant son premier lot. Fait
+ici, il a montré que le ticket supposait un mode d'accès là où la source en a **quatre** :
+
+| Mode | Familles |
+|---|---|
+| API départementale, un appel | ICPE, cavités, mouvements de terrain, sites pollués |
+| API communale, 332 appels | radon, GASPAR, atlas des zones inondables, CatNat |
+| Téléchargement national de 623 Mo | argiles |
+| Géoportail de l'urbanisme | servitudes |
+
+C'est cet inventaire, et non l'import, qui a permis d'écrire les gardes qui suivent.
+
+### Quatre pièges, tous silencieux
+
+**Un paramètre territorial inconnu est ignoré, pas rejeté.**
+`installations_classees?code_departement=35` répond `200` avec **138 248 résultats** — la France
+entière — parce que le paramètre attendu s'appelle `departement`. Sur `ssp/instructions`, c'est
+l'inverse. Le filtre est vérifié ligne à ligne ; s'y fier au code HTTP aurait peuplé la base de
+134 000 lignes étrangères sans une erreur.
+
+**Le lien de pagination pointe une machine interne du producteur** —
+`api-georisques.bike-prod.brgm.fr`, en clair et injoignable. Toute famille de plus d'une page
+échouait. Les pages sont reconstruites sur l'hôte public.
+
+**Un `500` peut vouloir dire « paramètre manquant ».** La temporisation se décide sur le corps,
+pas sur le statut.
+
+**Un `403` du GPU n'est pas toujours un refus.** `T1` a échoué une fois puis répondu ; quatre
+autres documents le refusent aux trois tentatives. Sans reprise, un refus passager retirait un
+document du manifeste et personne n'y revenait.
+
+**Et un cinquième, trouvé après coup.** `_geojson_wkt` ne traitait que les `MultiPolygon` : le
+découpage des argiles par commune produit un `Polygon` dès que l'intersection est d'un seul
+tenant, et **1 131 observations sur 1 428 disparaissaient**, import en succès. Corrigé, couvert
+par test, et l'import compte désormais tout enregistrement qui ne produit aucune observation —
+c'est ce compteur qui empêche la perte silencieuse de recommencer.
+
+### `RISK-002` reste absente, et c'est un résultat
+
+Aucune source du 35 ne donne une zone inondable **typée**. GASPAR et l'atlas disent qu'une commune
+est concernée : c'est communal, et « la commune est concernée par un PPRI » n'est pas « la
+parcelle est en zone inondable » — l'interdit central du ticket.
+
+La servitude `PM1` donne bien des géométries de zone, seul zonage opposable du département, mais
+elle porte les risques naturels prévisibles **sans dire lequel** : son assiette est une
+« enveloppe des zonages réglementaires ». En déduire « inondation » serait la faute commise sur le
+champ `ETAT` du CNIG pendant [D2](./D2-import-gpu-ds08.md). Les périmètres restent visibles dans
+`RISK-101` sous `sup_PM1`.
+
+**Ce qui débloquerait `RISK-002`** est la table de correspondance assiette `PM1` → aléa, à sourcer
+auprès du producteur. Travail court, non fait ici parce qu'il demande une source, pas du code.
+
+### Ce que les servitudes ont apporté, et ce qui manque
+
+Cinq des neuf servitudes du 35 sont lisibles, dont `PM1` et `PM3`, les deux qui portent des
+risques. Les quatre autres — canalisations, aéronautique, télécoms — sont refusées au
+téléchargement par leur producteur, aux trois tentatives. Aucune feature RISK ne les consulte, et
+le manifeste consigne le refus plutôt que de laisser croire à une couverture complète.
+
+`find_layers` de `market_data.cnig` accepte désormais une liste de couches : la reconnaissance est
+la même pour un document d'urbanisme et pour une servitude, seule la liste change.
+
+### Pourquoi `display_only`
+
+La revue manuelle stratifiée relève de [D6](./D6-revue-manuelle-metier.md). B4 a montré ce qu'elle
+trouve que les contrôles automatiques ne voient pas.

@@ -1,0 +1,36 @@
+{
+  "release_id": "DS-09@gaspar-risks--2026-09-14",
+  "release_key": "gaspar-risks--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "gaspar-risks",
+  "key_derivation": "Date d'épinglage. Géorisques ne publie pas d'édition datée par famille : la clé identifie les octets relevés ce jour-là, pas une édition amont. Le format suit `key_format: risk-family--YYYY-MM-DD` du contrat.",
+  "discovery": {
+    "catalog_entry": "https://www.georisques.gouv.fr/api/v1/gaspar/risques",
+    "access_mode": "commune",
+    "territory_parameter": "code_insee",
+    "granularity": "commune",
+    "api_is_not_a_path_back": "L'URL rejouée demain rendrait d'autres octets. Seule l'archive nommée ci-dessous permet de retrouver les octets importés, et le SHA-256 la contraint.",
+    "silent_national_fallback": "Un paramètre territorial inconnu n'est pas rejeté : il est ignoré, et la réponse couvre la France entière avec un statut 200. Le filtre est donc vérifié ligne à ligne à l'épinglage, pas déduit du code HTTP.",
+    "canonical_bytes": "Enregistrements triés et clés ordonnées : l'ordre de pagination d'une API n'est pas garanti stable, et sans canonicalisation le checksum ne prouverait rien."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://www.georisques.gouv.fr/api/v1/gaspar/risques?code_insee=…",
+      "sha256": "70294393367f5d0b01f562a416f96655ff842359730f4a6dbe0a5d0b50161ddc",
+      "byte_size": 5908,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/gaspar-risks/gaspar-risks--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 332,
+        "uncompressed_byte_size": 195546,
+        "territories": 332
+      }
+    }
+  ]
+}

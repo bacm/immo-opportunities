@@ -81,15 +81,22 @@ class LayerMembers:
         return ".shp" in self.files
 
 
-def find_layers(archive: zipfile.ZipFile) -> dict[str, LayerMembers]:
-    """Reconnaître les couches de l'archive, quelle que soit la convention de nommage."""
+def find_layers(
+    archive: zipfile.ZipFile, layers: tuple[str, ...] = LAYERS
+) -> dict[str, LayerMembers]:
+    """Reconnaître les couches de l'archive, quelle que soit la convention de nommage.
+
+    `layers` par défaut sont celles d'un document d'urbanisme. Les servitudes d'utilité publique
+    en ont d'autres — `ASSIETTE_SUP_S`, `GENERATEUR_SUP_S` — et relèvent de D3 : la reconnaissance
+    est la même, seule la liste change.
+    """
     found: dict[str, dict[str, str]] = {}
     for member in archive.namelist():
         base = member.rsplit("/", 1)[-1].lower()
         suffix = "." + base.rsplit(".", 1)[-1] if "." in base else ""
         if suffix not in SHAPEFILE_SUFFIXES:
             continue
-        for layer in LAYERS:
+        for layer in layers:
             # Le nom de couche, eventuellement precede d'un prefixe et suivi d'une date, elle
             # meme eventuellement suivie d'une lettre de version de procedure. Trois formes
             # observees sur des documents reels du 35 :

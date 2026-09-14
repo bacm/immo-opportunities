@@ -1,0 +1,36 @@
+{
+  "release_id": "DS-09@industrial-installation--2026-09-14",
+  "release_key": "industrial-installation--2026-09-14",
+  "source_published_on": "2026-09-14",
+  "department": "35",
+  "contract_version": 1,
+  "risk_family": "industrial-installation",
+  "key_derivation": "Date d'épinglage. Géorisques ne publie pas d'édition datée par famille : la clé identifie les octets relevés ce jour-là, pas une édition amont. Le format suit `key_format: risk-family--YYYY-MM-DD` du contrat.",
+  "discovery": {
+    "catalog_entry": "https://www.georisques.gouv.fr/api/v1/installations_classees",
+    "access_mode": "department",
+    "territory_parameter": "departement",
+    "granularity": "point",
+    "api_is_not_a_path_back": "L'URL rejouée demain rendrait d'autres octets. Seule l'archive nommée ci-dessous permet de retrouver les octets importés, et le SHA-256 la contraint.",
+    "silent_national_fallback": "Un paramètre territorial inconnu n'est pas rejeté : il est ignoré, et la réponse couvre la France entière avec un statut 200. Le filtre est donc vérifié ligne à ligne à l'épinglage, pas déduit du code HTTP.",
+    "canonical_bytes": "Enregistrements triés et clés ordonnées : l'ordre de pagination d'une API n'est pas garanti stable, et sans canonicalisation le checksum ne prouverait rien."
+  },
+  "assets": [
+    {
+      "layer": "observations",
+      "url": "https://www.georisques.gouv.fr/api/v1/installations_classees?departement=…",
+      "sha256": "0596a461a7f08a3c43db0ba480a5119638c189abfc0f08c4fdd0d25045a830fc",
+      "byte_size": 626689,
+      "media_type": "application/json",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-09/industrial-installation/industrial-installation--2026-09-14/35/observations.json.gz"
+      },
+      "extract": {
+        "records": 4350,
+        "uncompressed_byte_size": 6095943,
+        "territories": 1
+      }
+    }
+  ]
+}
