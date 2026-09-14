@@ -34,7 +34,22 @@ test('le cas à juger ne révèle ni décision ni confiance, dans la réponse r�
   }
 })
 
+/**
+ * Ces deux tests portent sur le formulaire de verdict, qui n'existe que tant qu'un cas reste à
+ * juger. L'échantillon `b4-2026-09-08` est **entièrement jugé** depuis la clôture de B4 — 142 cas
+ * jugés, 38 abandonnés dans deux strates closes — et l'écran affiche alors « Échantillon
+ * entièrement jugé ».
+ *
+ * Les ignorer dans cet état plutôt que les supprimer : ils redeviennent utiles au prochain
+ * tirage, et le protocole de B4 prévoit qu'il y en ait d'autres. Un test supprimé ne revient pas.
+ */
+async function caseAvailable(page: import('@playwright/test').Page): Promise<boolean> {
+  const response = await page.request.get('/api/v1/review/samples/b4-2026-09-08/next')
+  return response.ok()
+}
+
 test('un verdict exige un motif et la mention de ce qui a été consulté', async ({ page }) => {
+  test.skip(!(await caseAvailable(page)), 'échantillon entièrement jugé')
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()
   await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })
@@ -53,6 +68,7 @@ test('un verdict exige un motif et la mention de ce qui a été consulté', asyn
 })
 
 test('« indécidable » est proposé au même rang que les deux autres verdicts', async ({ page }) => {
+  test.skip(!(await caseAvailable(page)), 'échantillon entièrement jugé')
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()
   await expect(page.getByText(/^Cas \d+ ·/)).toBeVisible({ timeout: 20_000 })

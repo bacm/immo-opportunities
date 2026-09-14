@@ -668,14 +668,23 @@ function ParcelTransactions({ parcelId }: { parcelId: string }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!open || rows !== null) return
+    if (!open) return
     let cancelled = false
+    // Vider avant de recharger. Sans cela, passer d'une parcelle à sa voisine laissait les
+    // mutations de la première à l'écran : la fiche est rendue à la même place, React réutilise
+    // donc l'instance et son état survit au changement de parcelle. Le garde `rows !== null`,
+    // écrit pour ne pas recharger inutilement, empêchait alors toute nouvelle requête.
+    //
+    // Signalé sur 35024000AP0206, qui affichait les deux ventes de sa voisine AP0207 alors
+    // qu'elle n'en porte qu'une. Un écran de vérification qui attribue une vente à la mauvaise
+    // parcelle est pire qu'un écran absent.
+    setRows(null)
     fetch(`/api/v1/parcels/${encodeURIComponent(parcelId)}/transactions`)
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => { if (!cancelled) setRows(data as ParcelTransaction[]) })
       .catch(() => { if (!cancelled) setRows([]) })
     return () => { cancelled = true }
-  }, [open, parcelId, rows])
+  }, [open, parcelId])
 
   return <section className="detail-section">
     <h3>

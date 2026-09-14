@@ -316,3 +316,31 @@ test('l’état de couverture survit au partage d’URL', async ({ page }) => {
   await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
 })
+
+
+/**
+ * Changer de parcelle doit recharger ses mutations — D6a.
+ *
+ * La fiche est rendue à la même place d'une parcelle à l'autre : React réutilise l'instance et
+ * son état survit au changement. Le bloc de mutations gardait donc celles de la parcelle
+ * précédente, et un garde « ne pas recharger si on a déjà les données » empêchait toute nouvelle
+ * requête.
+ *
+ * Signalé sur 35024000AP0206, qui affichait les deux ventes de sa voisine AP0207 alors qu'elle
+ * n'en porte qu'une. Un écran de vérification qui attribue une vente à la mauvaise parcelle est
+ * pire qu'un écran absent : il fait douter d'une donnée juste, ou pire, il fait croire à une
+ * donnée fausse.
+ */
+test('changer de parcelle recharge ses mutations, sans garder celles de la précédente', async ({ page }) => {
+  await page.goto('/?lon=-1.6&lat=48.1&z=18&department=35&type=parcel&id=parcel:cadastre:35024000AP0207')
+  await page.waitForTimeout(4000)
+  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await page.waitForTimeout(2000)
+  expect(await page.locator('.transaction-row').count()).toBe(2)
+
+  await page.goto('/?lon=-1.6&lat=48.1&z=18&department=35&type=parcel&id=parcel:cadastre:35024000AP0206')
+  await page.waitForTimeout(4000)
+  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await page.waitForTimeout(2000)
+  expect(await page.locator('.transaction-row').count()).toBe(1)
+})
