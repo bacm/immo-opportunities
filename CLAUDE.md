@@ -150,6 +150,12 @@ make morphology-features  # matérialise LAND-*/BLD-* sur les releases acceptée
 interrompu par un `rebuild` lancé pour un autre ticket — la contention entre travaux parallèles ne
 porte pas que sur les fichiers. Vérifier qu'aucun import n'est en cours avant de reconstruire.
 
+**Le front servi n'est pas celui que Playwright teste.** Les tests e2e tournent contre un serveur
+Vite lancé depuis le dépôt ; le navigateur, lui, reçoit un bundle figé au build du conteneur `web`.
+Un test vert ne prouve donc rien sur ce que voit l'utilisateur. Après un changement de front :
+`docker compose … up -d --build web`, puis vérifier sur `http://localhost:8080` — **avec ce nom
+d'hôte**, Caddy ne répondant pas sur `127.0.0.1`.
+
 **Les conteneurs embarquent une copie du code figée au build.** `compose.dev.yaml` ne monte pas
 les sources : un changement backend demande `make rebuild`, pas un `docker compose restart`. Et
 `docker compose` sans les trois `-f` recrée les conteneurs hors configuration de développement.
