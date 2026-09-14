@@ -10,6 +10,7 @@ from immo.explorer import (
     find_parcel,
     find_property_unit,
     list_areas,
+    list_parcel_transactions,
     list_property_units_in_viewport,
     search_entities,
 )
@@ -152,6 +153,40 @@ def building(building_id: str) -> EntityDetailResponse:
     except (OSError, SQLAlchemyError) as exc:
         raise HTTPException(status_code=503, detail="Building data is unavailable") from exc
     return _entity_response(record, "Building not found")
+
+
+class ParcelTransactionResponse(BaseModel):
+    """Une mutation DVF rattachée à la parcelle.
+
+    `allocated_price_eur` est nul quand le prix n'est pas allouable à ce lot, et
+    `unallocated_reason` dit alors pourquoi — c'est le cas de 65,5 % des mutations. Aucun prix au
+    m² n'est calculé : il n'existe pas en base et le dériver ici en fabriquerait un.
+    """
+
+    transaction_id: str
+    mutation_date: str | None
+    mutation_nature: str | None
+    price_eur: float | None
+    property_type: str | None
+    surface_m2: float | None
+    allocated_price_eur: float | None
+    allocation_method: str | None
+    unallocated_reason: str | None
+    parcel_count: int | None
+    lot_count: int | None
+
+
+@router.get("/parcels/{parcel_id}/transactions", response_model=list[ParcelTransactionResponse])
+def parcel_transactions(parcel_id: str) -> list[ParcelTransactionResponse]:
+    """Vérification D6a : les mutations d'une parcelle, sur l'API privée sous RLS.
+
+    Jamais par les tuiles — une transaction n'est pas un attribut de rendu.
+    """
+    try:
+        records = list_parcel_transactions(parcel_id)
+    except (OSError, SQLAlchemyError) as exc:
+        raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
+    return [ParcelTransactionResponse.model_validate(record) for record in records]
 
 
 @router.get("/property-units/{property_unit_id}", response_model=EntityDetailResponse)

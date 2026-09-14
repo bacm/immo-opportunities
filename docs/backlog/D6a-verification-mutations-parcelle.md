@@ -1,6 +1,6 @@
 # D6a — Voir les mutations d'une parcelle, pour vérifier que DVF tient
 
-**Version :** v0.5 · **Taille :** S · **État :** À faire
+**Version :** v0.5 · **Taille :** S · **État :** En cours
 **Touche :** backend/src/immo/explorer.py, backend/src/immo/api/routes/explorer.py, apps/web/src/App.tsx, docs/data/dvf-verification-35.md
 **Dépend de :** D1 · **Bloque :** —
 **Scindé de :** [D6](./D6-revue-manuelle-metier.md), 14 septembre 2026

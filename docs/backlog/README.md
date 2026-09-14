@@ -106,7 +106,7 @@ dérivée du graphe de dépendances.
 | [D4](./D4-import-dpe-ds07.md) | DS-07 DPE : diagnostics réellement déposés | v0.5 | D1 | L | À faire | **prêt** |
 | [D5](./D5-rapports-qualite-metier.md) | Rapports qualité, couverture et fraîcheur par commune | v0.5 | D1, D2, D3, D4 | M | À faire | attend D2, D3, D4 |
 | [D6](./D6-revue-manuelle-metier.md) | Revue manuelle stratifiée comparables / GPU / DPE / risques | v0.5 | D5 | M | À faire | attend D5 |
-| [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | À faire | **prêt** |
+| [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | En cours | en cours |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
 
 ### E — v0.6 Scoring
@@ -143,19 +143,20 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**20/51 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, D3, D4, D6a, D7, G6, G7.
+**20/51 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, D3, D4, D7, G6, G7.
 
 ### Déjà démarré
 
 Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
 
-- **D2** — pipelines/scripts/import_gpu_release.py, pipelines/src/immo_pipelines/market_data/cnig.py, contracts/datasets/DS-08/, docs/data/gpu-coverage-35.md
+- **D2** — pipelines/scripts/compute_urban_features.py, pipelines/scripts/import_gpu_release.py, pipelines/src/immo_pipelines/market_data/cnig.py, contracts/datasets/DS-08/, docs/data/gpu-coverage-35.md
+- **D6a** — backend/src/immo/explorer.py, backend/src/immo/api/routes/explorer.py, apps/web/src/App.tsx, docs/data/dvf-verification-35.md
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A1, BUG-02, BUG-08, D3, D4, D6a, D7, G6
+1. A1, BUG-02, BUG-08, D3, D4, D7, G6
 2. BUG-11, G7
 
 <!-- END:tickets -->

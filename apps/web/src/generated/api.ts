@@ -412,6 +412,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/parcels/{parcel_id}/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Parcel Transactions
+         * @description Vérification D6a : les mutations d'une parcelle, sur l'API privée sous RLS.
+         *
+         *     Jamais par les tuiles — une transaction n'est pas un attribut de rendu.
+         */
+        get: operations["parcel_transactions_api_v1_parcels__parcel_id__transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/property-units": {
         parameters: {
             query?: never;
@@ -1185,6 +1207,38 @@ export interface components {
             transformation_version: string;
             /** Was Repaired */
             was_repaired: boolean;
+        };
+        /**
+         * ParcelTransactionResponse
+         * @description Une mutation DVF rattachée à la parcelle.
+         *
+         *     `allocated_price_eur` est nul quand le prix n'est pas allouable à ce lot, et
+         *     `unallocated_reason` dit alors pourquoi — c'est le cas de 65,5 % des mutations. Aucun prix au
+         *     m² n'est calculé : il n'existe pas en base et le dériver ici en fabriquerait un.
+         */
+        ParcelTransactionResponse: {
+            /** Allocated Price Eur */
+            allocated_price_eur: number | null;
+            /** Allocation Method */
+            allocation_method: string | null;
+            /** Lot Count */
+            lot_count: number | null;
+            /** Mutation Date */
+            mutation_date: string | null;
+            /** Mutation Nature */
+            mutation_nature: string | null;
+            /** Parcel Count */
+            parcel_count: number | null;
+            /** Price Eur */
+            price_eur: number | null;
+            /** Property Type */
+            property_type: string | null;
+            /** Surface M2 */
+            surface_m2: number | null;
+            /** Transaction Id */
+            transaction_id: string;
+            /** Unallocated Reason */
+            unallocated_reason: string | null;
         };
         /** PropertyUnitSummaryResponse */
         PropertyUnitSummaryResponse: {
@@ -2412,6 +2466,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EntityDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parcel_transactions_api_v1_parcels__parcel_id__transactions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parcel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParcelTransactionResponse"][];
                 };
             };
             /** @description Validation Error */

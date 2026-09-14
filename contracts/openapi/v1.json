@@ -1508,6 +1508,140 @@
         "title": "ParcelProvenanceResponse",
         "type": "object"
       },
+      "ParcelTransactionResponse": {
+        "description": "Une mutation DVF rattachée à la parcelle.\n\n`allocated_price_eur` est nul quand le prix n'est pas allouable à ce lot, et\n`unallocated_reason` dit alors pourquoi — c'est le cas de 65,5 % des mutations. Aucun prix au\nm² n'est calculé : il n'existe pas en base et le dériver ici en fabriquerait un.",
+        "properties": {
+          "allocated_price_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocated Price Eur"
+          },
+          "allocation_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Method"
+          },
+          "lot_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Count"
+          },
+          "mutation_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mutation Date"
+          },
+          "mutation_nature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mutation Nature"
+          },
+          "parcel_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Count"
+          },
+          "price_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Eur"
+          },
+          "property_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type"
+          },
+          "surface_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface M2"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          },
+          "unallocated_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unallocated Reason"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "mutation_date",
+          "mutation_nature",
+          "price_eur",
+          "property_type",
+          "surface_m2",
+          "allocated_price_eur",
+          "allocation_method",
+          "unallocated_reason",
+          "parcel_count",
+          "lot_count"
+        ],
+        "title": "ParcelTransactionResponse",
+        "type": "object"
+      },
       "PropertyUnitSummaryResponse": {
         "properties": {
           "area_m2": {
@@ -4147,6 +4281,53 @@
           }
         },
         "summary": "Parcel",
+        "tags": [
+          "real-map"
+        ]
+      }
+    },
+    "/api/v1/parcels/{parcel_id}/transactions": {
+      "get": {
+        "description": "Vérification D6a : les mutations d'une parcelle, sur l'API privée sous RLS.\n\nJamais par les tuiles — une transaction n'est pas un attribut de rendu.",
+        "operationId": "parcel_transactions_api_v1_parcels__parcel_id__transactions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parcel_id",
+            "required": true,
+            "schema": {
+              "title": "Parcel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ParcelTransactionResponse"
+                  },
+                  "title": "Response Parcel Transactions Api V1 Parcels  Parcel Id  Transactions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parcel Transactions",
         "tags": [
           "real-map"
         ]

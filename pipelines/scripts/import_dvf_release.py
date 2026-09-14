@@ -55,7 +55,8 @@ from immo_pipelines.cadastre.settings import CadastreSettings
 # 2 : le prix ne va plus qu au lot auquel il se rapporte. En version 1, une vente de
 # maison avec terrain donnait le montant entier a chacun des deux lots — 5 410
 # mutations et 13 303 lots concernes sur le 35, soit 8,3 % des mutations simples.
-DVF_TRANSFORMATION_VERSION = "2"
+# 3 : la surface d'un lot bati ne peut plus emprunter celle du terrain.
+DVF_TRANSFORMATION_VERSION = "3"
 
 SIMPLE_ALLOCATION = "single_property_full_price"
 
@@ -66,18 +67,25 @@ LAND_PROPERTY_TYPE = "Terrain"
 
 
 def _surface(row: dict[str, str]) -> float | None:
-    """La surface du lot : bâtie si le lot est un local, foncière sinon.
+    """La surface du lot : **bâtie** pour un local, **foncière** pour un terrain, jamais l'autre.
 
-    Une surface absente reste absente. La contrainte de schéma refuse une surface nulle ou
-    négative, ce qui est la bonne garde : une surface de zéro n'est pas une surface.
+    La première version prenait la surface bâtie puis retombait sur la surface de terrain. Ce
+    repli conflait deux grandeurs sans rapport : un lot déclaré `Dépendance` sans surface bâtie
+    ressortait avec les 382 m² de sa parcelle, comme si la dépendance faisait 382 m². Relevé sur
+    **30 816 lots bâtis — 17,2 %** — dont 367 portaient un prix alloué, donc un prix au m² faux
+    d'un ordre de grandeur.
+
+    Un lot bâti sans surface bâtie garde donc une surface **absente**. C'est la règle du projet :
+    une valeur manquante reste manquante, elle n'emprunte pas celle du voisin.
     """
-    for column in ("surface_reelle_bati", "surface_terrain"):
-        raw = row.get(column) or ""
-        if raw:
-            value = float(raw)
-            if value > 0:
-                return value
-    return None
+    column = "surface_terrain" if not row.get("type_local") else "surface_reelle_bati"
+    raw = row.get(column) or ""
+    if not raw:
+        return None
+    value = float(raw)
+    # La contrainte de schema refuse une surface nulle ou negative, et c'est la bonne garde :
+    # une surface de zero n'est pas une surface.
+    return value if value > 0 else None
 
 
 @dataclass

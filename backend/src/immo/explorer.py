@@ -446,6 +446,68 @@ def find_building(building_id: str) -> EntityDetail | None:
     return _detail_from_row(dict(row), entity_type="building") if row else None
 
 
+def list_parcel_transactions(parcel_id: str) -> list[dict[str, Any]]:
+    """Les mutations DVF rattachées à une parcelle — instrument de vérification, D6a.
+
+    **Ce n'est pas une fonctionnalité de consultation DVF.** Le produit classe des candidats ; il
+    ne donne pas accès à l'historique des ventes. Cette lecture existe pour qu'un humain vérifie
+    que l'import et le rattachement tiennent, comme l'écran de revue de B4 l'a fait pour les
+    appariements — et B4 a produit trois défauts structurels qu'aucun contrôle automatique
+    n'avait vus.
+
+    Aucun prix au m² n'est calculé ici. Le prix alloué et la surface sortent tels qu'ils sont en
+    base : dériver un ratio à l'affichage fabriquerait une valeur qui n'existe nulle part, et
+    **65,5 % des mutations n'ont aucun prix allouable**. Leur motif est la donnée utile.
+    """
+    statement = text(
+        """
+        SELECT transaction.source_identifier,
+               transaction.mutation_date,
+               transaction.mutation_nature,
+               transaction.price_eur,
+               transaction.is_complex,
+               transaction.complex_reason,
+               property.property_type,
+               property.surface_m2,
+               property.allocated_price_eur,
+               property.allocation_method,
+               (transaction.properties->>'parcel_count')::int AS parcel_count,
+               (transaction.properties->>'row_count')::int AS lot_count
+          FROM observation.transaction_property AS property
+          JOIN observation."transaction" AS transaction
+            ON transaction.id = property.transaction_id
+          JOIN reference.parcel AS parcel ON parcel.id = property.parcel_id
+         WHERE parcel.cadastral_id = :cadastral_id
+         ORDER BY transaction.mutation_date DESC, transaction.source_identifier
+        """
+    )
+    cadastral_id = parcel_id.removeprefix("parcel:cadastre:")
+    with get_engine().connect() as connection:
+        rows = connection.execute(statement, {"cadastral_id": cadastral_id}).mappings().all()
+    return [
+        {
+            "transaction_id": str(row["source_identifier"]),
+            "mutation_date": row["mutation_date"].isoformat() if row["mutation_date"] else None,
+            "mutation_nature": row["mutation_nature"],
+            "price_eur": float(row["price_eur"]) if row["price_eur"] is not None else None,
+            "property_type": row["property_type"],
+            "surface_m2": float(row["surface_m2"]) if row["surface_m2"] is not None else None,
+            "allocated_price_eur": (
+                float(row["allocated_price_eur"])
+                if row["allocated_price_eur"] is not None
+                else None
+            ),
+            "allocation_method": row["allocation_method"],
+            # Le motif de non-allocation est l'information, pas un detail : sans lui, un prix
+            # absent se lit comme un oubli.
+            "unallocated_reason": row["complex_reason"] if row["is_complex"] else None,
+            "parcel_count": row["parcel_count"],
+            "lot_count": row["lot_count"],
+        }
+        for row in rows
+    ]
+
+
 def find_property_unit(property_unit_id: str) -> EntityDetail | None:
     parcel_id = property_unit_id.removeprefix("property-unit:parcel:")
     if not parcel_id.startswith("parcel:cadastre:"):
