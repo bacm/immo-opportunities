@@ -91,6 +91,12 @@ rnb-import:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/import_rnb_release.py 2026-09-05 --department $(DEPARTMENT)
 
+gpu-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_gpu_release.py 2026-09-14 \
+		--department $(DEPARTMENT) $(if $(LIMIT),--limit $(LIMIT),)
+
 dvf-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
