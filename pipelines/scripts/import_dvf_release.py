@@ -58,6 +58,11 @@ from immo_pipelines.cadastre.settings import CadastreSettings
 # 3 : la surface d'un lot bati ne peut plus emprunter celle du terrain.
 DVF_TRANSFORMATION_VERSION = "3"
 
+# La version entre dans l'identifiant de chaque ligne, et pas seulement dans une constante. Sans
+# cela, `ON CONFLICT DO NOTHING` conserve les lignes de la version precedente et un correctif de
+# code n'atteint jamais les donnees : c'est exactement ce qui s'est produit sur BUG-09, ou la
+# regle du rang etait ecrite, testee, et 1 240 355 relations fautives restaient en base.
+
 SIMPLE_ALLOCATION = "single_property_full_price"
 
 # Une ligne sans `type_local` n'est pas une ligne dont le type manque : c'est un lot de terrain.
@@ -173,10 +178,10 @@ def import_year(
 
         transactions.append(
             (
-                f"transaction:dvf:{release_id}:{mutation_id}",
+                f"transaction:dvf:{release_id}:v{DVF_TRANSFORMATION_VERSION}:{mutation_id}",
                 release_id,
                 raw_asset_id,
-                mutation_id,
+                f"v{DVF_TRANSFORMATION_VERSION}:{mutation_id}",
                 head["date_mutation"] or None,
                 head["nature_mutation"] or None,
                 mutation.price,
@@ -202,8 +207,8 @@ def import_year(
             properties.append(
                 (
                     f"transaction-property:dvf:{release_id}:{mutation_id}:{index}",
-                    f"transaction:dvf:{release_id}:{mutation_id}",
-                    f"{mutation_id}:{index}",
+                    f"transaction:dvf:{release_id}:v{DVF_TRANSFORMATION_VERSION}:{mutation_id}",
+                    f"v{DVF_TRANSFORMATION_VERSION}:{mutation_id}:{index}",
                     row["id_parcelle"] or None,
                     row["type_local"] or LAND_PROPERTY_TYPE,
                     surface,
