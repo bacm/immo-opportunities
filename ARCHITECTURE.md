@@ -626,6 +626,21 @@ attributs obligatoires vides, les types de géométrie.
 6. **Un message d'erreur nomme sa cause.** Une bibliothèque peut lever une exception sans message
    utile ; le type et le contexte sont joints avant de consigner.
 
+#### Une reprise se fonde sur l'état écrit, pas sur un journal
+
+Un lot long est interrompu, et pas seulement par le réseau. L'import DS-08 l'a été deux fois : une
+coupure amont, puis un `make rebuild` lancé pour **un autre ticket**, qui recrée PostgreSQL et
+termine toutes les connexions en cours.
+
+Le second cas mérite d'être retenu : la contention entre travaux parallèles ne porte pas que sur
+les fichiers. Une commande d'infrastructure est globale, et aucun découpage de tickets ne protège
+d'elle.
+
+D'où la règle : **un import reprend en lisant ce qui est déjà en base**, pas en se fiant à un
+journal ou à un compteur en mémoire. Chaque élément est committé séparément, et la reprise
+interroge la base pour savoir ce qui reste. C'est ce qui a permis de ne rien perdre des 145
+documents déjà importés quand la connexion a été coupée.
+
 #### Ce que la règle interdit
 
 Réparer en silence. Une géométrie invalide est comptée et écartée, pas corrigée ; un encodage

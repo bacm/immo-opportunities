@@ -146,6 +146,10 @@ make physical-buildings   # regroupe les enregistrements en bâtiments physiques
 make morphology-features  # matérialise LAND-*/BLD-* sur les releases acceptées
 ```
 
+**`make rebuild` recrée PostgreSQL et coupe tout travail en cours.** Un import qui tourne est
+interrompu par un `rebuild` lancé pour un autre ticket — la contention entre travaux parallèles ne
+porte pas que sur les fichiers. Vérifier qu'aucun import n'est en cours avant de reconstruire.
+
 **Les conteneurs embarquent une copie du code figée au build.** `compose.dev.yaml` ne monte pas
 les sources : un changement backend demande `make rebuild`, pas un `docker compose restart`. Et
 `docker compose` sans les trois `-f` recrée les conteneurs hors configuration de développement.

@@ -335,12 +335,25 @@ def main() -> int:
         )
         connection.commit()
 
+        # Reprise : ne pas relire une archive dont le document est deja en base. Un import
+        # departemental demande plus d'une heure, et il a ete interrompu deux fois — une coupure
+        # reseau, puis un `make rebuild` lance pour un autre ticket, qui recree PostgreSQL et
+        # coupe toutes les connexions en cours.
+        imported = {
+            row[0]
+            for row in connection.execute(
+                "SELECT source_identifier FROM observation.urban_document WHERE release_id = %s",
+                (release_id,),
+            ).fetchall()
+        }
         assets = manifest["assets"]
         if arguments.only:
             wanted = {name.strip() for name in arguments.only.split(",")}
             assets = [a for a in assets if a["name"] in wanted]
         assets = assets[: arguments.limit]
         for asset in assets:
+            if any(name.startswith(str(asset["name"]).removeprefix("DU_")) for name in imported):
+                continue
             try:
                 counters = import_document(
                     connection,
