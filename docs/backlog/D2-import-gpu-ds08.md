@@ -1,6 +1,6 @@
-# D2 — DS-08 GPU : documents, zones et contraintes
+# D2 — DS-08 GPU : zonage et contraintes, sans interprétation de règlement
 
-**Version :** v0.5 · **Taille :** L · **État :** À faire
+**Version :** v0.5 · **Taille :** M · **État :** À faire
 **Dépend de :** D1 · **Bloque :** D5
 
 ## Contexte à charger
@@ -85,19 +85,50 @@ avec nos parcelles décide. C'est aussi ce qui rend l'aberration inoffensive.
 3. Importer `UrbanDocument`, `UrbanZone`, `UrbanConstraint` en conservant l'identifiant CNIG.
 4. Rattacher les zones aux parcelles du référentiel spatial, avec gestion explicite des
    chevauchements.
-5. Valider un **profil de règles** par version exacte de document. `URB-004` n'est calculé que si
-   toutes les règles indispensables sont structurées et validées pour cette version précise.
-6. Publier la couverture : combien de communes disposent d'un document opposable importé, combien
-   ont un profil de règles validé, combien restent sans donnée.
+5. Publier la couverture : combien de communes disposent d'un document opposable importé, combien
+   relèvent d'un PLUi, combien restent sans donnée — donc au RNU.
+6. Calculer `URB-005` **complétude des règles**, qui vaut zéro partout tant que
+   [D2b](./D2b-profils-de-regles.md) n'a rien validé. C'est un résultat, pas un échec : la feature
+   existe pour dire à quel point l'interprétation réglementaire est incomplète.
+
+## Ce que ce ticket livre, et ce qu'il ne livre pas
+
+| Feature | Formule | Ce ticket |
+|---|---|---|
+| `URB-001` code de zone | recouvrement représentatif avec la zone opposable | **livrée** |
+| `URB-003` contraintes connues | comptage typé et aire d'intersection | **livrée** |
+| `URB-005` complétude des règles | règles validées / règles requises | **livrée**, à zéro |
+| `URB-002` profil de règles | profil structuré validé manuellement | [D2b](./D2b-profils-de-regles.md) |
+| `URB-004` emprise résiduelle | après toutes les règles indispensables validées | [D2b](./D2b-profils-de-regles.md) |
+
+### Pourquoi la scission — arbitrage du 14 septembre 2026
+
+Le ticket portait les cinq features, dont deux exigent qu'un humain lise un règlement et en
+structure les règles. Mesuré sur l'API GPU : **12 795 documents d'urbanisme** en production en
+France — 9 463 PLU, 2 723 cartes communales, 565 PLUi, 42 PSMV, 2 POS. À trente minutes par
+document, ce qui est optimiste, cela représente près de **quatre années-personne**. La Bretagne
+seule en demanderait une dizaine de semaines, le 35 environ deux et demie.
+
+Aucune astuce ne réduit ce coût, puisque l'interprétation automatique du texte est interdite ici
+et le restera.
+
+Mais **trois features sur cinq n'en dépendent pas** : le zonage et les contraintes se rattachent
+spatialement, sans lire une ligne de règlement. La validation n'est donc pas un prérequis de
+l'import, c'est un **enrichissement** — et `URB-005` existe précisément pour publier à quel point
+il manque.
+
+Surtout, l'ordre de travail s'inverse. Valider 12 795 règlements avant de savoir quelles communes
+portent des candidats, c'est travailler à l'envers : le produit **classe**, et on ne valide un
+règlement que là où un candidat émerge. Quelques dizaines de communes, pas douze mille documents.
+D'où D2b, après [E3](./E3-publier-snapshots.md).
 
 ## Points de vigilance
 
-- **Risque déclaré :** appliquer un profil PLU à une mauvaise version du document. Le rattachement
-  profil ↔ version doit être strict et testé, pas conventionnel.
+- **Risque déclaré :** appliquer un profil PLU à une mauvaise version du document. Le modèle doit
+  porter la version exacte dès cet import, même si aucun profil n'existe encore — sinon
+  [D2b](./D2b-profils-de-regles.md) n'aura rien à quoi s'accrocher.
 - Un document périmé à la date du snapshot est inutilisable : la zone reste absente avec motif.
 - Un chevauchement matériel sans gagnant clair est ambigu, pas arbitré.
-- La validation des profils de règles est un travail humain non automatisable : le prévoir dans la
-  charge, commune par commune. C'est la principale raison pour laquelle ce ticket est L et non M.
 - Une zone GPU ne dit pas ce qui est constructible en pratique. Les features URB expriment un
   contexte réglementaire observé, jamais une autorisation.
 
