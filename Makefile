@@ -115,6 +115,25 @@ dvf-import:
 		dagster-code python pipelines/scripts/import_dvf_release.py 2026-09-13 \
 		--department $(DEPARTMENT) $(if $(YEAR),--year $(YEAR),)
 
+dpe-pin:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/contracts:/workspace/contracts \
+		dagster-code python pipelines/scripts/pin_dpe_release.py \
+		--release $(RELEASE) --department $(DEPARTMENT)
+
+dpe-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_dpe_release.py 2026-09-14-extract \
+		--department $(DEPARTMENT) $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
+
+dpe-report:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/dpe_matching_report.py --department $(DEPARTMENT)
+
 urban-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

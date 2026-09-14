@@ -86,6 +86,7 @@ dérivée du graphe de dépendances.
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
 | [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | À faire | **prêt** |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
+| [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
 
 ### C — v0.4 Carte réelle
 
@@ -103,8 +104,8 @@ dérivée du graphe de dépendances.
 | [D2](./D2-import-gpu-ds08.md) | DS-08 GPU : zonage et contraintes, sans interprétation de règlement | v0.5 | D1 | M | Terminé | — |
 | [D2b](./D2b-profils-de-regles.md) | Profils de règles d'urbanisme, là où un candidat le justifie | v0.6 | D2, E3 | L | À faire | attend E3 |
 | [D3](./D3-import-georisques-ds09.md) | DS-09 Géorisques : granularité conservée | v0.5 | D1 | L | À faire | **prêt** |
-| [D4](./D4-import-dpe-ds07.md) | DS-07 DPE : diagnostics réellement déposés | v0.5 | D1 | L | À faire | **prêt** |
-| [D5](./D5-rapports-qualite-metier.md) | Rapports qualité, couverture et fraîcheur par commune | v0.5 | D1, D2, D3, D4 | M | À faire | attend D3, D4 |
+| [D4](./D4-import-dpe-ds07.md) | DS-07 DPE : diagnostics réellement déposés | v0.5 | D1 | L | Terminé | — |
+| [D5](./D5-rapports-qualite-metier.md) | Rapports qualité, couverture et fraîcheur par commune | v0.5 | D1, D2, D3, D4 | M | À faire | attend D3 |
 | [D6](./D6-revue-manuelle-metier.md) | Revue manuelle stratifiée comparables / GPU / DPE / risques | v0.5 | D5 | M | À faire | attend D5 |
 | [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | Terminé | — |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
@@ -143,14 +144,15 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**22/51 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, D3, D4, D7, G6, G7.
+**23/52 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, BUG-13, D3, D7, G6, G7.
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A1, BUG-02, BUG-08, D3, D4, D7, G6
+1. A1, BUG-02, BUG-08, D3, D7, G6
 2. BUG-11, G7
+3. BUG-13
 
 <!-- END:tickets -->
 

@@ -18,11 +18,22 @@
     "key_format": "YYYY-MM-DD-extract",
     "discovery_url": "https://data.ademe.fr/datasets/dpe-v2-logements-existants",
     "preferred_format": "CSV/API extract archived before import",
-    "partition_dimensions": ["release", "department"],
+    "partition_dimensions": [
+      "release",
+      "department"
+    ],
     "checksum_algorithm": "sha256",
-    "latest_alias_forbidden_for_reproducible_imports": true
+    "latest_alias_forbidden_for_reproducible_imports": true,
+    "api_slug": "dpe03existant",
+    "access_note": "L'API data-fair ne résout pas le slug de la page portail (`dpe-v2-logements-existants`) : elle attend `dpe03existant`. Le jeu servi est une vue virtuelle filtrée par l'ADEME sur `dpe_desactive = 0` ; le jeu sous-jacent, qui porte les diagnostics désactivés, répond 403. Un diagnostic annulé n'est donc jamais observable, et l'exclusion est celle du producteur. Aucun fichier daté n'est publié : l'extrait est constitué par pagination puis archivé et checksumé avant import, ce que `key_format` prévoyait."
   },
-  "coverage": {"country": "FR", "initial_departments": ["35"], "start_date": "2021-07-01"},
+  "coverage": {
+    "country": "FR",
+    "initial_departments": [
+      "35"
+    ],
+    "start_date": "2021-07-01"
+  },
   "layers": {
     "assessments": {
       "target": "observation.energy_assessment",
@@ -45,18 +56,58 @@
   },
   "field_policy": {
     "allowed": "actually deposited DPE records and observed declared characteristics",
-    "excluded": ["simulated DPE", "predicted energy label", "BDNB Expert prediction"],
+    "excluded": [
+      "simulated DPE",
+      "predicted energy label",
+      "BDNB Expert prediction"
+    ],
     "missing_dpe": "neutral contribution; confidence reduction only",
     "multiple_at_address": "ambiguous until a building or dwelling is resolved"
   },
   "quality_checks": [
-    {"code": "schema", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "checksum", "version": "1", "scope": "asset", "blocks_publication": true},
-    {"code": "deposited_only", "version": "1", "scope": "row", "blocks_publication": true},
-    {"code": "label_consumption_consistency", "version": "1", "scope": "row", "blocks_publication": false},
-    {"code": "building_match_rate", "version": "1", "scope": "commune", "blocks_publication": false},
-    {"code": "multiple_dpe_resolution", "version": "1", "scope": "address", "blocks_publication": true}
+    {
+      "code": "schema",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "checksum",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "deposited_only",
+      "version": "1",
+      "scope": "row",
+      "blocks_publication": true
+    },
+    {
+      "code": "label_consumption_consistency",
+      "version": "1",
+      "scope": "row",
+      "blocks_publication": false
+    },
+    {
+      "code": "building_match_rate",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": false
+    },
+    {
+      "code": "multiple_dpe_resolution",
+      "version": "1",
+      "scope": "address",
+      "blocks_publication": true
+    }
   ],
-  "publication": {"atomic_pointer_scope": "department", "acceptance_report_required": true},
-  "retention": {"raw_assets": "permanent and immutable", "observations": "append-only by release"}
+  "publication": {
+    "atomic_pointer_scope": "department",
+    "acceptance_report_required": true
+  },
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "observations": "append-only by release"
+  }
 }

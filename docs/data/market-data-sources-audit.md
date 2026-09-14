@@ -10,7 +10,7 @@ encore acceptée ou publiable.
 | Source | Release réelle archivée | Tests de contrat | Verdict actuel |
 |---|---:|---:|---|
 | DS-06 DVF (geo-dvf) | **oui** | oui | **`display_only`** — release réelle importée et auditée, segments et seuil de support à calibrer par E1 |
-| DS-07 DPE ADEME | non | oui | **rejeté pour publication** — release et contrôle d'appariement réels absents |
+| DS-07 DPE ADEME | **oui** | oui | **`display_only`** — release réelle importée et auditée, revue manuelle D6 requise pour accepter |
 | DS-08 GPU/CNIG | non | oui | **rejeté pour publication** — documents opposables et profils validés absents |
 | DS-09 Géorisques | non | oui | **rejeté pour publication** — releases par famille de risque absentes |
 
@@ -66,7 +66,58 @@ transactions, c'est-à-dire le risque de fausse précision déclaré par la v0.5
 - médiane pondérée, quartiles, dispersion, récence, liquidité et tendance restent absents quand le
   support statistique requis manque.
 
-### DS-07 — DPE
+### DS-07 — verdict du 14 septembre 2026 : `display_only`
+
+**Preuve :** [`dpe-matching-35.md`](./dpe-matching-35.md) · **Release :**
+`DS-07@2026-09-14-extract`, 231 416 diagnostics, 208 086 conservés, 335 communes.
+
+**Source sans fichier, et le contrat l'avait prévu.** L'ADEME ne publie aucun fichier daté : la
+seule voie d'accès est l'API `data-fair`, dont le contenu change en continu. `key_format:
+YYYY-MM-DD-extract` anticipait exactement ce cas. L'extrait départemental — 24 pages, 226
+colonnes, 458 Mo bruts — est constitué par pagination, archivé dans MinIO et checksumé avant
+import. **L'URL n'est pas un chemin de retour** ; l'archive nommée au manifeste l'est.
+
+**Ce qui est acquis.** Aucun enregistrement écarté à l'éligibilité : les 231 416 lignes sont des
+diagnostics réglementaires déposés, antérieurs au snapshot. Import idempotent, clé portant la
+version de transformation, réimport vérifié à l'identique. Rattachement par **identifiant
+déclaré**, jamais par géométrie :
+
+| Classe | Diagnostics | Part |
+|---|---:|---:|
+| Bâtiment, par `id_rnb` | 136 628 | 59,04 % |
+| Adresse seule, par `identifiant_ban` | 71 458 | 30,88 % |
+| Non rattaché, motif consigné | 23 330 | 10,08 % |
+
+Le taux d'appariement au bâtiment va de **14,8 % à 80,2 %** entre communes de plus de 100
+diagnostics — la dispersion est réelle et publiée telle quelle.
+
+**Deux constats que la source impose.**
+
+- **Elle se contredit sur son propre géocodage.** 17 135 diagnostics portent un
+  `identifiant_ban` qui se résout dans notre référentiel alors que `statut_geocodage` annonce
+  « aucune correspondance trouvée » — et leur `score_ban` médian y est *plus élevé* que sur les
+  lignes géocodées. L'adresse est conservée, la confiance devient absente avec le motif
+  `contradictory_geocoding_status`. Quarantaine par attribut de
+  [BUG-03](../backlog/BUG-03-quarantaine-par-attribut.md).
+- **Un diagnostic annulé n'est jamais observable.** Le jeu servi est une vue virtuelle filtrée
+  par l'ADEME sur `dpe_desactive = 0` ; le jeu sous-jacent répond 403. La règle qui l'écarterait
+  existe et est testée, mais l'exclusion est celle du producteur, pas la nôtre, et le rapport le
+  dit plutôt que de laisser croire à une couverture complète.
+
+**Pourquoi `display_only` et non `accepted`.** La revue manuelle stratifiée n'a pas eu lieu.
+C'est l'étape 4 de la procédure d'acceptation ci-dessous, et elle relève de
+[D6](../backlog/D6-revue-manuelle-metier.md). B4 a montré ce que cette étape trouve : trois
+défauts structurels qu'aucun contrôle automatique n'avait vus. 9 423 adresses portent plusieurs
+diagnostics sans rattachement bâtiment — 47 284 diagnostics — et c'est précisément la population
+qu'une revue humaine doit trancher.
+
+**Ce que la release n'apporte pas.** `REN-001..008` ne sont **pas matérialisées** :
+`feature.feature_value.building_id` réfère les enregistrements RNB, sujet que
+[BUG-12](../backlog/BUG-12-deduplication-batiments-physiques.md) a invalidé. Les distributions
+dont [E1](../backlog/E1-profiling-distributions.md) a besoin sont au rapport ; la matérialisation
+attend [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md).
+
+### DS-07 — DPE (audit initial, avant import)
 
 - seuls les diagnostics déposés, non simulés, non annulés et antérieurs au snapshot sont éligibles ;
 - le dernier diagnostic directement rattaché au bâtiment est retenu ;

@@ -1,0 +1,33 @@
+{
+  "release_id": "DS-07@2026-09-14-extract",
+  "release_key": "2026-09-14-extract",
+  "source_published_on": "2026-09-09",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "Date de constitution de l'extrait. L'ADEME ne publie pas d'édition datée des DPE : la clé identifie les octets relevés ce jour-là via l'API, pas une édition amont. `source_published_on` reprend le `last-modified` annoncé par l'API pour le jeu.",
+  "discovery": {
+    "catalog_entry": "https://data.ademe.fr/datasets/dpe03existant",
+    "api_is_not_a_path_back": "L'URL rejouée demain rendrait d'autres octets : le jeu est mis à jour en continu. Seule l'archive nommée ci-dessous permet de retrouver les octets importés, et le SHA-256 la contraint.",
+    "upstream_filter": "Le jeu accessible est une vue virtuelle filtrée par l'ADEME sur `dpe_desactive = 0`. Le jeu sous-jacent, qui porte les diagnostics désactivés, répond 403. Un DPE annulé n'est donc jamais observable ici : l'exclusion est celle du producteur, pas la nôtre.",
+    "projection": "Aucune : les 226 colonnes de la source sont archivées. Le contrat demande `additional_properties: preserve`, et un extrait ne se ré-épingle pas à l'identique."
+  },
+  "assets": [
+    {
+      "layer": "assessments",
+      "url": "https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?format=csv&qs=code_departement_ban%3A35&sort=_i",
+      "sha256": "39686c6859be27dcec53514ad10696dcefde8ee90b0c2af601ca03944c3fa624",
+      "byte_size": 83872400,
+      "media_type": "text/csv",
+      "content_encoding": "gzip",
+      "archive": {
+        "object_key": "ds-07/2026-09-14-extract/35/assessments.csv.gz"
+      },
+      "extract": {
+        "pages": 24,
+        "page_size": 10000,
+        "column_count": 226,
+        "uncompressed_byte_size": 458463960
+      }
+    }
+  ]
+}
