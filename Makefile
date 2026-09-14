@@ -171,6 +171,13 @@ georisques-report:
 		dagster-code python pipelines/scripts/georisques_coverage_report.py \
 		--department $(DEPARTMENT)
 
+market-data-quality:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/market_data_quality_report.py \
+		--department $(DEPARTMENT)
+
 urban-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

@@ -204,6 +204,19 @@ sont refusées au téléchargement par le producteur. Aucune feature RISK ne les
 - les distances aux sites pollués et cavités ne sont calculées qu'avec une géométrie et une
   couverture déclarée.
 
+## Rapport qualité consolidé — D5, 15 septembre 2026
+
+[`market-data-quality-35.md`](./market-data-quality-35.md), régénéré par
+`make market-data-quality`, croise les quatre sources : verdicts, traçabilité, volumétrie,
+fraîcheur, complétude par feature **ventilée par motif d'absence**, distributions, communes les
+moins couvertes, et un écart de vocabulaire entre producteurs.
+
+Il a fait apparaître un défaut que les rapports par source ne pouvaient pas voir, parce qu'il ne
+se lit qu'en comptant les runs d'import par source : **DS-06 et DS-08 n'en ont aucun**. DS-08 en
+reste `pending` — la porte d'acceptation refuse une release sans import traçable, à juste titre.
+DS-06, lui, porte `display_only` sans qu'aucun run ne l'appuie. C'est
+[BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md).
+
 ## Couverture et fraîcheur
 
 La migration ajoute `meta.dataset_coverage_metric`, unique par release et commune, avec compte de
