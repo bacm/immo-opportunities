@@ -244,9 +244,7 @@ def main() -> int:
             return 1
         connection.execute("SET ROLE pipeline_rw")
         targets = (
-            [arguments.commune]
-            if arguments.commune
-            else communes(connection, arguments.department)
+            [arguments.commune] if arguments.commune else communes(connection, arguments.department)
         )
         computed = 0
         for commune in targets:

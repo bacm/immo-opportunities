@@ -67,8 +67,7 @@ class RemoteFile:
             content_range = response.headers.get("Content-Range", "")
             if "/" not in content_range:
                 raise RuntimeError(
-                    f"{self.url} ne renvoie pas de Content-Range exploitable : "
-                    f"{content_range!r}."
+                    f"{self.url} ne renvoie pas de Content-Range exploitable : {content_range!r}."
                 )
             return int(content_range.rsplit("/", 1)[1])
 
@@ -91,9 +90,8 @@ class RemoteFile:
         if amount <= 0:
             return b""
         end = min(self._position + amount, self.size)
-        buffered = (
-            0 <= self._buffer_start <= self._position
-            and end <= self._buffer_start + len(self._buffer)
+        buffered = 0 <= self._buffer_start <= self._position and end <= self._buffer_start + len(
+            self._buffer
         )
         if not buffered:
             start = self._position

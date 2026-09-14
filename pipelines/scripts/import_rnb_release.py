@@ -82,8 +82,7 @@ def main() -> int:
                 # cle d'idempotence : sans cela la nouvelle cle cree bien un run, qui entre
                 # aussitot en collision de cle primaire avec l'ancien. BD TOPO le faisait deja.
                 import_run_id=(
-                    f"rnb:{manifest.release_key}:{manifest.department}"
-                    f":{RNB_TRANSFORMATION_VERSION}"
+                    f"rnb:{manifest.release_key}:{manifest.department}:{RNB_TRANSFORMATION_VERSION}"
                 ),
                 release_id=manifest.release_id,
                 department_code=manifest.department,

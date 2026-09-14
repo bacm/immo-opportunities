@@ -24,13 +24,7 @@ from pathlib import Path
 
 import pytest
 
-SOURCE = (
-    Path(__file__).resolve().parents[1]
-    / "src"
-    / "immo_pipelines"
-    / "spatial"
-    / "importer.py"
-)
+SOURCE = Path(__file__).resolve().parents[1] / "src" / "immo_pipelines" / "spatial" / "importer.py"
 TEXT = SOURCE.read_text(encoding="utf-8")
 # Le bloc complet, depuis la CTE de rang jusqu'au ON CONFLICT : couper sur le nom de
 # l'algorithme laisserait la CTE dehors, elle le precede.

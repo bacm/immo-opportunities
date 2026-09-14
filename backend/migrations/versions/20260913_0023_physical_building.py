@@ -73,12 +73,9 @@ def upgrade() -> None:
     )
     op.execute("GRANT SELECT ON reference.physical_building TO api_rw, backup_ro")
     op.execute("GRANT SELECT ON reference.physical_building_member TO api_rw, backup_ro")
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON reference.physical_building TO pipeline_rw")
     op.execute(
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON reference.physical_building TO pipeline_rw"
-    )
-    op.execute(
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON reference.physical_building_member "
-        "TO pipeline_rw"
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON reference.physical_building_member TO pipeline_rw"
     )
     op.execute("RESET ROLE")
 

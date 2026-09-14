@@ -12,6 +12,7 @@ peut casser en silence — la logique de tampon, et le refus d'un serveur qui ig
 """
 
 import io
+import os
 import zipfile
 
 import pytest
@@ -38,10 +39,16 @@ class _FauxDistant(RemoteFile):
 
 
 def _archive() -> bytes:
+    """Une archive sensiblement plus grosse que le tampon, sinon le test ne prouve rien.
+
+    Le règlement est incompressible à dessein : avec du texte répétitif, il se réduirait à
+    quelques kilo-octets et une seule requête suffirait à tout rapatrier, ce qui ferait passer le
+    test sans qu'il ait rien mesuré.
+    """
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("doc/ZONE_URBA.dbf", b"zones" * 2000)
-        archive.writestr("doc/reglement.pdf", b"texte reglementaire" * 50_000)
+        archive.writestr("doc/reglement.pdf", os.urandom(4 * RemoteFile.CHUNK))
         archive.writestr("doc/DOC_URBA.dbf", b"document" * 1000)
     return buffer.getvalue()
 
