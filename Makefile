@@ -56,9 +56,21 @@ up: config
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml up -d --wait
 
-rebuild: config
+# Garde-fou : `rebuild` recree PostgreSQL et coupe toute connexion en cours. Un import ou un
+# calcul en arriere-plan y perd sa transaction courante — c'est arrive deux fois, sur l'import GPU
+# puis sur le calcul URB, a chaque fois parce qu'un autre ticket demandait une reconstruction.
+# Voir ARCHITECTURE.md §10.6.
+rebuild: check-no-batch config
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml up -d --build --force-recreate --wait
+
+check-no-batch:
+	@if pgrep -f 'import_.*_release\.py|compute_.*_features\.py|build_physical_buildings\.py' >/dev/null; then \
+		echo "Un lot est en cours : rebuild couperait sa connexion PostgreSQL."; \
+		pgrep -fl 'import_.*_release\.py|compute_.*_features\.py|build_physical_buildings\.py' | head -3; \
+		echo "L'arrêter, ou forcer avec FORCE_REBUILD=1."; \
+		[ -n "$(FORCE_REBUILD)" ] || exit 1; \
+	fi
 
 down:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \

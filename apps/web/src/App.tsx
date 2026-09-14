@@ -8,6 +8,7 @@ import {
   CircleHelp,
   Compass,
   Database,
+  Euro,
   ExternalLink,
   FileText,
   Heart,
@@ -632,6 +633,102 @@ function OpportunitySheet({ id, onClose, onProperty }: { id: string; onClose: ()
   </>
 }
 
+type ParcelTransaction = {
+  transaction_id: string
+  mutation_date: string | null
+  mutation_nature: string | null
+  property_type: string | null
+  surface_m2: number | null
+  allocated_price_eur: number | null
+  unallocated_reason: string | null
+  parcel_count: number | null
+  lot_count: number | null
+}
+
+/**
+ * Les mutations DVF d'une parcelle — instrument de vérification D6a, pas fonctionnalité produit.
+ *
+ * Le produit classe des candidats ; il ne donne pas accès à l'historique des ventes. Ce bloc
+ * existe pour qu'un humain vérifie que l'import et le rattachement tiennent, comme l'écran de
+ * revue de B4 l'a fait pour les appariements — et B4 a produit trois défauts structurels qu'aucun
+ * contrôle automatique n'avait vus.
+ *
+ * Il a d'ailleurs servi avant d'exister : la première requête a montré une « Dépendance » de
+ * 382 m², dont la surface venait du terrain. 30 816 lots bâtis étaient concernés.
+ *
+ * **Aucun prix au m² n'est calculé ici.** Il n'existe pas en base, et le dériver à l'affichage
+ * fabriquerait une valeur que rien ne justifie. Le motif de non-allocation est montré à la place :
+ * 65,5 % des mutations n'ont aucun prix allouable, et ce motif est l'information.
+ *
+ * Chargé à la demande, jamais avec la fiche : une parcelle sur huit seulement porte une mutation,
+ * et le bloc ne doit rien coûter aux sept autres.
+ */
+function ParcelTransactions({ parcelId }: { parcelId: string }) {
+  const [rows, setRows] = useState<ParcelTransaction[] | null>(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open || rows !== null) return
+    let cancelled = false
+    fetch(`/api/v1/parcels/${encodeURIComponent(parcelId)}/transactions`)
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => { if (!cancelled) setRows(data as ParcelTransaction[]) })
+      .catch(() => { if (!cancelled) setRows([]) })
+    return () => { cancelled = true }
+  }, [open, parcelId, rows])
+
+  return <section className="detail-section">
+    <h3>
+      <button className="property-link" onClick={() => setOpen(!open)}>
+        <Euro size={15} /> {open ? 'Masquer' : 'Voir'} les mutations DVF
+      </button>
+    </h3>
+    {open && rows === null && <p className="unknown-value">Chargement…</p>}
+    {open && rows !== null && rows.length === 0 &&
+      <p className="unknown-value">Aucune mutation rattachée à cette parcelle.</p>}
+    {open && rows !== null && rows.length > 0 && <>
+      {/* Groupé par mutation, jamais ligne à ligne. Une mutation est un acte ; ses lots en sont
+          le contenu. Affichés à plat, deux lots d'une même vente sur la même parcelle
+          ressemblaient à deux ventes — et c'est précisément ce qu'un écran de vérification ne
+          doit pas laisser croire. */}
+      <div className="transaction-list">{Object.entries(
+        rows.reduce<Record<string, ParcelTransaction[]>>((groups, row) => {
+          (groups[row.transaction_id] ??= []).push(row)
+          return groups
+        }, {}),
+      ).map(([transactionId, lots]) => {
+        const head = lots[0]
+        return <div className="transaction-row" key={transactionId}>
+          <span>
+            <strong>{head.mutation_date ?? 'Date inconnue'}</strong>
+            <small>{head.mutation_nature ?? 'Nature inconnue'}
+              {head.lot_count && head.lot_count > 1 ? ` · ${head.lot_count} lots dans l’acte` : ''}
+              {head.parcel_count && head.parcel_count > 1 ? ` · ${head.parcel_count} parcelles` : ''}
+            </small>
+            {lots.map((lot, index) => <small key={index} className="transaction-lot">
+              {lot.property_type ?? 'Type inconnu'}
+              {lot.surface_m2 ? ` · ${Math.round(lot.surface_m2)} m²` : ' · surface absente'}
+              {lot.allocated_price_eur !== null
+                ? ` · ${Math.round(lot.allocated_price_eur).toLocaleString('fr-FR')} €`
+                : ''}
+            </small>)}
+          </span>
+          <span className={head.allocated_price_eur === null ? 'unknown-value' : undefined}>
+            {head.allocated_price_eur === null
+              ? <>Prix non allouable<br /><small>{head.unallocated_reason ?? 'motif absent'}</small></>
+              : <>{lots.length === 1 ? 'Prix alloué' : 'Prix par lot'}</>}
+          </span>
+        </div>
+      })}
+      </div>
+      <p className="detail-note">
+        {rows.length} lot{rows.length > 1 ? 's' : ''} sur cette parcelle. Aucun prix au m² n’est calculé ici : il n’existe pas en base. Un prix non allouable porte
+        son motif — c’est le cas de deux mutations sur trois, et c’est le résultat.
+      </p>
+    </>}
+  </section>
+}
+
 function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onClose: () => void; onRelated: (type: EntityType, id: string) => void }) {
   const kind = detail.entity_type === 'building' ? 'Bâtiment' : detail.entity_type === 'property_unit' ? 'Unité foncière' : 'Parcelle'
   return <>
@@ -641,6 +738,7 @@ function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onC
       <section className="detail-section"><h3>Géométrie active</h3><dl className="facts"><div><dt>Surface calculée</dt><dd>{formatArea(detail.area_m2)}</dd></div><div><dt>Identifiant stable</dt><dd>{detail.id}</dd></div><div><dt>Commune INSEE</dt><dd>{detail.commune_code ?? 'Non disponible'}</dd></div></dl></section>
       {Object.keys(detail.properties).length > 0 && <section className="detail-section"><h3>Attributs</h3><dl className="facts">{Object.entries(detail.properties).map(([key, value]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd>{value === null ? 'Non disponible' : String(value)}</dd></div>)}</dl></section>}
       {detail.related_entities.length > 0 && <section className="detail-section"><h3>Entités liées</h3><div className="related-list">{detail.related_entities.map((entity) => <button key={`${entity.entity_type}:${entity.id}`} onClick={() => onRelated(entity.entity_type, entity.id)}>{entity.entity_type === 'building' ? <Building2 size={15} /> : <MapIcon size={15} />}<span>{entity.label}</span></button>)}</div></section>}
+      {(detail.entity_type === 'parcel' || detail.entity_type === 'property_unit') && <ParcelTransactions parcelId={detail.entity_type === 'parcel' ? detail.id : String(detail.properties.parcel_id ?? detail.id)} />}
       <section className="detail-section"><h3>Provenance</h3>{detail.sources.map((source, index) => <div className="source-row" key={`${source.data_source_id}:${index}`}><ExternalLink size={15} /><span><strong>{source.data_source_id}</strong><small>{source.producer ?? 'Producteur documenté'}{source.release_id ? ` · ${source.release_id}` : ''}</small></span></div>)}</section>
     </div>
   </>

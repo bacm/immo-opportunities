@@ -287,3 +287,11 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .review-legend .swatch-left { border-top-color: #b7791f; }
 .review-legend .swatch-right { border-top-color: #0d5c31; border-top-style: dashed; }
 .review-legend .swatch-parcel { border-top-color: #8b7bb8; border-top-width: 2px; }
+
+/* Mutations DVF d'une parcelle — instrument de verification D6a. Un prix non allouable se lit
+   comme une absence motivee, jamais comme un blanc : c'est le cas de deux mutations sur trois. */
+.transaction-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.transaction-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+.transaction-row span:last-child { text-align: right; white-space: nowrap; }
+.transaction-row small { display: block; color: var(--muted); font-size: 11px; }
+.transaction-lot { padding-left: 9px; border-left: 2px solid var(--line); margin-top: 3px; }

@@ -56,8 +56,8 @@ from immo_pipelines.progress import Progress
 # 2 : le prix ne va plus qu au lot auquel il se rapporte. En version 1, une vente de
 # maison avec terrain donnait le montant entier a chacun des deux lots — 5 410
 # mutations et 13 303 lots concernes sur le 35, soit 8,3 % des mutations simples.
-# 3 : la surface d'un lot bati ne peut plus emprunter celle du terrain.
-DVF_TRANSFORMATION_VERSION = "3"
+# 4 : un bien decrit plusieurs fois par la source ne compte plus pour plusieurs lots.
+DVF_TRANSFORMATION_VERSION = "4"
 
 # La version entre dans l'identifiant de chaque ligne, et pas seulement dans une constante. Sans
 # cela, `ON CONFLICT DO NOTHING` conserve les lignes de la version precedente et un correctif de
@@ -70,6 +70,36 @@ SIMPLE_ALLOCATION = "single_property_full_price"
 # `geo-dvf` decrit le bati par `type_local` et le non-bati par `nature_culture` et
 # `surface_terrain`. Nommer ce cas plutot que d'ecrire NULL dit ce que la source dit.
 LAND_PROPERTY_TYPE = "Terrain"
+
+
+def _distinct_lots(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Dédupliquer les lignes qui décrivent le même bien.
+
+    `geo-dvf` publie **une ligne par (bien, nature de culture du terrain)**. Une maison vendue
+    avec un terrain en « terres » et un en « sols » apparaît donc deux fois, identique à
+    l'identique — même type, même surface bâtie, même nombre de pièces, même parcelle.
+
+    Sans déduplication, cette maison compte pour deux lots chiffrables et la mutation devient
+    complexe : son prix est écarté alors qu'il est parfaitement allouable. Mesuré sur les cinq
+    millésimes du 35 : **4 666 mutations sur 49 838**, soit 9,4 % de celles à plusieurs lignes
+    bâties, sont un seul bien répété.
+
+    La clé de déduplication est volontairement stricte. Deux appartements identiques du même
+    immeuble ne s'y distinguent pas — mais ils partagent alors leur numéro de lot ou leur
+    parcelle, et l'ambiguïté est réelle, pas fabriquée par nous : la source ne permet pas de
+    trancher, et une mutation ambiguë doit le rester.
+    """
+    seen: dict[tuple[str, ...], dict[str, str]] = {}
+    for row in rows:
+        key = (
+            row.get("type_local") or "",
+            row.get("surface_reelle_bati") or "",
+            row.get("nombre_pieces_principales") or "",
+            row.get("lot1_numero") or "",
+            row.get("id_parcelle") or "",
+        )
+        seen.setdefault(key, row)
+    return list(seen.values())
 
 
 def _surface(row: dict[str, str]) -> float | None:
@@ -109,7 +139,7 @@ class Mutation:
         return {row["type_local"] for row in self.rows if row["type_local"]}
 
     def priced_lots(self) -> list[dict[str, str]]:
-        """Les lots auxquels le prix peut se rapporter.
+        """Les lots **distincts** auxquels le prix peut se rapporter.
 
         Une vente de maison comporte le lot bâti **et** ses lots de terrain. Le prix au m² d'une
         maison se rapporte par convention à la surface bâtie, le terrain venant avec : les lots
@@ -119,8 +149,10 @@ class Mutation:
         S'il n'y a aucun lot bâti, la mutation est une vente de terrain et le prix se rapporte
         au terrain.
         """
-        built = [row for row in self.rows if row["type_local"]]
-        return built if built else [row for row in self.rows if _surface(row) is not None]
+        built = _distinct_lots([row for row in self.rows if row["type_local"]])
+        if built:
+            return built
+        return _distinct_lots([row for row in self.rows if _surface(row) is not None])
 
     @property
     def price(self) -> float | None:
@@ -294,6 +326,26 @@ def main() -> int:
             source_srid=4326,
         )
         connection.execute("SET ROLE pipeline_rw")
+        # Purger les versions de transformation precedentes de cette release.
+        #
+        # Les avoir laissees coexister etait une erreur : la comparaison entre deux versions se
+        # fait une fois, et le doublon reste ensuite. L'ecran de verification de D6a l'a montre
+        # aussitot — quatre lignes pour deux mutations, une par version.
+        #
+        # La version vit dans l'identifiant precisement pour qu'un correctif atteigne les
+        # donnees ; elle ne doit pas pour autant faire s'accumuler les etats successifs.
+        connection.execute(
+            """
+            DELETE FROM observation.transaction
+             WHERE release_id = %(release_id)s
+               AND source_identifier NOT LIKE %(prefix)s
+            """,
+            {
+                "release_id": manifest.release_id,
+                "prefix": f"v{DVF_TRANSFORMATION_VERSION}:%",
+            },
+        )
+        connection.commit()
         with tempfile.TemporaryDirectory(prefix="immo-dvf-") as temporary:
             wanted = [
                 asset
