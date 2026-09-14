@@ -1,7 +1,12 @@
 # D3 — DS-09 Géorisques : granularité conservée
 
 **Version :** v0.5 · **Taille :** L · **État :** À faire
-**Dépend de :** D2 · **Bloque :** D5
+**Dépend de :** D1 · **Bloque :** D5
+
+> **Parallélisable avec D2 et D4** — resequencage du 14 septembre 2026. Ce ticket dépendait de
+> D2, mais son seul besoin réel est le module `immo_pipelines.market_data.cnig`, écrit et livré.
+> Géorisques et le GPU sont deux sources sans rapport ; attendre la fin de D2 pour commencer D3
+> allongeait le chemin critique sans raison.
 
 ## Contexte à charger
 

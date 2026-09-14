@@ -1,7 +1,12 @@
 # D4 — DS-07 DPE : diagnostics réellement déposés
 
 **Version :** v0.5 · **Taille :** L · **État :** À faire
-**Dépend de :** D3 · **Bloque :** D5
+**Dépend de :** D1 · **Bloque :** D5
+
+> **Parallélisable avec D2 et D3** — resequencage du 14 septembre 2026. Ce ticket dépendait de
+> D3 sans qu'aucune ligne ne le justifie : les DPE de l'ADEME et les risques de Géorisques sont
+> deux sources distinctes, de producteurs distincts. La dépendance venait de l'ordre de la liste,
+> pas du travail.
 
 ## Contexte à charger
 

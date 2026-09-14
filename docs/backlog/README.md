@@ -102,8 +102,8 @@ dérivée du graphe de dépendances.
 | [D1](./D1-import-dvf-ds06.md) | DS-06 DVF+ : archive, import relançable, comparables explicables | v0.5 | B5 | XL | Terminé | — |
 | [D2](./D2-import-gpu-ds08.md) | DS-08 GPU : zonage et contraintes, sans interprétation de règlement | v0.5 | D1 | M | À faire | **prêt** |
 | [D2b](./D2b-profils-de-regles.md) | Profils de règles d'urbanisme, là où un candidat le justifie | v0.6 | D2, E3 | L | À faire | attend D2, E3 |
-| [D3](./D3-import-georisques-ds09.md) | DS-09 Géorisques : granularité conservée | v0.5 | D2 | L | À faire | attend D2 |
-| [D4](./D4-import-dpe-ds07.md) | DS-07 DPE : diagnostics réellement déposés | v0.5 | D3 | L | À faire | attend D3 |
+| [D3](./D3-import-georisques-ds09.md) | DS-09 Géorisques : granularité conservée | v0.5 | D1 | L | À faire | **prêt** |
+| [D4](./D4-import-dpe-ds07.md) | DS-07 DPE : diagnostics réellement déposés | v0.5 | D1 | L | À faire | **prêt** |
 | [D5](./D5-rapports-qualite-metier.md) | Rapports qualité, couverture et fraîcheur par commune | v0.5 | D1, D2, D3, D4 | M | À faire | attend D2, D3, D4 |
 | [D6](./D6-revue-manuelle-metier.md) | Revue manuelle stratifiée comparables / GPU / DPE / risques | v0.5 | D5 | M | À faire | attend D5 |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
@@ -142,7 +142,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**20/50 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, D2, D7, G6, G7.
+**20/50 terminés.** Prêts à démarrer : A1, BUG-02, BUG-08, BUG-11, D2, D3, D4, D7, G6, G7.
 
 <!-- END:tickets -->
 
