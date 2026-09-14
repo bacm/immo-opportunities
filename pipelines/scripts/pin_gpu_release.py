@@ -38,6 +38,25 @@ API = "https://www.geoportail-urbanisme.gouv.fr/api"
 # DS-09 et les schemas de coherence territoriale (SCoT) ne s'appliquent pas a la parcelle.
 DOCUMENT_TYPES = ("PLU", "PLUi", "CC", "POS", "PSMV")
 
+# Un echec passager ne dit rien du document : il dit que le reseau a lache. Le consigner comme
+# definitif ferait disparaitre le document du manifeste sans qu'on y revienne, alors qu'une simple
+# relance suffirait. La distinction se fait sur le message, faute de types d'erreur distincts a
+# travers `urllib` et `zipfile` — un ZIP juge invalide apres une reponse tronquee en est un cas.
+TRANSIENT = (
+    "timed out",
+    "timeout",
+    "connection",
+    "temporarily",
+    "reset by peer",
+    "not a zip file",
+)
+
+
+def is_transient(error: Exception) -> bool:
+    """Un échec qui vaut d'être retenté, par opposition à un défaut du document lui-même."""
+    message = str(error).lower()
+    return any(marker in message for marker in TRANSIENT)
+
 
 def _get(path: str, **params: Any) -> Any:
     query = urllib.parse.urlencode(params, doseq=True)
@@ -187,6 +206,7 @@ def main() -> int:
     previous = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     assets: list[dict[str, Any]] = list(previous.get("assets", []))
     unreadable: list[dict[str, Any]] = list(previous.get("unreadable", []))
+    transient: list[str] = []
     done = {asset["document_id"] for asset in assets} | {
         entry.get("document_id") for entry in unreadable
     }
@@ -198,6 +218,11 @@ def main() -> int:
         try:
             communes = covers(document, arguments.department, bounds)
         except Exception as error:
+            if is_transient(error):
+                # Ni consigne ni compte comme releve : la prochaine relance le reprendra.
+                transient.append(str(document.get("name")))
+                print(f"  {document.get('name')} : échec passager ({error})", flush=True)
+                continue
             unreadable.append(
                 {
                     "document_id": document["id"],
@@ -210,7 +235,26 @@ def main() -> int:
             continue
         if not communes:
             continue
-        digests, archive_size = layer_digests(document["id"])
+        try:
+            digests, archive_size = layer_digests(document["id"])
+        except Exception as error:
+            # Le calcul d'empreinte lit chaque couche entierement, la ou `covers` ne lit que
+            # `DOC_URBA_COM` : il echoue sur des archives que la premiere etape traverse sans
+            # probleme. Hors du `try`, un seul document en faisait tomber tout l'epinglage.
+            if is_transient(error):
+                transient.append(str(document.get("name")))
+                print(f"  {document.get('name')} : échec passager ({error})", flush=True)
+                continue
+            unreadable.append(
+                {
+                    "document_id": document["id"],
+                    "name": document.get("name"),
+                    "reason": f"empreintes illisibles : {error}",
+                }
+            )
+            write(path, manifest(arguments, assets, unreadable))
+            print(f"  {document.get('name')} : empreintes illisibles ({error})", flush=True)
+            continue
         assets.append(
             {
                 "document_id": document["id"],
@@ -236,6 +280,10 @@ def main() -> int:
     print(f"\n{len(assets)} documents, {len(communes)} communes couvertes → {path}")
     if unreadable:
         print(f"{len(unreadable)} document(s) illisible(s), consignés au manifeste")
+    if transient:
+        # Code de sortie distinct : le manifeste est incomplet et une relance le complétera.
+        print(f"{len(transient)} échec(s) passager(s) à reprendre : {', '.join(transient)}")
+        return 3
     return 0
 
 
