@@ -293,6 +293,37 @@ document d'urbanisme sans en dépendre. C'est la nature même de ce que D3 trait
 
 Les **SCoT** sont exclus aussi : ils ne s'appliquent pas à la parcelle.
 
+### Un chemin d'erreur est un résultat, pas une exception
+
+Quatre défauts de même famille se sont succédé sur ce seul ticket. Aucun n'était visible d'un
+contrôle automatique, et trois n'ont été vus que parce que le chiffre attendu était connu.
+
+| Défaut | Symptôme | Ce qui l'a révélé |
+|---|---|---|
+| Casse des champs CNIG | « Rennes Métropole couvre 1 commune, hors du 35 » | l'invraisemblance du chiffre |
+| Convention de nommage versionnée | Couesnon absent du manifeste, sans erreur | un comptage 5 au lieu de 6 |
+| Lecture partielle tronquée | erreur d'en-tête ZIP imputée au producteur | la trace d'exécution |
+| Échec réseau consigné comme définitif | deux documents absents pour toujours | la relecture du manifeste |
+
+Le dernier est le plus instructif : le mécanisme de reprise, écrit pour ne rien perdre,
+**transformait un incident réseau en absence permanente**. Un document consigné illisible était
+compté comme traité et jamais repris.
+
+**La règle qui s'en dégage, et qui vaut pour tout import de ce ticket :**
+
+1. **Un cas non prévu échoue bruyamment.** Une archive sans couche reconnue n'est pas « hors
+   périmètre », c'est un nom qu'on ne sait pas lire. Un document silencieusement absent est pire
+   qu'un import qui s'arrête.
+2. **Un échec est consigné dans le manifeste, pas seulement journalisé.** Taire un document
+   illisible ferait passer une couverture partielle pour une couverture complète.
+3. **Un échec passager n'est pas un échec définitif.** Un délai dépassé ne dit rien du document ;
+   le consigner comme définitif le condamne. Le script sort en code 3 pour dire que le manifeste
+   est incomplet.
+4. **Une lecture partielle vérifie ce qu'elle a reçu.** Une réponse courte produit une erreur qui
+   nomme l'URL, la plage et le nombre d'octets — jamais un message qui accuse la donnée.
+5. **Un fichier peut mentir sur sa nature.** `DU_35093` porte deux archives Office sous une
+   extension `.dbf`. L'import vérifie la signature des couches qu'il lit.
+
 ## Travail à réaliser
 
 1. Identifier et épingler les documents : **178 communaux** par `territory=35`, plus les PLUi
