@@ -37,10 +37,23 @@ ticket.
 | Cartes communales | 14 |
 | Servitudes d'utilité publique | 9 |
 | PSMV | 1 |
-| **Documents d'urbanisme communaux** | **178**, couvrant **179 communes sur 332** |
+| **Documents d'urbanisme communaux** | **178**, couvrant **179 communes** |
 
-**53,9 % des communes** ont un document à leur propre nom. Les autres relèvent d'un PLUi ou du
-RNU — c'est exactement l'hétérogénéité que le ticket demande de modéliser plutôt que d'aplatir.
+Auxquels s'ajoutent **6 PLUi** couvrant **123 communes** du département — invisibles d'une requête
+départementale, voir ci-dessous.
+
+| Couverture réelle | Communes | Part |
+|---|---:|---:|
+| Document communal propre | 179 | 53,9 % |
+| Couvertes par un PLUi | 123 | 37,0 % |
+| Les deux — Rennes, PSMV et PLUi | 1 | — |
+| **Couvertes au total** | **301** | **90,7 %** |
+| **Sans document, donc au RNU** | **31** | **9,3 %** |
+
+Rennes cumule un **PSMV**, approuvé le 22 février 2024, et le PLUi de Rennes Métropole. Ce n'est
+pas une ambiguïté à arbitrer : un PSMV est un instrument distinct qui se substitue au PLU dans son
+périmètre. C'est exactement l'hétérogénéité que le ticket demande de modéliser plutôt que
+d'aplatir, et le modèle doit porter les deux.
 
 ### Les PLUi sont invisibles d'une requête départementale
 
@@ -54,6 +67,36 @@ Il n'apparaît dans aucune requête départementale.
 **Conséquence de conception : le rattachement doit être spatial, pas administratif.** Ce n'est pas
 un pis-aller — le point 4 du ticket le demandait déjà, et cela évite d'avoir à importer une
 correspondance EPCI ↔ communes qui serait une source de plus.
+
+### Six PLUi sur vingt-trois candidats, tranchés par `DOC_URBA_COM`
+
+La lecture partielle des archives a permis de vérifier chaque candidat sans en télécharger aucun :
+on lit `DOC_URBA_COM`, quelques kilo-octets, au lieu de rapatrier 36,9 Go.
+
+| PLUi | Communes | dont dans le 35 |
+|---|---:|---:|
+| Rennes Métropole | 43 | **43** |
+| Bretagne Romantique | 25 | **25** |
+| Bretagne Porte de Loire Communauté | 20 | **20** |
+| Val d'Ille-Aubigné | 19 | **19** |
+| Couesnon Marches de Bretagne | 8 | **8** |
+| Brocéliande | 8 | **8** |
+
+Dix-sept candidats sont écartés : leur emprise touche le département, aucune de leurs communes n'y
+est. La `bbox` était bien un pré-filtre et rien de plus.
+
+### La casse des noms de champs CNIG varie d'un document à l'autre
+
+**Ce piège a failli faire disparaître Rennes Métropole de l'import.** Le PLU communal écrit ses
+champs en majuscules — `INSEE`, `IDURBA` — et le PLUi de Rennes Métropole en minuscules —
+`insee`, `idurba`. Une lecture sensible à la casse retourne une chaîne vide sans lever d'erreur,
+et le document paraît alors ne couvrir aucune commune.
+
+Le symptôme était invraisemblable — « Rennes Métropole couvre une commune, hors du 35 » — et c'est
+la seule raison pour laquelle il a été vu. Un document moins notoire serait passé inaperçu.
+
+**Toute lecture d'attribut CNIG doit donc être insensible à la casse, et un test doit le
+garantir.**
 
 ### Repérer les PLUi candidats par leur emprise, puis trancher par la géométrie
 
