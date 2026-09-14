@@ -74,6 +74,47 @@ avec nos parcelles décide. C'est aussi ce qui rend l'aberration inoffensive.
   rattachement spatial ;
 - `/document/{id}/download` fournit l'archive CNIG, et `/document/{id}/files` les pièces écrites.
 
+### L'archive CNIG et la correspondance avec nos tables
+
+Une archive par document, servie par `/document/{id}/download`. Sur `DU_35018`, un PLU communal :
+**33,5 Mo**, dont seulement **1,7 Mo de données structurées** — le reste est le règlement, le PADD
+et les orientations d'aménagement, en PDF. Ce sont exactement les pièces que D2 n'a pas le droit
+d'interpréter, et celles que l'humain de [D2b](./D2b-profils-de-regles.md) lira.
+
+Les couches sont en **Lambert-93**, notre SRID canonique : aucune reprojection.
+
+| Couche CNIG | Champs utiles | Table cible |
+|---|---|---|
+| `DOC_URBA` | `IDURBA`, `TYPEDOC`, `DATAPPRO`, `DATEFIN`, `ETAT`, `SIREN`, `INTERCO` | `observation.urban_document` |
+| `DOC_URBA_COM` | `IDURBA` → `INSEE` | `urban_document.commune_codes` |
+| `ZONE_URBA` | `LIBELLE`, `LIBELONG`, `TYPEZONE`, `DESTDOMI`, `DATAPPRO`, `DATVALID` | `observation.urban_zone` |
+| `PRESCRIPTION_SURF`, `PRESCRIPTION_LIN` | `TYPEPSC`, `LIBELLE` | `observation.urban_constraint` |
+| `INFO_SURF` | `TYPEINF`, `LIBELLE` | information, **non opposable** — à ne pas confondre avec une prescription |
+
+**`DOC_URBA_COM` résout le rattachement d'un PLUi à ses communes** sans importer de correspondance
+EPCI ↔ communes : la donnée est dans l'archive. Le rattachement spatial aux parcelles reste
+nécessaire et reste la référence, mais la liste administrative est désormais disponible pour le
+contrôler.
+
+`IDURBA` — par exemple `35018_20161215` — porte la **version exacte** du document. C'est la clé du
+risque déclaré de la v0.5, et elle vient de la source.
+
+### Le schéma confirme la scission
+
+`observation.urban_zone` porte déjà, et séparément, `rule_profile`, `rule_profile_version`,
+`rule_profile_validated_at`, `rule_profile_validated_by`, `required_rule_count` et
+`validated_rule_count`. Ces colonnes sont nullables et vides tant que D2b n'a rien validé, et les
+deux dernières **sont** `URB-005`.
+
+Le modèle avait donc prévu dès l'origine que l'import et la validation humaine soient deux gestes
+distincts. La scission du 14 septembre ne fait que l'expliciter dans le backlog.
+
+### Une dépendance ajoutée : `pyshp`
+
+Les couches CNIG sont des shapefiles. Le dépôt évite GDAL par principe — la lecture GeoPackage
+passe par `sqlite3` et `shapely`. `pyshp` est l'équivalent minimal pour le shapefile : pur Python,
+sans binaire à installer, et il n'introduit aucune dépendance système.
+
 ## Travail à réaliser
 
 1. Identifier et épingler les documents : **178 communaux** par `territory=35`, plus les PLUi
