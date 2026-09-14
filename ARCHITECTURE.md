@@ -647,6 +647,31 @@ faut pour décider d'attendre ou d'intervenir :
   Un écart entre l'estimation et le réel est lui-même une information — c'est ainsi qu'on voit
   qu'une temporisation s'est déclenchée.
 
+#### Un lot interactif n'est pas un lot de production
+
+L'import DS-08 a demandé plusieurs heures pour 184 documents, et le débit s'est effondré en fin de
+lot : quarante documents à l'heure au début, deux en vingt minutes à la fin. La cause est connue —
+le producteur limite le débit et la temporisation s'accumule — mais le remède ne relève pas du
+script.
+
+**Ce fonctionnement est celui d'un import mené à la main, pas celui de la cible.** Trois choses le
+distinguent d'un pipeline de production, et elles sont toutes hors du périmètre d'un script :
+
+- **la parallélisation.** Un lot séquentiel attend chaque archive l'une après l'autre. Dagster
+  partitionne par `dataset × release × département` et peut traiter plusieurs partitions de front,
+  avec une concurrence bornée qui respecte le producteur au lieu de le subir.
+- **la planification.** Un import qui n'a pas à aboutir dans la session peut s'étaler, reprendre
+  la nuit, et céder le pas quand le producteur ralentit. Un lot lancé à la main ne le peut pas.
+- **l'absence d'interactivité.** Un lot surveillé impose d'attendre ; un asset planifié notifie.
+
+D'où [BUG-02](../docs/backlog/BUG-02-scripts-import-hors-dagster.md), qui porte les imports vers
+Dagster. Les scripts actuels sont une dette assumée : ils prouvent la donnée, ils ne sont pas le
+chemin cible.
+
+**En attendant, un lot partiel est un résultat exploitable** dès lors que sa couverture est
+publiée. 152 documents sur 184 suffisent à valider une chaîne de calcul ; ce qui ne serait pas
+acceptable, c'est de présenter cette couverture comme complète.
+
 #### Une reprise se fonde sur l'état écrit, pas sur un journal
 
 Un lot long est interrompu, et pas seulement par le réseau. L'import DS-08 l'a été deux fois : une

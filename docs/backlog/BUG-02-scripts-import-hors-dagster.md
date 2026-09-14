@@ -5,6 +5,23 @@
 **Non bloquant** pour le chemin critique, mais bloquant pour la DoD architecture §25
 (« pipelines partitionnés 22/29/35/56 »).
 
+## Ce que l'import DS-08 a montré — 14 septembre 2026
+
+Le débit s'est effondré en fin de lot : quarante documents à l'heure au début, **deux en vingt
+minutes** à la fin, le producteur limitant le débit et la temporisation s'accumulant.
+
+Aucun réglage de script n'y répond, parce que le problème n'est pas dans le script :
+
+| Manque | Ce que Dagster apporte |
+|---|---|
+| Séquentialité | partitions `dataset × release × département` traitées de front, concurrence bornée |
+| Lot lié à la session | un asset planifié s'étale, reprend la nuit, cède le pas quand le producteur ralentit |
+| Surveillance manuelle | notification au lieu d'attente |
+
+Le lot a été arrêté à **152 documents sur 184**, ce qui suffit à valider la chaîne de calcul. Les
+32 restants ne sont pas perdus — l'import reprend sur l'état en base — mais les rattraper à la
+main n'a pas de sens : c'est exactement le travail que ce ticket doit rendre inutile.
+
 ## Contexte à charger
 
 - `pipelines/src/immo_pipelines/assets/cadastre.py` (modèle d'asset partitionné)
