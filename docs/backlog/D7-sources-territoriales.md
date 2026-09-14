@@ -2,6 +2,7 @@
 
 **Version :** v0.5 · **Taille :** L · **État :** À faire
 **Dépend de :** D1 · **Bloque :** E6
+**Touche :** pipelines/scripts/import_territorial_sources.py, contracts/datasets/DS-10/, contracts/datasets/DS-11/, docs/data/territorial-variables-35.md
 **Demandé par :** conversation du 14 septembre 2026, à la clôture de D1
 
 ## Contexte

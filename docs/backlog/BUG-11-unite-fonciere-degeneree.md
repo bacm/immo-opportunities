@@ -2,6 +2,7 @@
 
 **Version :** v0.6 · **Taille :** L · **État :** À faire
 **Dépend de :** D1 · **Bloque :** E2, E3
+**Touche :** docs/data/property-unit-35.md, backend/migrations/versions/
 **Découvert par :** revue manuelle B4, cas 90, 10 septembre 2026
 
 ## Contexte à charger

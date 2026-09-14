@@ -113,7 +113,8 @@ v0.1 preuve CI → v0.3 données spatiales 35 → v0.4 adresse réelle → v0.5 
 ```
 
 Ne pas sauter une étape. **Ne pas enrichir l'UI tant qu'aucun `OpportunitySnapshot` publié
-n'existe.** Une seule version peut être `En cours`.
+n'existe.** Plusieurs versions peuvent être `En cours` si aucune ne dépend de l'autre — la
+contrainte est le graphe de dépendances, pas un décompte.
 
 Les nice-to-have (exports, alertes, collaboration, indice de vacance) ne démarrent pas avant qu'un
 top-N réel soit publiable sur le 35 — voir [`docs/backlog/NICE-backlog.md`](docs/backlog/NICE-backlog.md).
@@ -127,7 +128,9 @@ Terminé **seulement si** :
 3. `make openapi` régénéré si l'API change ;
 4. `make check` vert ;
 5. aucune donnée simulée présentée comme réelle ;
-6. l'état du ticket est mis à jour **dans son propre fichier**, puis `make backlog`.
+6. l'état du ticket est mis à jour **dans son propre fichier**, puis `make backlog` ;
+7. les dépendances des tickets que celui-ci débloque sont **relues** : une dépendance qui n'a plus
+   d'objet se retire, sans quoi elle allonge le chemin critique indéfiniment.
 
 ## Commandes
 
@@ -160,11 +163,38 @@ cohérence documentaire ne doit pas bloquer la CI de code.
 Les fichiers `docs/versions/` et `docs/data/mvp-dod-traceability.md` ne se mettent à jour qu'à la
 clôture d'une **version**, pas d'un ticket.
 
-## Sous-agents
+## Sous-agents et parallélisation
 
 - **Oui** pour la recherche en fan-out (« où est implémenté X ») : on garde la conclusion, pas les
   fichiers.
-- **Oui** pour les tickets réellement indépendants — la colonne « Disponibilité » les identifie.
+- **Oui** pour les tickets d'un même **lot menable de front** — section générée en bas de
+  [`docs/backlog/README.md`](docs/backlog/README.md).
 - **Non** sur le chemin critique séquentiel : la continuité y coûte moins cher que la relecture.
 - Un sous-agent doit recevoir l'ID du ticket et son bloc « Contexte à charger », sinon il produit
   du hors-sujet.
+
+### « Disponible » ne veut pas dire « parallélisable »
+
+La colonne « Disponibilité » dérive du graphe de dépendances : elle dit ce qui *peut commencer*.
+Elle ne dit pas ce qui peut commencer **ensemble** — deux tickets sans lien de dépendance peuvent
+très bien écrire dans le même fichier.
+
+D'où le champ `**Touche :**` dans l'en-tête de chaque ticket : les chemins qu'il va **écrire**,
+distincts de « Contexte à charger » qui dit ce qu'il faut lire. `make backlog` en dérive :
+
+- les **lots menables de front**, dont les tickets n'ont aucun chemin commun ;
+- les tickets **déjà démarrés**, qui occupent leurs chemins ;
+- les tickets prêts mais **retenus** par un travail en cours.
+
+Un ticket sans `Touche` déclaré est isolé par précaution et signalé — l'oubli coûte de la
+parallélisation, il ne produit pas de collision.
+
+### Deux disciplines sans lesquelles rien de tout cela ne tient
+
+1. **Passer un ticket à `En cours` en le commençant**, pas en le finissant. C'est ce qui réserve
+   ses chemins ; un ticket travaillé mais resté `À faire` est invisible et un second agent ira
+   écrire au même endroit.
+2. **À la clôture d'un ticket, réexaminer ce qu'il débloque.** Une dépendance héritée de l'ordre
+   de rédaction survit tant que personne ne la relit — `D3` attendait `D2` pour un module déjà
+   livré, `D4` attendait `D3` sans qu'aucune ligne ne le justifie. Les deux allongeaient le chemin
+   critique pour rien.

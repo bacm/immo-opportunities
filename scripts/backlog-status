@@ -60,6 +60,15 @@ def load() -> dict:
             "size": field(text, "Taille") or "—",
             "state": field(text, "État") or "",
             "deps": list(dict.fromkeys(d for d in ID_RE.findall(raw_deps) if d != tid)),
+            # Les chemins que le ticket va **ecrire**. Distinct de « Contexte a charger », qui
+            # dit ce qu'il faut lire. Deux tickets sans dependance entre eux peuvent tres bien
+            # ecrire dans le meme fichier : la disponibilite ne suffit donc pas a decider ce qui
+            # peut etre mene de front.
+            "writes": [
+                path.strip()
+                for path in (field(text, "Touche") or "").split(",")
+                if path.strip() and path.strip() != "—"
+            ],
         }
     return tickets
 
@@ -101,6 +110,51 @@ def availability(t: dict, tickets: dict) -> str:
     return "**prêt**" if not blocking else "attend " + ", ".join(blocking)
 
 
+def collides(left: dict, right: dict) -> bool:
+    """Deux tickets se disputent-ils un chemin ?
+
+    Un chemin en prefixe d'un autre suffit : `pipelines/src/immo_pipelines/market_data/` et
+    `pipelines/src/immo_pipelines/market_data/cnig.py` sont en conflit, le premier couvrant le
+    second. Un ticket sans `Touche` declare est traite comme entrant en conflit avec tout le
+    monde — l'inconnu ne se parallelise pas.
+    """
+    if not left["writes"] or not right["writes"]:
+        return True
+    return any(
+        a == b or a.startswith(b.rstrip("/") + "/") or b.startswith(a.rstrip("/") + "/")
+        for a in left["writes"]
+        for b in right["writes"]
+    )
+
+
+def parallel_batches(tickets: dict) -> tuple[list[list[str]], list[str]]:
+    """Les lots menables de front, et les tickets prêts qu'un travail en cours retient.
+
+    Un ticket `En cours` **occupe ses chemins** : quelqu'un y écrit déjà. Un ticket prêt qui les
+    touche n'est pas démarrable, quoi qu'en dise le graphe de dépendances — c'est précisément la
+    collision que la colonne « Disponibilité » ne voyait pas.
+
+    Le regroupement est glouton et non optimal, et c'est voulu : un ordonnancement exact
+    n'apporterait rien, la contrainte réelle étant le nombre de personnes disponibles.
+    """
+    running = [t for t in tickets.values() if t["state"] == "En cours"]
+    ready = [t for t in tickets.values() if availability(t, tickets) == "**prêt**"]
+    ready.sort(key=lambda t: (not t["writes"], t["id"]))
+
+    held = [t["id"] for t in ready if any(collides(t, r) for r in running)]
+    free = [t for t in ready if t["id"] not in held]
+
+    batches: list[list[dict]] = []
+    for ticket in free:
+        for batch in batches:
+            if all(not collides(ticket, other) for other in batch):
+                batch.append(ticket)
+                break
+        else:
+            batches.append([ticket])
+    return [[t["id"] for t in batch] for batch in batches], held
+
+
 def render(tickets: dict) -> str:
     out = [BEGIN, ""]
     for _, heading, match in SECTIONS:
@@ -117,9 +171,38 @@ def render(tickets: dict) -> str:
             )
         out.append("")
     ready = sorted(t["id"] for t in tickets.values() if availability(t, tickets) == "**prêt**")
+    undeclared = sorted(
+        t["id"]
+        for t in tickets.values()
+        if availability(t, tickets) == "**prêt**" and not t["writes"]
+    )
     done = sum(1 for t in tickets.values() if t["state"] == "Terminé")
     out += [f"**{done}/{len(tickets)} terminés.** Prêts à démarrer : "
-            + (", ".join(ready) if ready else "aucun") + ".", "", END]
+            + (", ".join(ready) if ready else "aucun") + ".", ""]
+    running = sorted(t["id"] for t in tickets.values() if t["state"] == "En cours")
+    if running:
+        out += ["### Déjà démarré", "",
+                "Ces tickets occupent leurs chemins : ne pas y lancer un second travail. "
+                "L'état vit dans la ligne `**État :**` de chaque fichier, source unique.", ""]
+        for tid in running:
+            paths = ", ".join(tickets[tid]["writes"]) or "chemins non déclarés"
+            out.append(f"- **{tid}** — {paths}")
+        out.append("")
+    batches, held = parallel_batches(tickets)
+    if held:
+        out += ["Prêts mais **retenus par un travail en cours** : " + ", ".join(held) + ".", ""]
+    if batches:
+        out += ["### Lots menables de front", "",
+                "Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot "
+                "n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est "
+                "supposé entrer en conflit avec tout le monde.", ""]
+        for index, batch in enumerate(batches, start=1):
+            out.append(f"{index}. " + ", ".join(batch))
+        out.append("")
+        if undeclared:
+            out += ["Sans `Touche` déclaré, donc isolés par précaution : "
+                    + ", ".join(undeclared) + ".", ""]
+    out.append(END)
     return "\n".join(out)
 
 

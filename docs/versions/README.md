@@ -6,8 +6,13 @@ Ces numéros désignent des **versions d’implémentation**, pas des versions d
 
 ## Règles de suivi
 
-- Une seule version peut être `En cours`.
-- Une version ne commence que lorsque ses dépendances obligatoires sont terminées.
+- Une version ne commence que lorsque ses dépendances obligatoires sont terminées. **C'est la
+  seule contrainte d'ordre entre versions.**
+- Plusieurs versions peuvent être `En cours` simultanément si aucune ne dépend de l'autre.
+  L'ancienne règle « une seule version `En cours` » a été retirée le 14 septembre 2026 : elle
+  était plus restrictive que le graphe réel et bloquait des tickets sans dépendance — `G6`
+  exploitation et `G7` observabilité n'attendent rien de technique, seulement leur étiquette de
+  version.
 - Un item n’est terminé que si son test et son élément de preuve existent.
 - Une version terminée devient immuable. Toute correction ultérieure est documentée dans la version active.
 - Les décisions qui modifient une ADR nécessitent une nouvelle note ADR.
@@ -16,7 +21,8 @@ Ces numéros désignent des **versions d’implémentation**, pas des versions d
 États possibles : `À faire`, `En cours`, `Bloquée`, `Terminée`, `Abandonnée`.
 
 Le code livré en avance sur une dépendance ne vaut pas avancement : une version dont les critères
-dépendent d'une donnée absente reste `Bloquée` avec son motif, jamais `En cours`. La seule version
+dépendent d'une donnée absente reste `Bloquée` avec son motif, jamais `En cours`. C'est cette
+règle-là qui empêche d'avancer à vide, pas le décompte des versions ouvertes. La seule version
 `En cours` au 14 septembre 2026 est **v0.5 — Données métier**, v0.3 et v0.4 ayant été clôturées.
 
 ## Tableau de suivi

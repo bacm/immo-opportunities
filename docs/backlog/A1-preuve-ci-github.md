@@ -2,6 +2,7 @@
 
 **Version :** v0.1 · **Taille :** S · **État :** À faire
 **Dépend de :** — · **Bloque :** clôture de v0.1 uniquement (hors chemin critique données)
+**Touche :** .github/workflows/, docs/data/ci-proof.md
 
 ## Contexte à charger
 

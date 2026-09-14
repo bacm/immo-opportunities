@@ -1,6 +1,7 @@
 # BUG-02 — Les imports réels passent par des scripts one-shot, pas par Dagster
 
 **Version :** dette transverse · **Taille :** L · **État :** À faire
+**Touche :** pipelines/src/immo_pipelines/assets/, pipelines/src/immo_pipelines/definitions.py
 **Non bloquant** pour le chemin critique, mais bloquant pour la DoD architecture §25
 (« pipelines partitionnés 22/29/35/56 »).
 

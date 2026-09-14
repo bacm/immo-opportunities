@@ -2,6 +2,7 @@
 
 **Version :** dette transverse · **Taille :** M · **État :** À faire
 **Dépend de :** — · **Bloque :** —
+**Touche :** backend/migrations/versions/, pipelines/src/immo_pipelines/cadastre/catalog.py
 **Découvert par :** question de dimensionnement, 8 septembre 2026
 
 ## Contexte à charger

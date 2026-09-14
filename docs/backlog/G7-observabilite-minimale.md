@@ -2,6 +2,7 @@
 
 **Version :** v0.8 · **Taille :** M · **État :** À faire
 **Dépend de :** — (parallélisable) · **Bloque :** clôture de v0.8
+**Touche :** config/grafana/, config/prometheus/, docs/operations/observabilite.md
 
 ## Contexte à charger
 

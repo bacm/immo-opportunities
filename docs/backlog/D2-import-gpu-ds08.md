@@ -1,7 +1,8 @@
 # D2 — DS-08 GPU : zonage et contraintes, sans interprétation de règlement
 
-**Version :** v0.5 · **Taille :** M · **État :** À faire
+**Version :** v0.5 · **Taille :** M · **État :** En cours
 **Dépend de :** D1 · **Bloque :** D5
+**Touche :** pipelines/scripts/import_gpu_release.py, pipelines/src/immo_pipelines/market_data/cnig.py, contracts/datasets/DS-08/, docs/data/gpu-coverage-35.md
 
 ## Contexte à charger
 

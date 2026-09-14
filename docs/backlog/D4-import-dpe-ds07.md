@@ -2,6 +2,7 @@
 
 **Version :** v0.5 · **Taille :** L · **État :** À faire
 **Dépend de :** D1 · **Bloque :** D5
+**Touche :** pipelines/scripts/import_dpe_release.py, contracts/datasets/DS-07/, docs/data/dpe-quality-35.md
 
 > **Parallélisable avec D2 et D3** — resequencage du 14 septembre 2026. Ce ticket dépendait de
 > D3 sans qu'aucune ligne ne le justifie : les DPE de l'ADEME et les risques de Géorisques sont
