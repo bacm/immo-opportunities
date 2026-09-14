@@ -589,6 +589,50 @@ Les Dagster Asset Checks couvrent :
 - fraîcheur ;
 - comparaison avec la release précédente.
 
+### 10.6 Résistance à la variété des sources
+
+**Règle applicable à tout pipeline nouveau ou modifié.**
+
+Une source publique n'est jamais uniforme. Sur le seul import DS-08, 184 documents d'un même
+producteur, au même format normalisé, ont présenté six variantes distinctes : un attribut
+obligatoire vide, un encodage non déclaré, des géométries invalides, une limitation de débit, une
+erreur au message illisible, et un type de document sans la couche attendue. Chacune, non prévue,
+a coûté un lot complet et une relance.
+
+Ces cas sont **inconnaissables d'avance**. Ce qui est évitable, c'est de lancer un lot entier en
+supposant que tout ressemblera à l'échantillon testé.
+
+#### Avant le premier lot
+
+**Inventorier la variété sur un échantillon dispersé**, jamais sur les premiers éléments — ils se
+ressemblent. Compter la présence de chaque couche ou colonne attendue, les encodages déclarés, les
+attributs obligatoires vides, les types de géométrie.
+
+#### Pendant le lot
+
+1. **Un élément échoue sans faire échouer le lot.** L'échec est consigné dans le manifeste ou le
+   rapport, pas seulement journalisé : taire un élément absent ferait passer une couverture
+   partielle pour une couverture complète.
+2. **Un échec passager n'est pas un échec définitif.** Un `429`, un délai dépassé, une connexion
+   coupée ne disent rien de l'élément — les consigner comme défectueux condamne des données
+   valides. Temporisation croissante, puis code de sortie distinct pour qu'une relance soit une
+   décision et non un oubli.
+3. **Un service public se temporise, il ne s'insiste pas.** Un `429` est une demande d'attendre.
+4. **Une valeur absente prend un repli documenté ou reste absente**, jamais une valeur devinée. La
+   provenance du repli est persistée, de sorte que le rapport distingue une donnée déclarée d'une
+   donnée reconstituée.
+5. **Un écrit progressif plutôt qu'un écrit final.** Un lot long doit reprendre là où il s'est
+   arrêté ; recommencer à zéro est tenable sur un département et rédhibitoire sur la France.
+6. **Un message d'erreur nomme sa cause.** Une bibliothèque peut lever une exception sans message
+   utile ; le type et le contexte sont joints avant de consigner.
+
+#### Ce que la règle interdit
+
+Réparer en silence. Une géométrie invalide est comptée et écartée, pas corrigée ; un encodage
+inconnu produit un repli qui ne peut pas échouer, pas une supposition ; un attribut manquant reste
+manquant avec son motif. **Un import qui masque la variété de sa source produit une couverture qui
+ment.**
+
 ---
 
 ## 11. Tâches asynchrones applicatives

@@ -83,6 +83,9 @@ Sources de vérité, dans cet ordre : `SPEC.md` → `ARCHITECTURE.md` → `docs/
 - **Données simulées interdites** pour satisfaire un critère « données réelles ».
 - Anomalie sur un attribut → l'attribut devient manquant avec motif, l'enregistrement est conservé
   (décision BUG-03, réutilisée par D1 à D4).
+- **Tout pipeline prévoit la variété de sa source avant son premier lot.** Inventorier sur un
+  échantillon dispersé, faire échouer un élément sans faire échouer le lot, distinguer l'échec
+  passager du défectueux, temporiser face à un service public. Voir `ARCHITECTURE.md` §10.6.
 - **La clé d'idempotence et l'identifiant de run d'un import portent la version de
   transformation.** Sans elle, une release déjà importée est rejouée à vide et un correctif de
   code n'atteint jamais les données — constaté sur BUG-09.

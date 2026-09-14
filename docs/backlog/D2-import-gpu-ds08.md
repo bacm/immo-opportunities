@@ -301,6 +301,10 @@ prévue coûtait un lot complet, une correction, une relance. Cinq cycles pour c
 L'erreur n'était pas de découvrir ces cas — ils sont inconnaissables d'avance — mais de **lancer
 un lot de 184 documents en supposant que tous ressembleraient aux trois premiers testés**.
 
+> **La règle qui en découle ne vit plus ici.** Elle s'applique à tout pipeline nouveau ou modifié,
+> et elle est écrite dans [`ARCHITECTURE.md` §10.6](../../ARCHITECTURE.md#106-résistance-à-la-variété-des-sources).
+> Ce qui suit en est l'instance observée sur DS-08.
+
 Ce qu'un import de ce type doit prévoir **avant** son premier lot :
 
 | Variante | Observée sur le 35 | Traitement |
