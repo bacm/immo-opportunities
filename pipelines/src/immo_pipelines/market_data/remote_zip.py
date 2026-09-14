@@ -18,6 +18,8 @@ chercher que ceux dont on a besoin. Le serveur du GPU annonce `accept-ranges: by
 il suffit donc d'en fournir un qui traduise les lectures en requêtes de plage HTTP.
 """
 
+import time
+import urllib.error
 import urllib.request
 from typing import IO
 
@@ -76,7 +78,29 @@ class RemoteFile:
                 )
             return int(content_range.rsplit("/", 1)[1])
 
+    # Le GPU limite le debit. Un 429 n'est pas un defaut du document : c'est une demande
+    # d'attendre, et la traiter comme un echec definitif condamne des documents valides — quatre
+    # l'ont ete lors du premier import du 35.
+    RETRY_DELAYS = (5, 15, 45)
+
     def _fetch(self, start: int, end: int) -> bytes:
+        last: Exception | None = None
+        for attempt, delay in enumerate((0, *self.RETRY_DELAYS)):
+            if delay:
+                time.sleep(delay)
+            try:
+                return self._fetch_once(start, end)
+            except urllib.error.HTTPError as error:
+                if error.code not in (429, 503):
+                    raise
+                last = error
+                if attempt < len(self.RETRY_DELAYS):
+                    continue
+        raise RuntimeError(
+            f"{self.url} : débit limité après {len(self.RETRY_DELAYS)} tentatives ({last})"
+        )
+
+    def _fetch_once(self, start: int, end: int) -> bytes:
         request = urllib.request.Request(
             self.url,
             headers={"Range": f"bytes={start}-{end}", "User-Agent": USER_AGENT},

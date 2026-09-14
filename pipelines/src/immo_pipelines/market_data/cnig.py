@@ -121,7 +121,16 @@ def read_features(archive: zipfile.ZipFile, members: LayerMembers) -> Iterator[F
         parts["shp"] = io.BytesIO(archive.read(members.files[".shp"]))
         if ".shx" in members.files:
             parts["shx"] = io.BytesIO(archive.read(members.files[".shx"]))
-    reader = cast(Any, shapefile.Reader(**parts))
+    # L'encodage des attributs DBF est declare par le `.cpg`, et ce fichier manque sur une partie
+    # des documents : cinq des 88 premiers imports du 35 ont echoue sur un octet 0xe9, c'est-a-dire
+    # un « é » en Latin-1. `pyshp` suppose UTF-8 par defaut et leve.
+    #
+    # A defaut de declaration, on essaie UTF-8 puis on retombe sur Latin-1, qui est l'encodage
+    # historique des shapefiles et ne peut pas echouer — au pire il produit des caracteres faux,
+    # la ou UTF-8 perdrait le document entier. Un libelle mal accentue reste lisible ; un document
+    # absent ne l'est pas.
+    declared = _declared_encoding(archive, members)
+    reader = cast(Any, shapefile.Reader(**parts, encoding=declared, encodingErrors="replace"))
 
     if not members.has_geometry:
         for record in cast(Iterator[Any], reader.iterRecords()):
@@ -133,6 +142,21 @@ def read_features(archive: zipfile.ZipFile, members: LayerMembers) -> Iterator[F
             attributes=_attributes(item.record),
             geometry=cast("Mapping[str, Any]", item.shape.__geo_interface__),
         )
+
+
+def _declared_encoding(archive: zipfile.ZipFile, members: LayerMembers) -> str:
+    """L'encodage déclaré par le `.cpg`, ou Latin-1 à défaut.
+
+    Latin-1 plutôt qu'UTF-8 comme repli : il décode n'importe quel octet sans lever, là où UTF-8
+    échoue sur un accent Latin-1 et fait perdre le document entier.
+    """
+    cpg = members.files.get(".cpg")
+    if cpg is None:
+        return "latin-1"
+    label = archive.read(cpg).decode("ascii", errors="ignore").strip().lower()
+    if "utf" in label:
+        return "utf-8"
+    return "latin-1"
 
 
 def _attributes(record: Any) -> dict[str, str]:

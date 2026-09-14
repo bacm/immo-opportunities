@@ -293,6 +293,33 @@ document d'urbanisme sans en dépendre. C'est la nature même de ce que D3 trait
 
 Les **SCoT** sont exclus aussi : ils ne s'appliquent pas à la parcelle.
 
+### Prévoir les variantes avant le lot, pas après chaque échec
+
+**Méthode corrigée le 14 septembre 2026**, sur remarque pendant l'import : chaque variante non
+prévue coûtait un lot complet, une correction, une relance. Cinq cycles pour cinq variantes.
+
+L'erreur n'était pas de découvrir ces cas — ils sont inconnaissables d'avance — mais de **lancer
+un lot de 184 documents en supposant que tous ressembleraient aux trois premiers testés**.
+
+Ce qu'un import de ce type doit prévoir **avant** son premier lot :
+
+| Variante | Observée sur le 35 | Traitement |
+|---|---|---|
+| Attribut obligatoire vide | `DATAPPRO` absent — 2 documents | repli sur la date du catalogue, **provenance marquée** |
+| Encodage non déclaré | `.cpg` absent — 5 documents | UTF-8 si déclaré, Latin-1 sinon, qui ne peut pas échouer |
+| Géométrie invalide | 3 documents | comptée et écartée, le document passe sans elle |
+| Débit limité | `429` — 4 documents | temporisation 5 s, 15 s, 45 s, puis échec passager |
+| Erreur au message illisible | `pyshp` lève un entier nu | le type est joint au message |
+| Carte communale sans zonage | 14 documents | résultat normal, pas une anomalie |
+
+**Le 429 est le plus instructif.** Ce n'est pas un défaut du document, c'est une demande
+d'attendre — et le traiter en échec définitif condamnait quatre documents valides. Un import qui
+sollicite un service public doit temporiser, pas insister.
+
+Trois de ces six variantes n'ont été trouvées qu'en lisant les échecs d'un lot interrompu. La
+règle qui en découle : **inventorier la variété d'un échantillon avant de traiter le tout**, et
+faire échouer un document sans faire échouer le lot.
+
 ### Un chemin d'erreur est un résultat, pas une exception
 
 Quatre défauts de même famille se sont succédé sur ce seul ticket. Aucun n'était visible d'un

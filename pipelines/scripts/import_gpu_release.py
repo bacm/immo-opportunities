@@ -84,7 +84,10 @@ def geometry_wkt(feature: Feature) -> str | None:
     if feature.geometry is None:
         return None
     geometry = shape(feature.geometry)
-    if geometry.is_empty:
+    if geometry.is_empty or not geometry.is_valid:
+        # La contrainte `st_isvalid` du schema refuse ces geometries, et c'est voulu : les
+        # reparer en silence reviendrait a deviner ce que le producteur voulait dire. Elles sont
+        # comptees et le document est importe sans elles, plutot que perdu en entier.
         return None
     return geometry.wkt
 
@@ -113,8 +116,21 @@ def import_document(
         raise RuntimeError(f"{asset['name']} : IDURBA absent, version du document inconnue")
 
     approved = parse_date(document.get("datappro"))
+    provenance = "cnig_datappro"
     if approved is None:
-        raise RuntimeError(f"{asset['name']} : DATAPPRO illisible ({document.get('datappro')!r})")
+        # `DATAPPRO` vide sur certains documents. Le catalogue porte la date de publication, qui
+        # n'est pas la date d'approbation mais s'en approche et vient du meme producteur. La
+        # provenance est marquee pour que le rapport distingue les deux.
+        published = str(asset.get("published_at") or "")
+        if len(published) >= 10:
+            day, month, year = published[:2], published[3:5], published[6:10]
+            approved = parse_date(f"{year}{month}{day}")
+        provenance = "catalog_published_at"
+    if approved is None:
+        raise RuntimeError(
+            f"{asset['name']} : ni DATAPPRO ni date de publication exploitables "
+            f"({document.get('datappro')!r}, {asset.get('published_at')!r})"
+        )
 
     document_id = f"urban-document:gpu:{release_id}:{identifier}"
     connection.execute(
@@ -150,6 +166,7 @@ def import_document(
                     # D'ou vient la liste des communes. `catalog_fallback` est une provenance
                     # degradee, et le rapport de couverture doit pouvoir la distinguer.
                     "communes_provenance": asset.get("communes_provenance", "doc_urba_com"),
+                    "approval_date_provenance": provenance,
                     # Les pieces ecrites ne sont pas lues ici : leurs noms sont conserves pour
                     # que D2b sache ou aller, sans qu'aucun texte n'entre en base.
                     "written_pieces_url": document.get("urlreg") or None,
@@ -296,15 +313,29 @@ def main() -> int:
                 connection.commit()
             except Exception as error:
                 connection.rollback()
-                message = str(error).lower()
-                if any(m in message for m in ("timed out", "timeout", "connection", "not a zip")):
+                message = f"{type(error).__name__}: {error}".lower()
+                if any(
+                    marker in message
+                    for marker in (
+                        "timed out",
+                        "timeout",
+                        "connection",
+                        "not a zip",
+                        "429",
+                        "débit limité",
+                        "too many requests",
+                    )
+                ):
                     # Un echec reseau ne dit rien du document : ne pas le consigner comme
                     # defectueux, et sortir en code 3 pour qu'une relance soit une decision.
                     transient += 1
                     print(f"  {asset['name']} : échec passager ({error})", flush=True)
                     continue
-                failures.append({"name": str(asset["name"]), "reason": str(error)})
-                print(f"  {asset['name']} : échec ({error})", flush=True)
+                # `pyshp` leve parfois une exception dont le message est un entier nu : sans le
+                # type, l'echec est illisible dans le rapport.
+                detail = f"{type(error).__name__}: {error}"
+                failures.append({"name": str(asset["name"]), "reason": detail})
+                print(f"  {asset['name']} : échec ({detail})", flush=True)
                 continue
             totals["documents"] += 1
             for key, value in counters.items():
