@@ -253,6 +253,35 @@ Le rattachement zone ↔ parcelle est donc **nécessairement spatial** — ce n'
 de conception mais une contrainte de la donnée. `DOC_URBA_COM` donne le périmètre administratif du
 document, pas le rattachement de chaque zone.
 
+### Un document réellement malformé, et ce qu'il impose
+
+**Dinard, `DU_35093`** — la commune sur laquelle la revue B4 a travaillé — est le seul document du
+35 que l'épinglage ne sait pas lire. Le diagnostic, une fois la lecture partielle corrigée :
+
+| Couche | Premier octet | Nature réelle |
+|---|---|---|
+| `DOC_URBA.dbf` | `0x50` | **archive Office renommée** — on y lit `[Content_Types].xml` |
+| `DOC_URBA_COM.dbf` | `0x50` | **archive Office renommée** |
+| `zone_urba`, `prescription_*`, `info_surf` | `0x03` | DBF valides |
+
+Les octets sont complets — vérifié en comparant la taille lue à la taille déclarée par le ZIP,
+donc la lecture partielle n'est pas en cause. Ce sont deux fichiers Office déposés sous une
+extension `.dbf` par le producteur.
+
+**Ce que cela coûte :** les cinq couches géographiques de Dinard sont lisibles, mais son
+`DOC_URBA_COM` ne l'est pas. Le document ne peut donc pas déclarer les communes qu'il couvre, et
+le rattachement administratif échoue. Le rattachement **spatial**, lui, resterait possible.
+
+**Ce qui est décidé ici :** le document est consigné comme illisible, avec son motif, et Dinard
+compte parmi les communes sans zonage importé. Deviner que `DU_35093` couvre la commune `35093`
+depuis son nom serait une convention inventée — exactement ce que la règle « aucune convention
+inventée » interdit. Le signaler au producteur est la bonne réponse ; le contourner n'en est pas
+une.
+
+**Ce que cela apprend :** un fichier peut porter la bonne extension, la bonne taille et le bon
+nom, et n'être pas du tout ce qu'il prétend. La reconnaissance par nom ne suffit pas — l'import
+doit vérifier la signature des couches qu'il lit, et échouer bruyamment sinon.
+
 ### Périmètre : les documents d'urbanisme, pas les servitudes
 
 Les types retenus sont `PLU`, `PLUi`, `CC`, `POS` et `PSMV`.

@@ -15094,5 +15094,12 @@
         }
       }
     }
+  ],
+  "unreadable": [
+    {
+      "document_id": "b34eefaec73ff6a99313b5745fcbec92",
+      "name": "DU_35093",
+      "reason": "Shapefile dbf header lacks expected terminator. (likely corrupt?)"
+    }
   ]
 }
