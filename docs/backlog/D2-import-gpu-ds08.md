@@ -194,6 +194,65 @@ Les couches CNIG sont des shapefiles. Le dépôt évite GDAL par principe — la
 passe par `sqlite3` et `shapely`. `pyshp` est l'équivalent minimal pour le shapefile : pur Python,
 sans binaire à installer, et il n'introduit aucune dépendance système.
 
+### `URB-001` : la règle vient de la distribution observée, pas d'un seuil
+
+Mesuré sur le PLUi de Rennes Métropole — 4 069 zones, aucune géométrie invalide — croisé avec les
+parcelles de Rennes, Cesson-Sévigné et Saint-Grégoire : **51 577 parcelles**.
+
+| | Parcelles | Part |
+|---|---:|---:|
+| Une seule zone | 35 869 | 69,5 % |
+| **Plusieurs zones** | **15 708** | **30,5 %** |
+| Maximum observé | 15 zones sur une parcelle | — |
+
+Le partage est donc trop fréquent pour être traité en exception. Mais il est **massivement
+déséquilibré** :
+
+| Parmi les 15 708 parcelles multi-zones | Part |
+|---|---:|
+| Zone dominante à plus de 95 % | **92,0 %** |
+| Zone dominante à plus de 90 % | 93,1 % |
+| Seconde zone sous 1 % | **91,0 %** |
+| **`typezone` réellement différents** | **19,6 %** |
+
+Neuf parcelles sur dix touchent une seconde zone sur moins de 1 % de leur surface : c'est du bruit
+de numérisation entre deux découpages, pas un zonage partagé. Et quatre partages sur cinq portent
+sur des sous-zones du **même** `typezone` — `UC1` contre `UC2` — ce qui ne change pas ce qu'on
+peut faire du terrain.
+
+**La règle retenue est celle du rang, transposée de
+[BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) :** la zone représentative est celle qui
+couvre la plus grande part de la parcelle. Aucun seuil n'est inventé, et la revue B4 a montré
+qu'un seuil sur un recouvrement se paie cher — le relecteur y jugeait faux à 12,4 % et juste à
+15,6 %.
+
+**Une parcelle partagée entre deux `typezone` distincts reste enregistrée comme telle.** C'est la
+réalité juridique : une parcelle à cheval est soumise aux deux règlements sur ses parties
+respectives. La zone de rang 1 est représentative, les autres sont conservées comme relations
+secondaires, et le scoring devra en tenir compte plutôt que de croire la parcelle homogène.
+
+### `typezone` et `libelle` ne se comparent pas de la même façon
+
+Deux colonnes, deux natures, et les confondre produirait des comparaisons fausses :
+
+| Colonne | Exemple | Nature |
+|---|---|---|
+| `typezone` | `U`, `AUc`, `A`, `N` | **normalisé CNIG**, comparable entre documents |
+| `libelle` | `UG2b`, `UC2`, `UD1a` | **code du règlement local**, sans portée hors du document |
+
+`UG2b` à Rennes n'a aucun rapport avec `UG2b` ailleurs. `URB-001` doit porter les deux, et le
+scoring ne peut comparer que `typezone`.
+
+### Une zone de PLUi ne porte pas de code commune
+
+Sur les 4 069 zones de Rennes Métropole, `insee` et `destdomi` sont vides **partout**. Un PLU
+communal renseigne `INSEE`, mais on ne peut pas dépendre d'un champ qui disparaît sur les
+documents intercommunaux.
+
+Le rattachement zone ↔ parcelle est donc **nécessairement spatial** — ce n'est plus une préférence
+de conception mais une contrainte de la donnée. `DOC_URBA_COM` donne le périmètre administratif du
+document, pas le rattachement de chaque zone.
+
 ## Travail à réaliser
 
 1. Identifier et épingler les documents : **178 communaux** par `territory=35`, plus les PLUi
