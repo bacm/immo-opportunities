@@ -444,3 +444,32 @@ D'où D2b, après [E3](./E3-publier-snapshots.md).
 - manifestes `contracts/datasets/DS-08/releases/…` ;
 - section DS-08 de [`market-data-sources-audit.md`](../data/market-data-sources-audit.md) ;
 - rapport `docs/data/gpu-coverage-35.md`.
+
+## Avancement au 14 septembre 2026
+
+**Épinglage** : 184 documents, 1 257 couches, 707,6 Mo d'empreintes pour 34,2 Go d'archives, aucun
+illisible. Voir [`gpu-coverage-35.md`](../data/gpu-coverage-35.md).
+
+**Import** : **152 documents sur 184**, tous `opposable`, 154 communes couvertes. Le lot a été
+arrêté volontairement — le débit du producteur s'effondrait et le rattrapage à la main n'a pas de
+sens, c'est le travail de [BUG-02](./BUG-02-scripts-import-hors-dagster.md). Un lot partiel est un
+résultat exploitable dès lors que sa couverture est publiée.
+
+**Features `URB-*`** : la chaîne est vérifiée de bout en bout sur Guipry-Messac —
+**15 128 parcelles zonées sur 15 129**, 7 813 portant au moins une contrainte.
+
+| Feature | État |
+|---|---|
+| `URB-001` | calculée — `typezone\|libelle`, par exemple `A\|A`, `N\|NM`, `N\|NP` |
+| `URB-003` | calculée — comptage typé et aire d'intersection |
+| `URB-005` | calculée à **zéro partout**, ce qui est le résultat attendu |
+| `URB-002`, `URB-004` | absentes avec motif, jusqu'à [D2b](./D2b-profils-de-regles.md) |
+
+Une commune sans document importé sort en `source_not_accepted`, jamais en blanc.
+
+### Ce qui reste
+
+- importer les 32 documents manquants, une fois [BUG-02](./BUG-02-scripts-import-hors-dagster.md)
+  livré plutôt qu'à la main ;
+- calculer `URB-*` sur le département entier ;
+- enrichir le rapport de couverture de ce que l'import révèle.
