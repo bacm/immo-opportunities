@@ -91,6 +91,12 @@ rnb-import:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/import_rnb_release.py 2026-09-05 --department $(DEPARTMENT)
 
+dvf-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_dvf_release.py 2026-09-13 \
+		--department $(DEPARTMENT) $(if $(YEAR),--year $(YEAR),)
+
 morphology-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
