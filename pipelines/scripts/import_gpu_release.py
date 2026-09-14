@@ -44,13 +44,20 @@ from immo_pipelines.market_data.remote_zip import open_remote
 # 1 : premier import GPU. Zonage et contraintes, sans interpretation de reglement.
 GPU_TRANSFORMATION_VERSION = "1"
 
-# `etat` CNIG : 01 projet, 02 arrete, 03 approuve, 04 executoire, 05 annule.
-CNIG_STATUS = {
-    "03": "opposable",
-    "04": "opposable",
-    "05": "cancelled",
-    "01": "informational",
-    "02": "informational",
+# Le statut vient du **catalogue**, dont la specification enumere les valeurs, et non du champ
+# `ETAT` de `DOC_URBA`.
+#
+# `ETAT` a d'abord ete interprete de memoire — 03 approuve, 05 annule — ce qui a produit
+# 32 documents « annules » alors que le GPU les declare tous APPROVED, et 40 « informational »
+# pour un code 07 dont la signification n'a jamais ete sourcee. C'est la meme faute que refuser
+# d'interpreter le champ `type` du cadastre pour LAND-010, sauf qu'ici je l'avais commise.
+#
+# `legalStatus` est documente dans `/api/swagger.yaml` avec ses quatre valeurs. Il fait foi.
+LEGAL_STATUS = {
+    "APPROVED": "opposable",
+    "PARTIALLY_ANNULLED": "opposable",
+    "ANNULLED": "cancelled",
+    "HISTORICAL": "superseded",
 }
 
 # Les prescriptions s'imposent a la parcelle ; `info_*` est porte a connaissance, jamais opposable.
@@ -105,9 +112,28 @@ def import_document(
     if "doc_urba" not in layers:
         raise RuntimeError(f"{asset['name']} : pas de couche DOC_URBA")
 
-    document = next(read_features(archive, layers["doc_urba"]), None)
+    document_provenance = "doc_urba"
+    try:
+        document = next(read_features(archive, layers["doc_urba"]), None)
+    except Exception:
+        # `DOC_URBA` illisible — pour `DU_35093`, deux archives Office deposees sous une
+        # extension `.dbf`. Les zones du meme document declarent pourtant leur `IDURBA`, et
+        # c'est le producteur qui l'ecrit, sur une couche lisible de la meme archive.
+        #
+        # Prendre le producteur au mot sur un autre canal n'est pas deviner : c'est le meme
+        # raisonnement que le rattrapage de communes par le catalogue. Sans cela, les 57 zones
+        # de Dinard seraient perdues pour une table de metadonnees defectueuse.
+        document = None
+        document_provenance = "zone_urba_fallback"
+
+    if document is None and "zone_urba" in layers:
+        first_zone = next(read_features(archive, layers["zone_urba"]), None)
+        if first_zone is not None and first_zone.get("idurba"):
+            document = first_zone
+            document_provenance = "zone_urba_fallback"
+
     if document is None:
-        raise RuntimeError(f"{asset['name']} : DOC_URBA vide")
+        raise RuntimeError(f"{asset['name']} : DOC_URBA vide et aucun repli possible")
 
     identifier = document.get("idurba")
     if not identifier:
@@ -152,7 +178,9 @@ def import_document(
             approved,
             approved,
             parse_date(document.get("datefin")),
-            CNIG_STATUS.get(document.get("etat"), "informational"),
+            # Un statut inconnu reste `informational` : ni opposable, ni annule, et visible
+            # comme tel plutot que devine.
+            LEGAL_STATUS.get(str(asset.get("legal_status") or ""), "informational"),
             # `commune_codes` est du `jsonb` : une liste Python y arriverait comme un litteral
             # de tableau PostgreSQL, que le type refuse.
             json.dumps(asset["communes"]),
@@ -167,6 +195,7 @@ def import_document(
                     # degradee, et le rapport de couverture doit pouvoir la distinguer.
                     "communes_provenance": asset.get("communes_provenance", "doc_urba_com"),
                     "approval_date_provenance": provenance,
+                    "document_metadata_provenance": document_provenance,
                     # Les pieces ecrites ne sont pas lues ici : leurs noms sont conserves pour
                     # que D2b sache ou aller, sans qu'aucun texte n'entre en base.
                     "written_pieces_url": document.get("urlreg") or None,
@@ -256,6 +285,11 @@ def main() -> int:
     parser.add_argument("release")
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
     parser.add_argument("--limit", type=int, default=None, help="limiter le nombre de documents")
+    parser.add_argument(
+        "--only",
+        default=None,
+        help="noms de documents, séparés par des virgules — rejouer sans relire tout le lot",
+    )
     arguments = parser.parse_args()
 
     manifest_path = (
@@ -301,7 +335,11 @@ def main() -> int:
         )
         connection.commit()
 
-        assets = manifest["assets"][: arguments.limit]
+        assets = manifest["assets"]
+        if arguments.only:
+            wanted = {name.strip() for name in arguments.only.split(",")}
+            assets = [a for a in assets if a["name"] in wanted]
+        assets = assets[: arguments.limit]
         for asset in assets:
             try:
                 counters = import_document(
