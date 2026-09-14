@@ -50,6 +50,7 @@ from immo_pipelines.cadastre.archive import MinioObjectStore
 from immo_pipelines.cadastre.catalog import DatasetCatalog
 from immo_pipelines.cadastre.manifest import load_release_manifest, resolve_asset
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.progress import Progress
 
 # 1 : premier import geo-dvf, qualification des mutations complexes dans ce script.
 # 2 : le prix ne va plus qu au lot auquel il se rapporte. En version 1, une vente de
@@ -294,10 +295,14 @@ def main() -> int:
         )
         connection.execute("SET ROLE pipeline_rw")
         with tempfile.TemporaryDirectory(prefix="immo-dvf-") as temporary:
-            for asset in manifest.assets:
+            wanted = [
+                asset
+                for asset in manifest.assets
+                if not arguments.year or asset.layer.removeprefix("mutations-") == arguments.year
+            ]
+            progress = Progress(len(wanted), "DS-06")
+            for asset in wanted:
                 year = asset.layer.removeprefix("mutations-")
-                if arguments.year and year != arguments.year:
-                    continue
                 destination = Path(temporary) / f"{year}.csv.gz"
                 # `resolve_asset` verifie l'empreinte, quel que soit le chemin emprunte :
                 # archive en base, copie nommee au manifeste, ou amont. Un fichier qui aurait
@@ -319,6 +324,7 @@ def main() -> int:
                 connection.commit()
                 for key, value in counters.items():
                     totals[key] += value
+                progress.advance(detail=f"{totals['mutations']} mutations")
                 print(
                     f"{year} ({resolved.origin}) : {counters['mutations']} mutations, "
                     f"{counters['properties']} biens",

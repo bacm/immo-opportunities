@@ -40,6 +40,7 @@ from shapely.geometry import shape
 from immo_pipelines.cadastre.settings import CadastreSettings
 from immo_pipelines.market_data.cnig import Feature, find_layers, read_features
 from immo_pipelines.market_data.remote_zip import open_remote
+from immo_pipelines.progress import Progress
 
 # 1 : premier import GPU. Zonage et contraintes, sans interpretation de reglement.
 GPU_TRANSFORMATION_VERSION = "1"
@@ -351,9 +352,16 @@ def main() -> int:
             wanted = {name.strip() for name in arguments.only.split(",")}
             assets = [a for a in assets if a["name"] in wanted]
         assets = assets[: arguments.limit]
-        for asset in assets:
-            if any(name.startswith(str(asset["name"]).removeprefix("DU_")) for name in imported):
-                continue
+        remaining = [
+            asset
+            for asset in assets
+            if not any(name.startswith(str(asset["name"]).removeprefix("DU_")) for name in imported)
+        ]
+        # Le total est celui du travail **restant**, pas du manifeste : annoncer « 145/184 » sur
+        # une reprise laisserait croire qu'il reste 39 documents a lire alors qu'ils sont deja
+        # sautes.
+        progress = Progress(len(remaining), "DS-08")
+        for asset in remaining:
             try:
                 counters = import_document(
                     connection,
@@ -380,17 +388,20 @@ def main() -> int:
                     # Un echec reseau ne dit rien du document : ne pas le consigner comme
                     # defectueux, et sortir en code 3 pour qu'une relance soit une decision.
                     transient += 1
+                    progress.advance(failed=True)
                     print(f"  {asset['name']} : échec passager ({error})", flush=True)
                     continue
                 # `pyshp` leve parfois une exception dont le message est un entier nu : sans le
                 # type, l'echec est illisible dans le rapport.
                 detail = f"{type(error).__name__}: {error}"
                 failures.append({"name": str(asset["name"]), "reason": detail})
+                progress.advance(failed=True)
                 print(f"  {asset['name']} : échec ({detail})", flush=True)
                 continue
             totals["documents"] += 1
             for key, value in counters.items():
                 totals[key] = totals.get(key, 0) + value
+            progress.advance(detail=f"{totals['zones']} zones, {totals['constraints']} contraintes")
             print(
                 f"  {asset['name']:16s} {counters['zones']:5d} zones, "
                 f"{counters['constraints']:5d} contraintes",

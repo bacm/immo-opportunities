@@ -626,6 +626,27 @@ attributs obligatoires vides, les types de géométrie.
 6. **Un message d'erreur nomme sa cause.** Une bibliothèque peut lever une exception sans message
    utile ; le type et le contexte sont joints avant de consigner.
 
+#### Un lot long annonce son avancement
+
+Un import départemental demande de trente minutes à deux heures. Sans repère, **un lot silencieux
+est indiscernable d'un lot bloqué** — et l'inverse noie autant : une ligne par élément sur 184
+documents empêche de voir où l'on en est.
+
+Tout lot de plus de quelques minutes émet une annonce par tranche de **10 %**, portant ce qu'il
+faut pour décider d'attendre ou d'intervenir :
+
+```text
+[DS-08] 30 % · 55/184 · 0 échec · 12 min écoulées · ~28 min restantes
+```
+
+`immo_pipelines.progress.Progress` le fournit. Deux points comptent :
+
+- **le total est celui du travail restant**, pas du catalogue. Sur une reprise, annoncer
+  « 145/184 » laisserait croire qu'il reste 39 éléments à lire alors qu'ils sont déjà sautés ;
+- **l'estimation suppose un rythme constant**, ce qui est faux quand un serveur limite le débit.
+  Un écart entre l'estimation et le réel est lui-même une information — c'est ainsi qu'on voit
+  qu'une temporisation s'est déclenchée.
+
 #### Une reprise se fonde sur l'état écrit, pas sur un journal
 
 Un lot long est interrompu, et pas seulement par le réseau. L'import DS-08 l'a été deux fois : une

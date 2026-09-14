@@ -39,6 +39,7 @@ from typing import Any
 import psycopg
 
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.progress import Progress
 
 FEATURE_VERSION = 1
 
@@ -339,6 +340,7 @@ def main() -> int:
                 ).fetchall()
             ]
         )
+        progress = Progress(len(communes), "URB")
         for commune in communes:
             rows, counters = commune_rows(connection, commune, arguments.release)
             persist(connection, rows)
@@ -346,6 +348,7 @@ def main() -> int:
             totals["units"] += len(rows) // 5
             for key, value in counters.items():
                 totals[key] += value
+            progress.advance()
             print(
                 f"  {commune} : {len(rows) // 5} unités, {counters['zoned']} zonées, "
                 f"{counters['constrained']} contraintes",

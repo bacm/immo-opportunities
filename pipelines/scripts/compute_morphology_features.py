@@ -44,6 +44,7 @@ from shapely import wkb
 from shapely.geometry.base import BaseGeometry
 
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.progress import Progress
 from immo_pipelines.spatial.features import BuildingFootprint, compute_land_features
 
 FEATURE_VERSION = 1
@@ -247,6 +248,7 @@ def main() -> int:
             [arguments.commune] if arguments.commune else communes(connection, arguments.department)
         )
         computed = 0
+        progress = Progress(len(targets), "LAND")
         for commune in targets:
             for unit_id, parcel_geometry, footprints in unit_rows(connection, commune):
                 results: dict[str, object] = dict(
@@ -265,6 +267,7 @@ def main() -> int:
                 persist(connection, unit_id, results, [cadastre])
                 computed += 1
             connection.commit()
+            progress.advance()
             print(f"{commune} : {computed} unités cumulées", flush=True)
     print(
         json.dumps(
