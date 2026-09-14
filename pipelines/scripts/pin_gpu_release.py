@@ -52,6 +52,10 @@ TRANSIENT = (
 )
 
 
+class UnreadableArchive(RuntimeError):
+    """Une archive dont on ne sait extraire ni les couches ni la liste des communes."""
+
+
 def is_transient(error: Exception) -> bool:
     """Un échec qui vaut d'être retenté, par opposition à un défaut du document lui-même."""
     message = str(error).lower()
@@ -97,25 +101,65 @@ def documents_for(department: str) -> list[dict[str, Any]]:
     return communaux + intercommunaux
 
 
-def covers(document: dict[str, Any], department: str, bounds: tuple[float, ...]) -> list[str]:
-    """Les communes du département couvertes par ce document, lues dans `DOC_URBA_COM`.
+def catalog_commune(document: dict[str, Any], department: str) -> list[str]:
+    """Le territoire déclaré par le catalogue, **et seulement s'il est communal**.
+
+    Rattrapage de provenance dégradée, pour un document dont `DOC_URBA_COM` est illisible.
+
+    Ce n'est pas une convention inventée : le GPU déclare lui-même, sur un canal distinct de
+    l'archive défectueuse, `grid = {name: "35093", title: "DINARD", type: "municipality"}`.
+    Prendre le producteur au mot est autre chose que deviner `35093` depuis le nom de fichier
+    `DU_35093`, ce que le projet s'interdit.
+
+    **Un document intercommunal n'est jamais rattrapé ainsi** : `grid` y porte le SIREN de l'EPCI
+    et ne dit rien des communes couvertes — le PLUi de Rennes Métropole en couvre 43, qu'aucun
+    champ du catalogue n'énumère. Deviner y serait faux, pas dégradé.
+    """
+    grid = document.get("grid") or {}
+    if grid.get("type") != "municipality":
+        return []
+    code = str(grid.get("name") or "")
+    return [code] if code.startswith(department) and len(code) == 5 else []
+
+
+def covers(
+    document: dict[str, Any], department: str, bounds: tuple[float, ...]
+) -> tuple[list[str], str]:
+    """Les communes du département couvertes, et d'où l'information vient.
 
     La `bbox` du catalogue sert de **pré-filtre** et jamais de critère : sur les 23 PLUi dont
     l'emprise touche le 35, dix-sept n'y ont aucune commune, et l'un d'eux — « PLUI DE
     PUISAYE-FORTERRE », dans l'Yonne — a manifestement une `bbox` fausse. Seule la couche
-    `DOC_URBA_COM` fait foi.
+    `DOC_URBA_COM` fait foi, sauf rattrapage documenté ci-dessus.
     """
     box = document.get("bbox")
     if isinstance(box, list) and len(box) == 4:
         xmin, ymin, xmax, ymax = box
         if xmax < bounds[0] or xmin > bounds[2] or ymax < bounds[1] or ymin > bounds[3]:
-            return []
+            return [], "bbox_outside"
     archive = zipfile.ZipFile(open_remote(f"{API}/document/{document['id']}/download"))
     layers = find_layers(archive)
-    if "doc_urba_com" not in layers:
-        return []
-    communes = {feature.get("insee") for feature in read_features(archive, layers["doc_urba_com"])}
-    return sorted(code for code in communes if code.startswith(department))
+    if "doc_urba_com" in layers:
+        try:
+            communes = {
+                feature.get("insee") for feature in read_features(archive, layers["doc_urba_com"])
+            }
+        except Exception as error:
+            if is_transient(error):
+                raise
+            # `DOC_URBA_COM` illisible : pour DU_35093, deux archives Office deposees sous une
+            # extension `.dbf`. Les 57 zones du document, elles, sont parfaitement lisibles —
+            # les perdre pour une table d'association defectueuse serait disproportionne.
+            fallback = catalog_commune(document, department)
+            if fallback:
+                return fallback, "catalog_fallback"
+            raise
+    else:
+        fallback = catalog_commune(document, department)
+        if fallback:
+            return fallback, "catalog_fallback"
+        raise UnreadableArchive(f"pas de DOC_URBA_COM parmi les couches {sorted(layers)}")
+    return sorted(code for code in communes if code.startswith(department)), "doc_urba_com"
 
 
 def layer_digests(document_id: str) -> tuple[dict[str, dict[str, Any]], int]:
@@ -216,7 +260,7 @@ def main() -> int:
         if document.get("type") not in DOCUMENT_TYPES or document["id"] in done:
             continue
         try:
-            communes = covers(document, arguments.department, bounds)
+            communes, provenance = covers(document, arguments.department, bounds)
         except Exception as error:
             if is_transient(error):
                 # Ni consigne ni compte comme releve : la prochaine relance le reprendra.
@@ -264,6 +308,9 @@ def main() -> int:
                 "published_at": document.get("publicationDate"),
                 "territory": (document.get("grid") or {}).get("name"),
                 "communes": communes,
+                # D'ou vient la liste des communes : `doc_urba_com` est la source normale,
+                # `catalog_fallback` une provenance degradee que le rapport doit distinguer.
+                "communes_provenance": provenance,
                 "url": f"{API}/document/{document['id']}/download",
                 "archive_byte_size": archive_size,
                 "layers": digests,

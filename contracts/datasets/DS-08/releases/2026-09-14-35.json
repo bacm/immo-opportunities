@@ -15093,13 +15093,183 @@
           ]
         }
       }
-    }
-  ],
-  "unreadable": [
+    },
+    {
+      "document_id": "dd7c05786a86769a0afd0cd5f280c1e5",
+      "name": "DU_200070688_A",
+      "document_type": "PLUi",
+      "legal_status": "APPROVED",
+      "published_at": "15/10/2025 08:47:05",
+      "territory": "200070688",
+      "communes": [
+        "35011",
+        "35071",
+        "35191",
+        "35257",
+        "35273",
+        "35280",
+        "35292",
+        "35336"
+      ],
+      "url": "https://www.geoportail-urbanisme.gouv.fr/api/document/dd7c05786a86769a0afd0cd5f280c1e5/download",
+      "archive_byte_size": 813306025,
+      "layers": {
+        "doc_urba": {
+          "sha256": "1411452864e54a7270e5343e0025967af11e3f246adba9691215426a67334ec0",
+          "byte_size": 1772,
+          "members": [
+            "200070688_PLUi_20250930_A/200070688_DOC_URBA_20250930_A.dbf"
+          ]
+        },
+        "doc_urba_com": {
+          "sha256": "8347815d410c0abea927864656ca2af3c9d6e93c8b1a266f0eca70813a36756d",
+          "byte_size": 386,
+          "members": [
+            "200070688_PLUi_20250930_A/200070688_DOC_URBA_COM_20250930_A.dbf"
+          ]
+        },
+        "info_surf": {
+          "sha256": "919a02abcabc65614cfde39382c04fcee4484b32c7a76fe56074e9d6356f1eef",
+          "byte_size": 165743,
+          "members": [
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_INFO_SURF_20250930_A.cpg",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_INFO_SURF_20250930_A.dbf",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_INFO_SURF_20250930_A.prj",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_INFO_SURF_20250930_A.shp",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_INFO_SURF_20250930_A.shx"
+          ]
+        },
+        "prescription_lin": {
+          "sha256": "68cd19ae32bf28d0df0aaa888326170eb17a3f3625e1488406d79b01dbf1d994",
+          "byte_size": 10911271,
+          "members": [
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_LIN_20250930_A.cpg",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_LIN_20250930_A.dbf",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_LIN_20250930_A.prj",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_LIN_20250930_A.shp",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_LIN_20250930_A.shx"
+          ]
+        },
+        "prescription_pct": {
+          "sha256": "1994f67c873c21d2dbaadc2c6eecc98ca7b6c45d753d86114a228b930a1b9a40",
+          "byte_size": 353676,
+          "members": [
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_PCT_20250930_A.cpg",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_PCT_20250930_A.dbf",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_PCT_20250930_A.prj",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_PCT_20250930_A.shp",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_PCT_20250930_A.shx"
+          ]
+        },
+        "prescription_surf": {
+          "sha256": "dc24947adf76d9fdf2ef297564f28163ac021ffdf4edaf5278b01f00a994c1a9",
+          "byte_size": 4826832,
+          "members": [
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_SURF_20250930_A.cpg",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_SURF_20250930_A.dbf",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_SURF_20250930_A.prj",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_SURF_20250930_A.shp",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_PRESCRIPTION_SURF_20250930_A.shx"
+          ]
+        },
+        "zone_urba": {
+          "sha256": "8280c3eac6e0fe6cb2024d67dc58cd5007c3df41ecea1455b81e93955ad07adf",
+          "byte_size": 11345549,
+          "members": [
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_ZONE_URBA_20250930_A.cpg",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_ZONE_URBA_20250930_A.dbf",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_ZONE_URBA_20250930_A.prj",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_ZONE_URBA_20250930_A.shp",
+            "200070688_PLUi_20250930_A/Donnees_geographiques/200070688_ZONE_URBA_20250930_A.shx"
+          ]
+        }
+      }
+    },
     {
       "document_id": "b34eefaec73ff6a99313b5745fcbec92",
       "name": "DU_35093",
-      "reason": "Shapefile dbf header lacks expected terminator. (likely corrupt?)"
+      "document_type": "PLU",
+      "legal_status": "APPROVED",
+      "published_at": "19/01/2026 16:24:21",
+      "territory": "35093",
+      "communes": [
+        "35093"
+      ],
+      "communes_provenance": "catalog_fallback",
+      "url": "https://www.geoportail-urbanisme.gouv.fr/api/document/b34eefaec73ff6a99313b5745fcbec92/download",
+      "archive_byte_size": 197070385,
+      "layers": {
+        "doc_urba": {
+          "sha256": "a5725469937b452b9f955b3fa1896a5ef452fd89a47fa3fdde6d520860cc28d0",
+          "byte_size": 10748,
+          "members": [
+            "35093_PLU_20251215/35093_DOC_URBA_20251215.dbf"
+          ]
+        },
+        "doc_urba_com": {
+          "sha256": "7098e86077ffef40a066b741a68d745e2506372af015615e51c384e2d70cb11a",
+          "byte_size": 10407,
+          "members": [
+            "35093_PLU_20251215/35093_DOC_URBA_COM_20251215.dbf"
+          ]
+        },
+        "info_surf": {
+          "sha256": "b0e96c559369119293ce4dda78a3186d073afcabd11ecfbe8f1742b0861e4b79",
+          "byte_size": 79682,
+          "members": [
+            "35093_PLU_20251215/donnees_geographiques/35093_info_surf_20251215.cpg",
+            "35093_PLU_20251215/donnees_geographiques/35093_info_surf_20251215.dbf",
+            "35093_PLU_20251215/donnees_geographiques/35093_info_surf_20251215.prj",
+            "35093_PLU_20251215/donnees_geographiques/35093_info_surf_20251215.shp",
+            "35093_PLU_20251215/donnees_geographiques/35093_info_surf_20251215.shx"
+          ]
+        },
+        "prescription_lin": {
+          "sha256": "6ee359b9a7ecbe1972c3501f8b4f9945a5f931be5f9fea4c4656ed001c0ed3d3",
+          "byte_size": 316696,
+          "members": [
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_lin_20251215.cpg",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_lin_20251215.dbf",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_lin_20251215.prj",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_lin_20251215.shp",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_lin_20251215.shx"
+          ]
+        },
+        "prescription_pct": {
+          "sha256": "59779576af6e6e83818a487a83af89eec0d3f062290910146308a3a919e76f51",
+          "byte_size": 42860,
+          "members": [
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_pct_20251215.cpg",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_pct_20251215.dbf",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_pct_20251215.prj",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_pct_20251215.shp",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_pct_20251215.shx"
+          ]
+        },
+        "prescription_surf": {
+          "sha256": "4196cc0994053020f8248194c8b565e7c77413799c93f4be741e6e75f2210685",
+          "byte_size": 302549,
+          "members": [
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_surf_20251215.cpg",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_surf_20251215.dbf",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_surf_20251215.prj",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_surf_20251215.shp",
+            "35093_PLU_20251215/donnees_geographiques/35093_prescription_surf_20251215.shx"
+          ]
+        },
+        "zone_urba": {
+          "sha256": "bbb918d96a149bf2fbb9cb3ca0b2c4fd75df35c3e9dc344d1c3da85272871db6",
+          "byte_size": 323597,
+          "members": [
+            "35093_PLU_20251215/donnees_geographiques/35093_zone_urba_20251215.cpg",
+            "35093_PLU_20251215/donnees_geographiques/35093_zone_urba_20251215.dbf",
+            "35093_PLU_20251215/donnees_geographiques/35093_zone_urba_20251215.prj",
+            "35093_PLU_20251215/donnees_geographiques/35093_zone_urba_20251215.shp",
+            "35093_PLU_20251215/donnees_geographiques/35093_zone_urba_20251215.shx"
+          ]
+        }
+      }
     }
-  ]
+  ],
+  "unreadable": []
 }
