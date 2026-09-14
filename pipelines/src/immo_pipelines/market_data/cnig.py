@@ -137,10 +137,25 @@ def read_features(archive: zipfile.ZipFile, members: LayerMembers) -> Iterator[F
             yield Feature(attributes=_attributes(record), geometry=None)
         return
 
-    for item in cast(Iterator[Any], reader.iterShapeRecords()):
+    # Acces **par index** et non par parcours sequentiel. Les deux ne sont pas equivalents :
+    # `iterShapeRecords` lit le `.shp` d'un bout a l'autre et s'arrete au premier en-tete
+    # d'enregistrement corrompu, quand l'acces indexe passe par le `.shx`, qui existe
+    # precisement pour cela.
+    #
+    # Observe sur `DU_35136` : ses 309 geometries sont toutes lisibles une a une, et le parcours
+    # sequentiel echoue sur un `KeyError` negatif — un octet de padding lu comme un type de
+    # forme. Le document entier etait perdu pour un defaut d'alignement.
+    #
+    # Un enregistrement illisible est compte et saute ; il ne fait pas perdre la couche.
+    for index in range(len(reader)):
+        try:
+            geometry = reader.shape(index).__geo_interface__
+            record = reader.record(index)
+        except Exception:
+            continue
         yield Feature(
-            attributes=_attributes(item.record),
-            geometry=cast("Mapping[str, Any]", item.shape.__geo_interface__),
+            attributes=_attributes(record),
+            geometry=cast("Mapping[str, Any]", geometry),
         )
 
 

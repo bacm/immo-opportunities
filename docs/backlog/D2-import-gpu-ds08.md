@@ -316,6 +316,14 @@ Ce qu'un import de ce type doit prévoir **avant** son premier lot :
 | Débit limité | `429` — 4 documents | temporisation 5 s, 15 s, 45 s, puis échec passager |
 | Erreur au message illisible | `pyshp` lève un entier nu | le type est joint au message |
 | Carte communale sans zonage | 14 documents | résultat normal, pas une anomalie |
+| Parcours séquentiel d'un `.shp` | `DU_35136` | lecture **par index** via le `.shx` |
+
+**Le septième cas mérite d'être retenu**, parce qu'il ne ressemble pas à un défaut de donnée.
+`DU_35136` échouait sur un `KeyError` négatif de `pyshp` — un octet de remplissage lu comme un
+type de forme. Or ses 309 géométries sont **toutes lisibles une à une** : c'est le parcours
+séquentiel du `.shp` qui s'arrête au premier en-tête mal aligné, là où l'accès indexé passe par le
+`.shx`, qui existe précisément pour ça. Le document entier était perdu pour un défaut
+d'alignement, et la lecture indexée le récupère en totalité.
 
 **Le 429 est le plus instructif.** Ce n'est pas un défaut du document, c'est une demande
 d'attendre — et le traiter en échec définitif condamnait quatre documents valides. Un import qui
