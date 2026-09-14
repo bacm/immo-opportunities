@@ -99,3 +99,49 @@ cd pipelines && uv run python scripts/pin_gpu_release.py --department 35 --relea
 
 Reprise sur manifeste existant, écriture au fil de l'eau. Un échec passager n'est pas consigné
 comme définitif et le script sort en code 3 pour dire que le manifeste est incomplet.
+
+
+## Features URB matérialisées — 14 septembre 2026
+
+**1 333 327 unités**, 332 communes, 16 minutes, aucun échec.
+
+| Feature | Calculées | Absentes | Motifs |
+|---|---:|---:|---|
+| `URB-001` code de zone | **554 714** | 778 613 | `source_not_accepted`, `ambiguous_match` |
+| `URB-003` contraintes | **380 679** | 952 648 | `source_not_accepted` |
+| `URB-005` complétude | 1 333 327 | 0 | — |
+| `URB-002`, `URB-004` | 0 | 1 333 327 | `source_value_missing` |
+
+**257 communes sur 332 portent un zonage**, contre 300 couvertes par le manifeste : l'écart est
+celui des 32 documents non importés, le lot ayant été arrêté volontairement.
+
+### La distribution des types de zone est celle d'un département rural
+
+| `typezone` | Unités | Part |
+|---|---:|---:|
+| **A** agricole | 271 074 | **48,9 %** |
+| **U** urbaine | 158 488 | 28,6 % |
+| **N** naturelle | 111 844 | 20,2 % |
+| `AUc` à urbaniser | 9 964 | 1,8 % |
+| `Ah`, `AUs`, autres | 2 860 | 0,5 % |
+
+Près d'une parcelle zonée sur deux est agricole, et à peine 2 % sont ouvertes à l'urbanisation.
+C'est cohérent avec ce que le cadastre disait déjà — plus de la moitié des parcelles du 35 ne
+portent aucun bâtiment — et c'est directement pertinent pour la stratégie division / extension :
+**le gisement est étroit**, et le scoring devra en tenir compte plutôt que de traiter le
+département comme un ensemble homogène.
+
+### 2 114 unités en `ambiguous_match`
+
+Ce sont les ex æquo parfaits : deux zones couvrent exactement la même part de la parcelle, et le
+rang ne départage pas. Choisir serait arbitraire, donc la feature est absente avec ce motif — la
+quatrième classe de la résolution d'entités existe pour cela.
+
+Soit **0,4 % des unités zonées**. Le rang tranche donc dans 99,6 % des cas sans qu'aucun seuil
+n'ait été inventé.
+
+### `URB-005` vaut zéro partout, et c'est le résultat
+
+Aucun profil de règles n'est validé, puisque [D2b](../backlog/D2b-profils-de-regles.md) n'a pas
+commencé — c'est un travail humain de près de quatre années-personne à l'échelle nationale. La
+feature existe précisément pour publier cette incomplétude plutôt que de la taire.
