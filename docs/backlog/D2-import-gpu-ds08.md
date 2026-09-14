@@ -109,6 +109,42 @@ deux dernières **sont** `URB-005`.
 Le modèle avait donc prévu dès l'origine que l'import et la validation humaine soient deux gestes
 distincts. La scission du 14 septembre ne fait que l'expliciter dans le backlog.
 
+### Ce qu'on archive, et ce dont on garde seulement la trace
+
+**Pourquoi archiver.** L'amont bouge sous nos pieds : c'est la leçon de
+[BUG-05](./BUG-05-ds02-rnb-non-reproductible.md), où une URL épinglée était un alias mouvant et le
+checksum a sauté à la première relance. Ici c'est plus net encore — le GPU **supprime** des
+documents, et une requête sans filtre de statut en retourne vingt, tous en `document.deleted`.
+Or [E3](./E3-publier-snapshots.md) exige qu'un score publié reste explicable et reproductible
+après changement de millésime : si le document disparaît, l'import qui a produit le score n'est
+plus rejouable.
+
+**Pourquoi pas tout.** 95 % du volume sont des pièces écrites qu'il est interdit d'interpréter
+ici. Et elles restent atteignables à l'unité : `/document/{id}/files` les liste,
+`/document/{id}/files/{nom}` les sert, et `ZONE_URBA.URLFIC` nomme le règlement applicable à
+chaque zone.
+
+| | Par document | Le 35 | La Bretagne | La France |
+|---|---:|---:|---:|---:|
+| Archive complète | 33,5 Mo | ~6 Go | ~24 Go | ~430 Go |
+| **Couches structurées seules** | **1,7 Mo** | **~340 Mo** | **~1,4 Go** | **~22 Go** |
+
+**Décision du 14 septembre 2026.**
+
+- archiver les **couches structurées**, celles qui sont réellement importées, chacune avec son
+  empreinte ;
+- relever le **SHA-256 de l'archive complète** au manifeste, pour la provenance, sans la stocker ;
+- laisser [D2b](./D2b-profils-de-regles.md) archiver les pièces écrites des quelques dizaines de
+  documents qu'il validera.
+
+Le principe tient en une phrase : **on archive ce qu'on importe, on checksume ce qu'on archive, et
+de ce qu'on n'importe pas on garde la trace plutôt que les octets.**
+
+**Le risque assumé, écrit pour qu'il ne soit pas découvert plus tard.** Si le GPU supprime un
+document, nous gardons de quoi rejouer l'import et expliquer le score, mais nous perdons la
+possibilité de relire le règlement. Pour les communes qui portent un candidat, D2b aura archivé
+les pièces ; pour les autres, elles n'étaient pas nécessaires.
+
 ### Une dépendance ajoutée : `pyshp`
 
 Les couches CNIG sont des shapefiles. Le dépôt évite GDAL par principe — la lecture GeoPackage
@@ -120,7 +156,7 @@ sans binaire à installer, et il n'introduit aucune dépendance système.
 1. Identifier et épingler les documents : **178 communaux** par `territory=35`, plus les PLUi
    dont l'emprise touche le département — **23 candidats**, à confirmer par intersection
    réelle des zones avec nos parcelles et non par leur `bbox`.
-2. Archiver chaque document avec son checksum. Le périmètre est hétérogène : certaines communes
+2. Archiver les **couches structurées** de chaque document, chacune avec son checksum, et relever au manifeste l'empreinte de l'archive complète sans la stocker — voir la décision ci-dessus. Le périmètre est hétérogène : certaines communes
    relèvent d'un PLUi, d'autres d'un PLU, d'autres d'une carte communale ou du RNU. Cette
    hétérogénéité doit être modélisée, pas aplatie.
 3. Importer `UrbanDocument`, `UrbanZone`, `UrbanConstraint` en conservant l'identifiant CNIG.
