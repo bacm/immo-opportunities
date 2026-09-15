@@ -41,6 +41,7 @@ from immo_pipelines.market_data.exploratory import (
     cell,
     has_non_residential_nature,
     is_residential,
+    locate,
     mean_rank,
     use_populations,
     write_csv,
@@ -718,6 +719,7 @@ def main() -> int:
         baseline, ranked = orderings(rows, arguments.size)
         blind_rows, key_rows = blind(baseline, ranked, arguments.seed)
         enrich(connection, blind_rows)
+        locate(connection, blind_rows)
 
     root = arguments.output_dir or (Path(__file__).resolve().parents[2] / "docs" / "data")
     directory = root / "exploratory-candidates" / arguments.commune
@@ -742,6 +744,10 @@ def main() -> int:
             "dpe_label",
             "dpe_note",
             "risks",
+            "latitude",
+            "longitude",
+            "map_url",
+            "position_missing",
         ],
     )
     write_csv(key_file, key_rows, ["reference", "property_unit_id", "cadastral_id", "origine"])

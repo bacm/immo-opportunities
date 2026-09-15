@@ -164,7 +164,8 @@ dérivée du graphe de dépendances.
 | [E8e](./E8e-age-du-bati.md) | L'âge du bâti pèse plus que son implantation, et il manquait au classement | v0.6 | E8d | S | Terminé | — |
 | [E8f](./E8f-liste-biens-en-vente.md) | Une seconde liste : les biens probablement en vente, pour que E9 teste deux promesses | v0.6 | E8e | M | Terminé | — |
 | [E8g](./E8g-rang-observe-liste-en-vente.md) | Porter dans la liste des biens en vente ce que la courbe de conversion, l'étiquette et la commune disent déjà | v0.6 | E8f | S | Terminé | — |
-| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8, E8f, E8g | M | À faire | **verrou humain** |
+| [E8h](./E8h-kit-de-session-terrain.md) | Rendre les deux listes présentables : localiser chaque bien, et donner de quoi saisir les verdicts | v0.6 | E8g | M | Terminé | — |
+| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8, E8f, E8g, E8h | M | À faire | **verrou humain** |
 
 ### F — v0.7 Activation
 
@@ -188,7 +189,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**41/69 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**42/70 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 

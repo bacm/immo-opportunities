@@ -133,11 +133,11 @@ L'origine de chaque candidat — baseline ou classement — n'est **pas** dans c
 | C004 | `35051000ZE0101` | 1750 | 1 136 | 0.137 | 10.7 | 4.1 | 35.3 | 0.0 | 2 | Indifférencié · Résidentiel | 1 | U|UE2h(d) | 9 information, 14 prescription | aucune | aucun | aucun |
 | C005 | `35051000YD0141` | 1969 | 1 878 | 0.101 | 15.0 | 5.6 | 30.2 | 0.0 | 3 | Indifférencié · Résidentiel | 1 | U|UE2d | 9 information, 18 prescription | aucune | aucun | aucun |
 | C006 | `35051000ZB0082` | 1995 | 2 533 | 0.077 | 14.3 | 4.7 | 40.4 | 0.0 | 1 | Résidentiel | 1 | U|UE3 | 8 information, 14 prescription | aucune | aucun | clay |
-| C007 | `35051000ZV0320` | 1850 | 1 222 | 0.110 | 12.8 | 3.3 | 39.9 | 0.0 | 1 | Indifférencié · Résidentiel | 1 | U|UE3 | 8 information, 13 prescription | aucune | aucun | clay |
+| C007 | `35051000ZV0320` | 1850 | 1 222 | 0.110 | 12.8 | 3.3 | 39.9 | 0.0 | 1 | Indifférencié · Résidentiel | 1 | U|UE3 | 8 information, 13 prescription | 2018-11-28 | aucun | clay |
 | C008 | `35051000ZV0136` | 1982 | 2 667 | 0.065 | 11.8 | 1.5 | 67.2 | 1.9 | 2 | Annexe · Résidentiel | 1 | U|UE3 | 8 information, 13 prescription | aucune | aucun | clay |
 | C009 | `35051000AW0225` | 1972 | 2 166 | 0.065 | 10.5 | 0.9 | 41.3 | 5.9 | 1 | Résidentiel | 1 | U|UE2c(d) | 10 information, 16 prescription | aucune | aucun | clay |
-| C010 | `35051000ZT0062` | 1981 | 2 241 | 0.051 | 15.1 | 0.0 | 30.7 | 6.7 | 1 | Résidentiel | 1 | U|UE3 | 8 information, 16 prescription | aucune | aucun | clay |
-| C011 | `35051000AY0292` | 1850 | 1 745 | 0.140 | 13.2 | 4.2 | 36.2 | 0.0 | 2 | Annexe · Résidentiel | 1 | U|UE2h | 12 information, 22 prescription | aucune | aucun | clay |
+| C010 | `35051000ZT0062` | 1981 | 2 241 | 0.051 | 15.1 | 0.0 | 30.7 | 6.7 | 1 | Résidentiel | 1 | U|UE3 | 8 information, 16 prescription | 2017-04-20 | aucun | clay |
+| C011 | `35051000AY0292` | 1850 | 1 745 | 0.140 | 13.2 | 4.2 | 36.2 | 0.0 | 2 | Annexe · Résidentiel | 1 | U|UE2h | 12 information, 22 prescription | 2014-10-02 | aucun | clay |
 | C012 | `35051000YB0009` | 1944 | 1 383 | 0.111 | 12.7 | 2.4 | 26.8 | 0.0 | 3 | Indifférencié · Résidentiel | 1 | U|UE2h(d) | 12 information, 14 prescription | aucune | aucun | aucun |
 | C013 | `35051000ZV0250` | 2010 | 2 838 | 0.062 | 13.5 | 2.8 | 49.9 | 12.3 | 1 | Résidentiel | 1 | U|UE3 | 10 information, 17 prescription | aucune | aucun | clay |
 | C014 | `35051000ZV0230` | 2007 | 2 059 | 0.097 | 13.1 | 2.1 | 39.0 | 5.0 | 1 | Résidentiel | 1 | U|UE3 | 8 information, 14 prescription | aucune | aucun | clay |
@@ -153,10 +153,10 @@ L'origine de chaque candidat — baseline ou classement — n'est **pas** dans c
 | C024 | `35051000YH0008` | 1974 | 1 804 | 0.000 | 15.7 | 4.5 | 35.2 | 0.0 | 1 | Résidentiel | 1 | U|UI1a(d) | 8 information, 15 prescription | aucune | aucun | aucun |
 | C025 | `35051000AY0064` | 1989 | 2 507 | 0.087 | 16.3 | 4.5 | 51.5 | 0.0 | 2 | Annexe · Résidentiel | 1 | U|UE2h | 12 information, 24 prescription | aucune | aucun | clay |
 | C026 | `35051000YA0032` | 1973 | 2 055 | 0.116 | 8.9 | 5.0 | 46.4 | 0.0 | 2 | Résidentiel | 1 | U|UE2c(d) | 10 information, 14 prescription | aucune | aucun | clay |
-| C027 | `35051000ZT0145` | 2008 | 2 004 | 0.111 | 10.6 | 5.0 | 38.4 | 0.0 | 3 | Annexe · Résidentiel | 1 | U|UE3 | 8 information, 17 prescription | aucune | aucun | clay |
+| C027 | `35051000ZT0145` | 2008 | 2 004 | 0.111 | 10.6 | 5.0 | 38.4 | 0.0 | 3 | Annexe · Résidentiel | 1 | U|UE3 | 8 information, 17 prescription | 2018-09-17 | aucun | clay |
 | C028 | `35051000YB0106` | 1850 | 848 | 0.059 | 12.6 | 3.8 | 27.9 | 0.0 | 1 | Résidentiel | 1 | U|UE2h(d) | 11 information, 15 prescription | aucune | aucun | aucun |
 | C029 | `35051000ZV0194` | 1800 | 1 026 | 0.110 | 9.2 | 3.0 | 32.8 | 0.0 | 1 | Résidentiel | 1 | U|UE3 | 9 information, 14 prescription | aucune | aucun | clay |
-| C030 | `35051000AL0015` | 1900 | 1 793 | 0.129 | 14.3 | 14.9 | 45.8 | 0.0 | 2 | Résidentiel | 1 | U|UE2h | 11 information, 21 prescription | aucune | aucun | clay |
+| C030 | `35051000AL0015` | 1900 | 1 793 | 0.129 | 14.3 | 14.9 | 45.8 | 0.0 | 2 | Résidentiel | 1 | U|UE2h | 11 information, 21 prescription | 2017-03-16 | aucun | clay |
 | C031 | `35051000ZT0144` | 1931 | 1 490 | 0.104 | 10.6 | 4.2 | 34.5 | 0.0 | 4 | Annexe · Indifférencié · Résidentiel | 1 | U|UE3 | 8 information, 16 prescription | aucune | E | clay |
 | C032 | `35051000ZS0176` | 1978 | 2 532 | 0.133 | 11.5 | 3.5 | 54.9 | 0.0 | 2 | Résidentiel | 1 | U|UE3 | 10 information, 15 prescription | 2022-10-07 | C | clay, sup_AC1 |
 | C033 | `35051000ZY0198` | 1600 | 2 372 | 0.114 | 14.0 | 3.7 | 42.8 | 2.4 | 2 | Indifférencié · Résidentiel | 1 | U|UE2h(d) | 10 information, 17 prescription | aucune | aucun | aucun |

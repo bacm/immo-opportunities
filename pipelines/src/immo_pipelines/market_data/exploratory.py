@@ -132,6 +132,42 @@ def blind(
     return blind_rows, key_rows
 
 
+def locate(connection: Any, rows: list[dict[str, Any]]) -> None:
+    """Centroïde WGS84 de chaque parcelle, et lien de carte — sans aucune adresse.
+
+    La relation adresse ↔ parcelle n'est vérifiable par aucune règle géométrique (v0.3) ; ce
+    helper ne la calcule pas. Une parcelle sans géométrie reste sans position, avec son motif.
+    """
+    with connection.cursor() as cursor:
+        records = cursor.execute(
+            """
+            SELECT cadastral_id,
+                   ST_Y(ST_Transform(ST_PointOnSurface(geom), 4326)) AS latitude,
+                   ST_X(ST_Transform(ST_PointOnSurface(geom), 4326)) AS longitude
+              FROM reference.parcel_geometry
+             WHERE cadastral_id = ANY(%(parcels)s::text[])
+            """,
+            {"parcels": [row["cadastral_id"] for row in rows]},
+        ).fetchall()
+    positions = {record[0]: (record[1], record[2]) for record in records}
+    for row in rows:
+        latitude, longitude = positions.get(row["cadastral_id"], (None, None))
+        row["latitude"], row["longitude"] = latitude, longitude
+        row["map_url"] = map_url(latitude, longitude)
+        row["position_missing"] = None if latitude is not None else "géométrie absente"
+
+
+def map_url(latitude: float | None, longitude: float | None) -> str | None:
+    """Géoportail, parcellaire sur orthophoto, centré sur le point. Jamais sans position."""
+    if latitude is None or longitude is None:
+        return None
+    return (
+        f"https://www.geoportail.gouv.fr/carte?c={float(longitude):.6f},{float(latitude):.6f}&z=19"
+        "&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)"
+        "&l1=CADASTRALPARCELS.PARCELLAIRE_EXPRESS::GEOPORTAIL:OGC:WMTS(1)&permalink=yes"
+    )
+
+
 def cell(row: dict[str, Any], name: str, digits: int = 0) -> str:
     """Une valeur absente s'affiche absente, avec son motif."""
     value = row.get(name)

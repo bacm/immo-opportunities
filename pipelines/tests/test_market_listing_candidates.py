@@ -301,3 +301,19 @@ def test_le_rapport_nomme_la_cohorte_et_donne_le_taux_communal_avec_son_effectif
     assert "| Commune 35051, maisons | 4 | 50,0 % |" in rendu
     assert "jamais masqué sous un minimum" in rendu
     assert "non mesurée — hors courbe" in rendu  # la baseline, à plus de 24 mois, sort de la courbe
+
+
+# --- E8h : l'adresse déclarée sur le DPE, et la position ---
+
+
+def test_l_adresse_est_celle_du_diagnostic_et_manque_avec_son_motif() -> None:
+    module = load()
+    source = GENERATOR.read_text(encoding="utf-8")
+    assert "assessment.properties->>'adresse_ban'" in source
+    assert "locate(connection, blind_rows)" in source
+    rendu = module.render(_data(module), "2026-09-15")
+    assert "| Adresse du DPE |" in rendu
+    assert "absente — non déclarée sur le diagnostic" in rendu
+    data = _data(module)
+    data["blind"][0]["dpe_address"] = "12 Rue de Rennes 35510 Cesson-Sévigné"
+    assert "12 Rue de Rennes 35510 Cesson-Sévigné" in module.render(data, "2026-09-15")

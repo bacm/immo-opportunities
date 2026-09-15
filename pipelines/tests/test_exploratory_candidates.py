@@ -454,3 +454,23 @@ def test_le_rapport_publie_la_couverture_de_l_annee_et_sa_limite() -> None:
     assert "44,6 %" in rendu
     assert "68,9 %" in rendu
     assert "BUG-13" in rendu
+
+
+# --- E8h : localisation sans adresse ---
+
+
+def test_le_lien_de_carte_se_construit_depuis_le_centroide_et_jamais_sans() -> None:
+    from immo_pipelines.market_data.exploratory import map_url
+
+    url = map_url(48.1234567, -1.6543217)
+    assert url is not None and "c=-1.654322,48.123457" in url and "PARCELLAIRE" in url
+    assert map_url(None, -1.6) is None and map_url(48.1, None) is None
+
+
+def test_la_liste_aveugle_porte_la_position_mais_aucune_adresse() -> None:
+    """La relation adresse ↔ parcelle n'est vérifiable par aucune règle : on ne la calcule pas."""
+    source = GENERATOR.read_text(encoding="utf-8")
+    assert "locate(connection, blind_rows)" in source
+    for column in ('"latitude"', '"longitude"', '"map_url"', '"position_missing"'):
+        assert column in source
+    assert "address" not in source.lower()

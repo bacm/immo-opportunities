@@ -203,6 +203,9 @@ exploratory-candidates:
 		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
 		$(if $(LOT_WIDTH),--lot-width $(LOT_WIDTH),)
 
+field-test-kit:
+	uv run --package immo-pipelines python pipelines/scripts/field_test_kit.py --commune $(COMMUNE)
+
 biens-en-vente:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

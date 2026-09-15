@@ -37,6 +37,7 @@ from immo_pipelines.market_data.exploratory import (
     cell,
     has_non_residential_nature,
     is_residential,
+    locate,
     write_csv,
     zone_type,
 )
@@ -125,6 +126,10 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
                    (array_agg(assessment.properties->>'surface_habitable_logement' ORDER BY
                         coalesce(assessment.deposited_at, assessment.assessment_date) DESC))[1]
                        AS living_area_m2,
+                   -- L'adresse déclarée sur le diagnostic : du DPE, pas d'un appariement.
+                   (array_agg(assessment.properties->>'adresse_ban' ORDER BY
+                        coalesce(assessment.deposited_at, assessment.assessment_date) DESC))[1]
+                       AS dpe_address,
                    count(*) AS diagnostics
               FROM parcel
               JOIN reference.building_parcel AS link
@@ -157,7 +162,7 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
         SELECT parcel.id AS property_unit_id, parcel.cadastral_id,
                use.uses, use.natures, use.max_dwellings, use.built_year,
                diagnostic.dpe_deposited_at, diagnostic.energy_label,
-               diagnostic.living_area_m2, diagnostic.diagnostics,
+               diagnostic.living_area_m2, diagnostic.dpe_address, diagnostic.diagnostics,
                mutation.last_mutation, zone.zone, zone.parcel_area_m2
           FROM parcel
           JOIN use ON use.parcel_id = parcel.id
@@ -534,16 +539,17 @@ def render(data: dict[str, Any], today: str) -> str:
     )
     add("")
     add(
-        "| Réf. | Parcelle | DPE déposé | Âge (mois) | "
+        "| Réf. | Parcelle | Adresse du DPE | DPE déposé | Âge (mois) | "
         f"Chance de vente sous {parameters.horizon_months} mois (âge) | Étiquette | "
         "Taux 12 mois (étiquette) | Surface hab. | Année | Parcelle m² | Zone | "
         "Dernière mutation |"
     )
-    add("|---|---|---|---:|---:|---|---:|---:|---:|---:|---|---|")
+    add("|---|---|---|---|---:|---:|---|---:|---:|---:|---:|---|---|")
     for row in rows:
         mutation = row["last_mutation"].isoformat() if row["last_mutation"] else "aucune"
         add(
             f"| {row['reference']} | `{row['cadastral_id']}` | "
+            f"{row.get('dpe_address') or 'absente — non déclarée sur le diagnostic'} | "
             f"{row['dpe_deposited_at'].isoformat()} | {row['dpe_age_months']} | "
             f"{percent(row['residual_probability'], 'non mesurée — hors courbe')} | "
             f"{row['energy_label'] or 'absente'} | "
@@ -593,6 +599,7 @@ def main() -> int:
         blind_rows, key_rows = blind(
             signal[: arguments.size], baseline[: arguments.size], arguments.seed
         )
+        locate(connection, blind_rows)
         latest_mutation = dvf_end(connection)
         year = reference_cohort_year(latest_mutation)
         department = arguments.commune[:2]
@@ -639,6 +646,11 @@ def main() -> int:
             "zone",
             "last_mutation",
             "diagnostics",
+            "dpe_address",
+            "latitude",
+            "longitude",
+            "map_url",
+            "position_missing",
         ],
     )
     write_csv(key_file, key_rows, ["reference", "property_unit_id", "cadastral_id", "origine"])

@@ -82,46 +82,46 @@ La colonne « chance de vente sous 6 mois » se lit sur cette courbe : part de l
 
 L'origine — signal ou baseline — est dans `docs/data/biens-en-vente/35051/correspondance.csv`, que le relecteur ne voit pas.
 
-| Réf. | Parcelle | DPE déposé | Âge (mois) | Chance de vente sous 6 mois (âge) | Étiquette | Taux 12 mois (étiquette) | Surface hab. | Année | Parcelle m² | Zone | Dernière mutation |
-|---|---|---|---:|---:|---|---:|---:|---:|---:|---|---|
-| C001 | `35051000BH0260` | 2024-06-14 | 26 | non mesurée — hors courbe | C | 35,9 % | 145.4 | 1995 | 608 | U|UE2c(d) | aucune |
-| C002 | `35051000AZ0656` | 2024-07-17 | 25 | non mesurée — hors courbe | D | 38,5 % | 26.3 | 2003 | 671 | U|UE2c(d) | aucune |
-| C003 | `35051000AZ0490` | 2026-04-04 | 5 | 25,8 % | B | 40,6 % | 171.8 | 2002 | 613 | U|UE2c(d) | 2023-07-28 |
-| C004 | `35051000ZS0045` | 2026-05-12 | 3 | 31,7 % | F | 48,7 % | 82.5 | 2004 | 535 | U|UE3 | aucune |
-| C005 | `35051000AK0130` | 2024-08-30 | 24 | non mesurée — hors courbe | C | 35,9 % | absente | 1979 | 608 | U|UE2c(d) | aucune |
-| C006 | `35051000AZ0593` | 2026-03-26 | 5 | 25,8 % | C | 35,9 % | 133 | 2004 | 587 | U|UE2c(d) | aucune |
-| C007 | `35051000AN0260` | 2026-08-19 | 0 | 21,9 % | D | 38,5 % | 80.1 | 1932 | 193 | U|UE2c(d) | aucune |
-| C008 | `35051000AR0094` | 2026-07-17 | 1 | 26,4 % | D | 38,5 % | 13.4 | 1800 | 112 | U|UA1a | aucune |
-| C009 | `35051000AP0158` | 2024-06-13 | 26 | non mesurée — hors courbe | D | 38,5 % | 193 | 1971 | 1 417 | U|UE2c(d) | aucune |
-| C010 | `35051000AZ0698` | 2024-05-06 | 28 | non mesurée — hors courbe | C | 35,9 % | 188 | 2003 | 628 | U|UE2c(d) | aucune |
-| C011 | `35051000AW0141` | 2026-08-28 | 0 | 21,9 % | D | 38,5 % | 153 | 1962 | 389 | U|UE1a | aucune |
-| C012 | `35051000AB0054` | 2024-07-31 | 25 | non mesurée — hors courbe | D | 38,5 % | 132 | 1974 | 639 | U|UE2c(d) | aucune |
-| C013 | `35051000AK0102` | 2026-06-23 | 2 | 29,4 % | D | 38,5 % | 119.4 | 1980 | 715 | U|UE2c(d) | aucune |
-| C014 | `35051000AH0126` | 2024-04-26 | 28 | non mesurée — hors courbe | D | 38,5 % | 145 | 1978 | 477 | U|UE2c(d) | 2021-07-30 |
-| C015 | `35051000AD0060` | 2026-04-09 | 4 | 29,6 % | D | 38,5 % | 102.5 | 1978 | 218 | U|UE2c | 2018-05-04 |
-| C016 | `35051000AN0182` | 2024-07-03 | 26 | non mesurée — hors courbe | C | 35,9 % | 177.1 | 1983 | 904 | U|UE2c(d) | 2018-07-30 |
-| C017 | `35051000AN0364` | 2026-03-20 | 5 | 25,8 % | D | 38,5 % | 98.7 | 1974 | 173 | U|UE2c | aucune |
-| C018 | `35051000AA0132` | 2024-06-02 | 27 | non mesurée — hors courbe | C | 35,9 % | 152.2 | 1988 | 723 | U|UE2c(d) | aucune |
-| C019 | `35051000AE0129` | 2024-05-28 | 27 | non mesurée — hors courbe | D | 38,5 % | 80.5 | 1978 | 547 | U|UE2c(d) | aucune |
-| C020 | `35051000YA0156` | 2024-08-20 | 24 | non mesurée — hors courbe | D | 38,5 % | 130 | 1995 | 560 | U|UE2c(d) | aucune |
-| C021 | `35051000AZ0561` | 2024-06-05 | 27 | non mesurée — hors courbe | C | 35,9 % | 187.1 | 2003 | 679 | U|UE2c(d) | aucune |
-| C022 | `35051000AB0186` | 2026-06-01 | 3 | 31,7 % | C | 35,9 % | 160.8 | 1973 | 531 | U|UE2c(d) | 2022-09-15 |
-| C023 | `35051000AT0203` | 2026-04-22 | 4 | 29,6 % | C | 35,9 % | 95.1 | 1998 | 282 | U|UE2c | aucune |
-| C024 | `35051000BD0140` | 2026-05-26 | 3 | 31,7 % | D | 38,5 % | 234.4 | 1992 | 557 | U|UE2c(d) | aucune |
-| C025 | `35051000AB0229` | 2026-03-18 | 5 | 25,8 % | F | 48,7 % | 102.4 | 1975 | 601 | U|UE2c(d) | aucune |
-| C026 | `35051000AS0017` | 2026-06-01 | 3 | 31,7 % | E | 43,1 % | 167.3 | 1970 | 691 | U|UE2c(d) | aucune |
-| C027 | `35051000AK0249` | 2024-04-23 | 28 | non mesurée — hors courbe | D | 38,5 % | 145 | 1955 | 472 | U|UE2c | aucune |
-| C028 | `35051000AN0356` | 2024-08-27 | 24 | non mesurée — hors courbe | D | 38,5 % | 83.9 | 1974 | 159 | U|UE2c | aucune |
-| C029 | `35051000AB0203` | 2024-08-05 | 25 | non mesurée — hors courbe | E | 43,1 % | 135.9 | 1973 | 357 | U|UE2c(d) | aucune |
-| C030 | `35051000AE0155` | 2024-06-03 | 27 | non mesurée — hors courbe | E | 43,1 % | 104.4 | 1977 | 292 | U|UE2c | aucune |
-| C031 | `35051000AW0043` | 2026-05-21 | 3 | 31,7 % | D | 38,5 % | 96.4 | 1968 | 492 | U|UE2c(d) | 2025-07-21 |
-| C032 | `35051000AW0123` | 2026-05-05 | 4 | 29,6 % | E | 43,1 % | 106.8 | 1958 | 365 | U|UE2c | aucune |
-| C033 | `35051000AA0311` | 2026-03-27 | 5 | 25,8 % | D | 38,5 % | 112.1 | 1986 | 490 | U|UE2c(d) | aucune |
-| C034 | `35051000AR0102` | 2024-06-24 | 26 | non mesurée — hors courbe | C | 35,9 % | 67 | 1880 | 115 | U|UA1a | 2015-12-18 |
-| C035 | `35051000ZT0172` | 2024-08-18 | 24 | non mesurée — hors courbe | D | 38,5 % | 162.8 | 1972 | 4 296 | U|UE3 | aucune |
-| C036 | `35051000AK0196` | 2024-06-16 | 26 | non mesurée — hors courbe | E | 43,1 % | 62.2 | 1955 | 278 | U|UE2c | aucune |
-| C037 | `35051000AD0057` | 2026-04-30 | 4 | 29,6 % | D | 38,5 % | 95.8 | 1978 | 208 | U|UE2c | aucune |
-| C038 | `35051000ZT0144` | 2024-04-29 | 28 | non mesurée — hors courbe | E | 43,1 % | 70.8 | 1931 | 1 490 | U|UE3 | aucune |
+| Réf. | Parcelle | Adresse du DPE | DPE déposé | Âge (mois) | Chance de vente sous 6 mois (âge) | Étiquette | Taux 12 mois (étiquette) | Surface hab. | Année | Parcelle m² | Zone | Dernière mutation |
+|---|---|---|---|---:|---:|---|---:|---:|---:|---:|---|---|
+| C001 | `35051000BH0260` | 40 Rue des Gardes 35510 Cesson-Sévigné | 2024-06-14 | 26 | non mesurée — hors courbe | C | 35,9 % | 145.4 | 1995 | 608 | U|UE2c(d) | aucune |
+| C002 | `35051000AZ0656` | 30 Rue de la Monniais 35510 Cesson-Sévigné | 2024-07-17 | 25 | non mesurée — hors courbe | D | 38,5 % | 26.3 | 2003 | 671 | U|UE2c(d) | aucune |
+| C003 | `35051000AZ0490` | 38 Rue de l'Etournel 35510 Cesson-Sévigné | 2026-04-04 | 5 | 25,8 % | B | 40,6 % | 171.8 | 2002 | 613 | U|UE2c(d) | 2023-07-28 |
+| C004 | `35051000ZS0045` | 4 Rue de la Plesse 35510 Cesson-Sévigné | 2026-05-12 | 3 | 31,7 % | F | 48,7 % | 82.5 | 2004 | 535 | U|UE3 | aucune |
+| C005 | `35051000AK0130` | 3 Rue du Hyl 35510 Cesson-Sévigné | 2024-08-30 | 24 | non mesurée — hors courbe | C | 35,9 % | absente | 1979 | 608 | U|UE2c(d) | aucune |
+| C006 | `35051000AZ0593` | 47 Rue des Ormeaux 35510 Cesson-Sévigné | 2026-03-26 | 5 | 25,8 % | C | 35,9 % | 133 | 2004 | 587 | U|UE2c(d) | aucune |
+| C007 | `35051000AN0260` | Allée des Rosiers 35510 Cesson-Sévigné | 2026-08-19 | 0 | 21,9 % | D | 38,5 % | 80.1 | 1932 | 193 | U|UE2c(d) | aucune |
+| C008 | `35051000AR0094` | 2 Rue de la Fresnerie 35510 Cesson-Sévigné | 2026-07-17 | 1 | 26,4 % | D | 38,5 % | 13.4 | 1800 | 112 | U|UA1a | aucune |
+| C009 | `35051000AP0158` | 17 Rue des Lauriers 35510 Cesson-Sévigné | 2024-06-13 | 26 | non mesurée — hors courbe | D | 38,5 % | 193 | 1971 | 1 417 | U|UE2c(d) | aucune |
+| C010 | `35051000AZ0698` | 47 Rue des Galardières 35510 Cesson-Sévigné | 2024-05-06 | 28 | non mesurée — hors courbe | C | 35,9 % | 188 | 2003 | 628 | U|UE2c(d) | aucune |
+| C011 | `35051000AW0141` | 61 Rue de Rennes 35510 Cesson-Sévigné | 2026-08-28 | 0 | 21,9 % | D | 38,5 % | 153 | 1962 | 389 | U|UE1a | aucune |
+| C012 | `35051000AB0054` | 78 Rue de la Coulée 35510 Cesson-Sévigné | 2024-07-31 | 25 | non mesurée — hors courbe | D | 38,5 % | 132 | 1974 | 639 | U|UE2c(d) | aucune |
+| C013 | `35051000AK0102` | 40 Rue du Hyl 35510 Cesson-Sévigné | 2026-06-23 | 2 | 29,4 % | D | 38,5 % | 119.4 | 1980 | 715 | U|UE2c(d) | aucune |
+| C014 | `35051000AH0126` | 7 Rue de la Chesnaie 35510 Cesson-Sévigné | 2024-04-26 | 28 | non mesurée — hors courbe | D | 38,5 % | 145 | 1978 | 477 | U|UE2c(d) | 2021-07-30 |
+| C015 | `35051000AD0060` | 56 Rue des Petits Champs 35510 Cesson-Sévigné | 2026-04-09 | 4 | 29,6 % | D | 38,5 % | 102.5 | 1978 | 218 | U|UE2c | 2018-05-04 |
+| C016 | `35051000AN0182` | 3 Rue de la Rabine 35510 Cesson-Sévigné | 2024-07-03 | 26 | non mesurée — hors courbe | C | 35,9 % | 177.1 | 1983 | 904 | U|UE2c(d) | 2018-07-30 |
+| C017 | `35051000AN0364` | 15 Rue du Grand Champ 35510 Cesson-Sévigné | 2026-03-20 | 5 | 25,8 % | D | 38,5 % | 98.7 | 1974 | 173 | U|UE2c | aucune |
+| C018 | `35051000AA0132` | 17 Rue du Pressoir 35510 Cesson-Sévigné | 2024-06-02 | 27 | non mesurée — hors courbe | C | 35,9 % | 152.2 | 1988 | 723 | U|UE2c(d) | aucune |
+| C019 | `35051000AE0129` | 22 Rue du Champ Gaudois 35510 Cesson-Sévigné | 2024-05-28 | 27 | non mesurée — hors courbe | D | 38,5 % | 80.5 | 1978 | 547 | U|UE2c(d) | aucune |
+| C020 | `35051000YA0156` | 15 Rue de la Garenne 35510 Cesson-Sévigné | 2024-08-20 | 24 | non mesurée — hors courbe | D | 38,5 % | 130 | 1995 | 560 | U|UE2c(d) | aucune |
+| C021 | `35051000AZ0561` | 39 Rue de la Monniais 35510 Cesson-Sévigné | 2024-06-05 | 27 | non mesurée — hors courbe | C | 35,9 % | 187.1 | 2003 | 679 | U|UE2c(d) | aucune |
+| C022 | `35051000AB0186` | 27 Rue de la Chalotais 35510 Cesson-Sévigné | 2026-06-01 | 3 | 31,7 % | C | 35,9 % | 160.8 | 1973 | 531 | U|UE2c(d) | 2022-09-15 |
+| C023 | `35051000AT0203` | 29 Rue du Petit Marais 35510 Cesson-Sévigné | 2026-04-22 | 4 | 29,6 % | C | 35,9 % | 95.1 | 1998 | 282 | U|UE2c | aucune |
+| C024 | `35051000BD0140` | 21 Rue de la Pommeraie 35510 Cesson-Sévigné | 2026-05-26 | 3 | 31,7 % | D | 38,5 % | 234.4 | 1992 | 557 | U|UE2c(d) | aucune |
+| C025 | `35051000AB0229` | 6 Rue du Courtil 35510 Cesson-Sévigné | 2026-03-18 | 5 | 25,8 % | F | 48,7 % | 102.4 | 1975 | 601 | U|UE2c(d) | aucune |
+| C026 | `35051000AS0017` | 2 Rue du Verger 35510 Cesson-Sévigné | 2026-06-01 | 3 | 31,7 % | E | 43,1 % | 167.3 | 1970 | 691 | U|UE2c(d) | aucune |
+| C027 | `35051000AK0249` | 10 Allée des Tulipes 35510 Cesson-Sévigné | 2024-04-23 | 28 | non mesurée — hors courbe | D | 38,5 % | 145 | 1955 | 472 | U|UE2c | aucune |
+| C028 | `35051000AN0356` | 16 Rue du Grand Champ 35510 Cesson-Sévigné | 2024-08-27 | 24 | non mesurée — hors courbe | D | 38,5 % | 83.9 | 1974 | 159 | U|UE2c | aucune |
+| C029 | `35051000AB0203` | 18 Avenue de Caradeuc 35510 Cesson-Sévigné | 2024-08-05 | 25 | non mesurée — hors courbe | E | 43,1 % | 135.9 | 1973 | 357 | U|UE2c(d) | aucune |
+| C030 | `35051000AE0155` | 5 Rue des Petits Champs 35510 Cesson-Sévigné | 2024-06-03 | 27 | non mesurée — hors courbe | E | 43,1 % | 104.4 | 1977 | 292 | U|UE2c | aucune |
+| C031 | `35051000AW0043` | 9 Allée des Korrigans 35510 Cesson-Sévigné | 2026-05-21 | 3 | 31,7 % | D | 38,5 % | 96.4 | 1968 | 492 | U|UE2c(d) | 2025-07-21 |
+| C032 | `35051000AW0123` | 4 Rue de Bel Air 35510 Cesson-Sévigné | 2026-05-05 | 4 | 29,6 % | E | 43,1 % | 106.8 | 1958 | 365 | U|UE2c | aucune |
+| C033 | `35051000AA0311` | 26 Rue de la Grande Pierre 35510 Cesson-Sévigné | 2026-03-27 | 5 | 25,8 % | D | 38,5 % | 112.1 | 1986 | 490 | U|UE2c(d) | aucune |
+| C034 | `35051000AR0102` | 3 Place de l'Eglise 35510 Cesson-Sévigné | 2024-06-24 | 26 | non mesurée — hors courbe | C | 35,9 % | 67 | 1880 | 115 | U|UA1a | 2015-12-18 |
+| C035 | `35051000ZT0172` | 26 Route de Chantepie 35510 Cesson-Sévigné | 2024-08-18 | 24 | non mesurée — hors courbe | D | 38,5 % | 162.8 | 1972 | 4 296 | U|UE3 | aucune |
+| C036 | `35051000AK0196` | 4 Allée des Fauvettes 35510 Cesson-Sévigné | 2024-06-16 | 26 | non mesurée — hors courbe | E | 43,1 % | 62.2 | 1955 | 278 | U|UE2c | aucune |
+| C037 | `35051000AD0057` | 50 Rue des Petits Champs 35510 Cesson-Sévigné | 2026-04-30 | 4 | 29,6 % | D | 38,5 % | 95.8 | 1978 | 208 | U|UE2c | aucune |
+| C038 | `35051000ZT0144` | 14 Route de Chantepie 35510 Cesson-Sévigné | 2024-04-29 | 28 | non mesurée — hors courbe | E | 43,1 % | 70.8 | 1931 | 1 490 | U|UE3 | aucune |
 
 La revue et les hypothèses mesurées sont dans [E9](../backlog/E9-test-terrain-deux-professionnels.md), qui départage cette promesse et celle de [E8](../backlog/E8-liste-exploratoire-terrain.md).
 
