@@ -25,6 +25,31 @@ qualification est devenue notre code, donc testable — et c'est elle que ce rap
 | Millésimes | 2021 à 2025 |
 | Communes vues | 333 |
 
+## La profondeur d'historique est de cinq ans, et rien ne la rallonge
+
+**Résultat négatif, vérifié le 15 septembre 2026.** Nos cinq millésimes ne sont pas un choix
+d'import : c'est tout ce que la source publie.
+
+| Voie | Constat |
+|---|---|
+| `files.data.gouv.fr/geo-dvf/latest/csv/` | ne liste que 2021 à 2025 ; 2014, 2019 et 2020 répondent 404 |
+| `files.data.gouv.fr/geo-dvf/2025-12/csv/` | même contenu — le millésimé n'est pas plus profond que `latest` |
+| jeu « Demandes de valeurs foncières », data.gouv.fr | couverture temporelle déclarée **2021-01-01 → 2025-12-31** |
+| `cadastre.data.gouv.fr/data/dvf/` | aucune liste de fichiers |
+
+DVF open data est une **fenêtre glissante** : la DGFiP retire les millésimes au-delà de cinq ans.
+Les Fichiers fonciers du Cerema portent un historique plus long **et** le propriétaire, mais sont
+hors périmètre par décision produit — la même qui rend
+[BUG-11](../backlog/BUG-11-unite-fonciere-degeneree.md) irrésoluble.
+
+### Ce que cela interdit
+
+Le signal « ce bien n'a pas changé de mains depuis longtemps », proposé comme marqueur de
+succession latente, **n'est pas exploitable**. Sur le 35051, **1 390 parcelles sur 9 329 — 14,9 %**
+portent au moins une mutation sur les cinq millésimes. Les 85,1 % restantes ne forment pas une
+population remarquable : ne pas avoir vendu en cinq ans est le cas ordinaire. Il faudrait douze
+ans pour que l'absence devienne un signal, et ces douze ans ne sont pas publiés.
+
 ## Rattachement au référentiel spatial
 
 **328 571 lots sur 337 019, soit 97,49 %**, se rattachent à une parcelle du cadastre par jointure
