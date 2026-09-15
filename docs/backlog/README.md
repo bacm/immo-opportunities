@@ -28,18 +28,45 @@ Le dépôt ne versionne pas l'état de la base : une copie fraîche part d'une b
 qui rétablit l'état sur lequel ces preuves ont été mesurées est dans
 [`docs/operations/referentiel-local-35.md`](../operations/referentiel-local-35.md).
 
-## Chemin critique
+## Chemin critique — révisé le 15 septembre 2026
 
-> Débloquer BAN sur le 35, importer DVF+, profiler les distributions réelles, publier un premier
-> score. v0.7 est déjà écrit et n'attend que des candidats.
+> Montrer une liste à un professionnel avant de construire quoi que ce soit d'autre.
+
+Le chemin précédent — *débloquer BAN, importer DVF+, profiler, publier un premier score* — est
+**parcouru jusqu'à D5** : les quatre sources métier sont importées et mesurées. Il reste valable
+techniquement, et c'est précisément ce qui pose problème : il place la seule validation qui compte,
+[G8](./G8-pilote-trois-professionnels.md), derrière onze tickets dont une extension XL à trois
+départements. H1 à H5 ne sont mesurées nulle part, et `SPEC.md` §25 demande encore quel est le
+volume de travail hebdomadaire du premier marchand de biens.
+
+La base contient pourtant déjà de quoi répondre : 1 333 327 unités, 20 M de valeurs de features,
+133 066 mutations, 21 136 zones d'urbanisme. Une sonde sur Cesson-Sévigné ramène 679 candidats
+plausibles sur 9 329 unités.
 
 ```text
-A1 ──► (preuve CI, hors chemin données)
-
-BUG-03 ──► B1 ──► B3 ──► B4 ──┐
-                              ├──► B5 ──► C1 ──► D1 ──► D5 ──► E1 ──► E2 ──► E3 ──► F1 ──► G*
-           B2a, B2b ──────────┘                  D2, D3, D4 ┘
+E8 ──► E9 ──┬──► poursuivre : D6 ──► E1 ──► E2 ──► E3 ──► F1 ──► G*
+            ├──► recadrer : périmètre produit amendé, puis reprise
+            └──► arrêter : G9
 ```
+
+Deux tickets seulement, et le second est un verrou humain :
+
+| | |
+|---|---|
+| [E8](./E8-liste-exploratoire-terrain.md) | une liste exploratoire et sa baseline, sur une commune, sans rien publier |
+| [E9](./E9-test-terrain-deux-professionnels.md) | deux professionnels, en aveugle, H1 · H2 · H5 |
+
+Le reste du backlog n'est pas annulé : il est **suspendu à un verdict**. Les tickets de dette
+sans lien avec la promesse produit ([BUG-02](./BUG-02-scripts-import-hors-dagster.md),
+[BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md), [G6](./G6-exploitation-restauration.md),
+[G7](./G7-observabilite-minimale.md)) restent menables, mais ne sont plus prioritaires.
+
+[BUG-11](./BUG-11-unite-fonciere-degeneree.md) mérite une mention à part. Il est classé bug de
+résolution d'entités ; c'est en réalité la question de savoir si l'objet que le produit vend — un
+bien — est constructible avec les données autorisées. Le propriétaire est hors périmètre par
+décision, et la contiguïté est mesurée puis disqualifiée. E9 est le moyen le moins cher de savoir
+si cette limite est rédhibitoire ou seulement gênante : le relecteur du cas 90 l'avait signalée
+spontanément, sans connaître le modèle.
 
 Aucun ticket des sections `NICE-*` ne démarre tant que E3 (premier top-N réel publiable sur le 35)
 n'est pas livré.
@@ -128,6 +155,8 @@ dérivée du graphe de dépendances.
 | [E5](./E5-resultats-par-segment.md) | Résultats par segment urbain / périurbain / littoral / rural | v0.6 | E4 | M | À faire | attend E4 |
 | [E6](./E6-segmentation-observee.md) | Segmenter les marchés sur distribution observée, et mesurer ce que ça change | v0.6 | D7, E1 | M | À faire | attend D7, E1 |
 | [E7](./E7-decision-valorisation.md) | Décider si le produit estime la valeur des biens non vendus | v0.6 | E6 | M | À faire | attend E6 |
+| [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | À faire | **prêt** |
+| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | attend E8 |
 
 ### F — v0.7 Activation
 
@@ -151,7 +180,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**30/59 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**30/61 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, E8, G6, G7.
 
 ### Verrous humains
 
@@ -170,7 +199,7 @@ Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état 
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-08, D7, G6
+1. A6, BUG-02, BUG-08, D7, E8, G6
 2. BUG-11, G7
 3. BUG-13
 
