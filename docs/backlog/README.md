@@ -59,6 +59,7 @@ dérivée du graphe de dépendances.
 | [A1](./A1-preuve-ci-github.md) | Exécuter le workflow CI sur GitHub et attacher la preuve | v0.1 | — | S | Terminé | — |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
+| [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | À faire | **prêt** |
 
 ### B — v0.3 Référentiel spatial 35
 
@@ -146,7 +147,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**27/54 terminés.** Prêts à démarrer : BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**27/55 terminés.** Prêts à démarrer : A4, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 
@@ -164,7 +165,7 @@ Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état 
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. BUG-02, BUG-08, D7, G6
+1. A4, BUG-02, BUG-08, D7, G6
 2. BUG-11, G7
 3. BUG-13
 
