@@ -123,8 +123,34 @@ def test_no_share_is_published_without_its_volume() -> None:
 def test_a_source_without_an_import_run_is_named() -> None:
     """Un verdict sans import traçable derrière lui est une anomalie, pas un détail."""
     rendered = load().render(_data(), "35", "2026-09-15")
+    # invariant-ok: assertion-supprimee — le libellé fixe « sans qu'aucun run ne l'appuie »
+    # est remplacé par un libellé dérivé du tableau, qui nomme la source ; l'assertion suit.
+    assert "DS-06 n'en a aucun" in rendered
     assert "BUG-14" in rendered
-    assert "sans qu'aucun run ne l'appuie" in rendered
+
+
+def test_the_traceability_verdict_is_derived_and_not_hardcoded() -> None:
+    """Un rapport généré ne doit pas affirmer un défaut corrigé.
+
+    La première version écrivait le constat en dur : après BUG-14, le tableau disait que les
+    quatre sources avaient un run et le paragraphe en dessous soutenait le contraire.
+    """
+    traced = _data(
+        verdicts=[
+            {
+                "data_source_id": "DS-06",
+                "name": "DVF+",
+                "releases": 1,
+                "accepted": 0,
+                "display_only": 1,
+                "pending": 0,
+                "import_runs": 1,
+            }
+        ]
+    )
+    rendered = load().render(traced, "35", "2026-09-15")
+    assert "Chaque release porte au moins un run d'import réussi" in rendered
+    assert "n'en a aucun" not in rendered
 
 
 def test_the_vocabulary_gap_is_measured_and_not_arbitrated() -> None:

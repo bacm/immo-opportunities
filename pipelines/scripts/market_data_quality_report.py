@@ -236,14 +236,26 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
         "stratifiée de [D6](../backlog/D6-revue-manuelle-metier.md)."
     )
     add("")
-    add(
-        "**La colonne des runs d'import est celle à lire en premier.** DS-08 et DS-06 n'en ont "
-        "aucun : leurs imports n'écrivent pas dans `meta.import_run`. DS-08 en reste `pending`, "
-        "parce que la porte d'acceptation refuse une release sans import traçable — à juste "
-        "titre. DS-06, lui, porte `display_only` **sans qu'aucun run ne l'appuie** : rien en base "
-        "ne relie aujourd'hui ses 133 066 transactions à un import identifié, daté et rejouable. "
-        "C'est [BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md)."
-    )
+    # Le constat se **derive** du tableau. L'ecrire en dur l'aurait laisse affirmer un defaut
+    # corrige : c'est exactement ce qui s'est produit entre la premiere generation de ce rapport
+    # et la cloture de BUG-14.
+    untraced = [entry for entry in data["verdicts"] if not int(entry["import_runs"] or 0)]
+    if untraced:
+        names = ", ".join(str(entry["data_source_id"]) for entry in untraced)
+        add(
+            f"**La colonne des runs d'import est celle à lire en premier.** {names} n'en a "
+            "aucun : son import n'écrit pas dans `meta.import_run`. Une release sans import "
+            "traçable ne doit pas être publiable, et la porte d'acceptation la refuse — à juste "
+            "titre. Voir [BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md)."
+        )
+    else:
+        add(
+            "**Chaque release porte au moins un run d'import réussi.** Ce n'était pas le cas "
+            "avant [BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md) : DS-06 et DS-08 "
+            "n'écrivaient aucun run, et le second ne pouvait donc recevoir aucun verdict. Le "
+            "ticket relate ce que la réimportation a révélé ; ce rapport ne porte que l'état "
+            "courant."
+        )
     add("")
     add("## Volumétrie et fraîcheur par source")
     add("")

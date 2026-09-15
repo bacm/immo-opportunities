@@ -1,6 +1,6 @@
 # BUG-14 — Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict
 
-**Version :** v0.5 · **Taille :** M · **État :** En cours
+**Version :** v0.5 · **Taille :** M · **État :** Terminé
 **Dépend de :** — · **Bloque :** E1
 **Touche :** pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
 **Découvert par :** [D5](./D5-rapports-qualite-metier.md), 15 septembre 2026
@@ -83,3 +83,33 @@ d'espèce.
 - les deux motifs d'absence sont distincts en base ;
 - [D5](./D5-rapports-qualite-metier.md) peut publier une ventilation des motifs qui veut dire
   quelque chose.
+
+## Clôture — 15 septembre 2026
+
+**Le code est arrivé par le mauvais commit.** Les trois scripts déclarés dans `Touche` ont été
+modifiés dans `6aa78b4`, intitulé « A1 — La CI a tourné… ». Le correctif est sur `main` depuis ce
+commit ; seul le commit de clôture porte l'identifiant BUG-14. `make dod` ne voit donc que la
+seconde moitié du diff — les tests, le rapport et ce fichier.
+
+Ce que la réimportation a établi :
+
+- DS-08 était **à moitié peuplée** : 11 305 zones en base pour 21 136 annoncées par le rapport
+  de [D2](./D2-import-gpu-ds08.md) — le manifeste de la release ne porte aucun compte de zones,
+  contrairement à ce qu'une première version du rapport affirmait. Après réimport tracé :
+  21 136 zones, 300 communes, run `gpu:2026-09-14:35:1` réussi.
+- DS-06 porte deux runs réussis, un par release, l'archive 2014-2020 de [D8](./D8-historique-dvf-2014.md)
+  comprise.
+- `URB-001` passe de 554 714 à 1 209 188 valeurs présentes ; les 776 499 « `source_not_accepted` »
+  se répartissent en 122 026 `source_value_missing` réels et 2 113 `ambiguous_match`.
+- `DS-08@2026-09-14` porte `display_only`, et le motif est écrit dans `notes` de la release, à la
+  manière de DS-06. Aucun chemin de code n'écrit ce champ : c'est un manque à porter dans D6.
+
+**Recompte indépendant** du rapport régénéré, depuis la base et sans lire le script : tous les
+chiffres du tableau des verdicts, de DS-08, des ventilations URB et des communes les moins
+calculables sont confirmés. Le recompte a relevé deux écarts, corrigés avant clôture : le rapport
+avait été généré avant l'import de l'archive DVF, et la phrase de traçabilité attribuait au
+manifeste un chiffre qu'il ne contient pas. Cette phrase est désormais dérivée du tableau et ne
+porte plus de volumétrie en dur.
+
+**Dépendances relues :** aucun ticket ne déclare dépendre de BUG-14 ; E1 dépend de D6, qui dépend
+de D5. Rien à retirer.

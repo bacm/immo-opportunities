@@ -1,6 +1,6 @@
 # Qualité des données métier — département 35
 
-**Généré le :** 2026-09-14 · **Ticket :** [D5](../backlog/D5-rapports-qualite-metier.md)
+**Généré le :** 2026-09-15 · **Ticket :** [D5](../backlog/D5-rapports-qualite-metier.md)
 
 Ce fichier est **régénéré** par `make market-data-quality`. Ne pas l'éditer à la main.
 
@@ -10,22 +10,22 @@ Les rapports par source restent la référence de détail : [DVF](./dvf-quality-
 
 | Source | Releases | acceptées | `display_only` | `pending` | Runs d'import |
 |---|---:|---:|---:|---:|---:|
-| DS-06 DVF+ open-data | 1 | 0 | 1 | 0 | 0 |
+| DS-06 DVF+ open-data | 2 | 0 | 1 | 1 | 2 |
 | DS-07 DPE Logements existants depuis juillet 2021 | 1 | 0 | 1 | 0 | 1 |
-| DS-08 Géoportail de l urbanisme exports CNIG | 1 | 0 | 0 | 1 | 0 |
+| DS-08 Géoportail de l urbanisme exports CNIG | 1 | 0 | 1 | 0 | 1 |
 | DS-09 Géorisques API et téléchargements | 10 | 0 | 10 | 0 | 10 |
 
 **Aucune source métier n'est `accepted`.** Les quatre attendent la revue manuelle stratifiée de [D6](../backlog/D6-revue-manuelle-metier.md).
 
-**La colonne des runs d'import est celle à lire en premier.** DS-08 et DS-06 n'en ont aucun : leurs imports n'écrivent pas dans `meta.import_run`. DS-08 en reste `pending`, parce que la porte d'acceptation refuse une release sans import traçable — à juste titre. DS-06, lui, porte `display_only` **sans qu'aucun run ne l'appuie** : rien en base ne relie aujourd'hui ses 133 066 transactions à un import identifié, daté et rejouable. C'est [BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md).
+**Chaque release porte au moins un run d'import réussi.** Ce n'était pas le cas avant [BUG-14](../backlog/BUG-14-import-gpu-sans-trace.md) : DS-06 et DS-08 n'écrivaient aucun run, et le second ne pouvait donc recevoir aucun verdict. Le ticket relate ce que la réimportation a révélé ; ce rapport ne porte que l'état courant.
 
 ## Volumétrie et fraîcheur par source
 
 | Source | Unité | Enregistrements | Communes | Donnée la plus récente |
 |---|---|---:|---:|---|
-| DS-06 | transactions | 133 066 | 333 | 2025-12-31 |
+| DS-06 | transactions | 312 639 | 353 | 2025-12-31 |
 | DS-07 | diagnostics | 208 086 | 334 | 2026-09-07 |
-| DS-08 | zones | 11 305 | 154 | 2026-02-03 |
+| DS-08 | zones | 21 136 | 300 | 2026-06-25 |
 | DS-09 | observations | 10 824 | 339 | 2026-09-12 |
 
 ## Complétude par feature, ventilée par motif d'absence
@@ -44,9 +44,9 @@ C'est le cœur du rapport. Quatre motifs différents n'appellent pas la même d�
 | `LAND-008` | 1 333 327 | 0 | 1 333 327 | 0 | 0 | 0 | oui |
 | `LAND-009` | 1 333 327 | 1 333 327 | 0 | 0 | 0 | 0 | oui |
 | `LAND-010` | 1 333 327 | 0 | 0 | 1 333 327 | 0 | 0 | oui |
-| `URB-001` | 1 333 327 | 554 714 | 776 499 | 0 | 0 | 2 114 | oui |
+| `URB-001` | 1 333 327 | 1 209 188 | 0 | 122 026 | 0 | 2 113 | oui |
 | `URB-002` | 1 333 327 | 0 | 0 | 1 333 327 | 0 | 0 | oui |
-| `URB-003` | 1 333 327 | 380 679 | 952 648 | 0 | 0 | 0 | oui |
+| `URB-003` | 1 333 327 | 947 155 | 0 | 386 172 | 0 | 0 | oui |
 | `URB-004` | 1 333 327 | 0 | 0 | 1 333 327 | 0 | 0 | oui |
 | `URB-005` | 1 333 327 | 1 333 327 | 0 | 0 | 0 | 0 | oui |
 
@@ -72,16 +72,16 @@ Un cas défavorable est une information pour le pilote, pas une gêne à masquer
 
 | Commune | Unités | Valeurs présentes | Lignes de feature | Part présente |
 |---|---:|---:|---:|---:|
-| PAIMPONT (35211) | 10 594 | 87 274 | 158 910 | 54,92 % |
-| NOYAL-SOUS-BAZOUGES (35205) | 3 352 | 27 664 | 50 280 | 55,02 % |
-| BROUALAN (35044) | 2 833 | 23 393 | 42 495 | 55,05 % |
-| QUEDILLAC (35234) | 5 949 | 49 177 | 89 235 | 55,11 % |
-| LANRIGAN (35148) | 750 | 6 209 | 11 250 | 55,19 % |
-| TREMEHEUC (35342) | 1 757 | 14 549 | 26 355 | 55,20 % |
-| LOURMAIS (35159) | 1 545 | 12 794 | 23 175 | 55,21 % |
-| QUEBRIAC (35233) | 6 348 | 52 613 | 95 220 | 55,25 % |
-| LE CHATELLIER (35071) | 2 653 | 21 991 | 39 795 | 55,26 % |
-| MONTAUTOUR (35185) | 1 411 | 11 696 | 21 165 | 55,26 % |
+| NOYAL-SOUS-BAZOUGES (35205) | 3 352 | 27 679 | 50 280 | 55,05 % |
+| BROUALAN (35044) | 2 833 | 23 416 | 42 495 | 55,10 % |
+| PRINCE (35232) | 2 223 | 18 447 | 33 345 | 55,32 % |
+| MONTAUTOUR (35185) | 1 411 | 11 721 | 21 165 | 55,38 % |
+| SAINT ONEN LA CHAPELLE (35302) | 3 762 | 31 269 | 56 430 | 55,41 % |
+| COMBLESSAC (35084) | 2 594 | 21 594 | 38 910 | 55,50 % |
+| MOUTIERS (35200) | 3 368 | 28 072 | 50 520 | 55,57 % |
+| VIEUX-VIEL (35354) | 2 310 | 19 262 | 34 650 | 55,59 % |
+| LA SELLE-GUERCHAISE (35325) | 551 | 4 595 | 8 265 | 55,60 % |
+| AVAILLES-SUR-SEICHE (35008) | 2 149 | 17 922 | 32 235 | 55,60 % |
 
 ## Un écart de vocabulaire entre sources, mesuré et non arbitré
 

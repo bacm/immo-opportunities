@@ -118,7 +118,7 @@ dérivée du graphe de dépendances.
 | [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | À faire | **prêt** |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
 | [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
-| [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | En cours | en cours |
+| [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | Terminé | — |
 | [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
 
@@ -187,7 +187,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**39/68 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**40/68 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 
@@ -195,12 +195,6 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 - **D6** — revue humaine · preuve attendue : `docs/data/market-data-manual-review-35.md`
 - **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
-
-### Déjà démarré
-
-Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
-
-- **BUG-14** — pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
 
 ### Lots menables de front
 
