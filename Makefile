@@ -120,6 +120,12 @@ dvf-import:
 		dagster-code python pipelines/scripts/import_dvf_release.py 2026-09-13 \
 		--department $(DEPARTMENT) $(if $(YEAR),--year $(YEAR),)
 
+dvf-archive-import:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_dvf_release.py 2019-04-archive \
+		--department $(DEPARTMENT) $(if $(YEAR),--year $(YEAR),)
+
 dpe-pin:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

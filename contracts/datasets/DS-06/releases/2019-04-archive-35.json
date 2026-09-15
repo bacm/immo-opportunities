@@ -1,0 +1,88 @@
+{
+  "release_id": "DS-06@2019-04-archive",
+  "release_key": "2019-04-archive",
+  "source_published_on": "2024-04-01",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "Publications DGFiP archivées, chaque millésime pris dans la **plus récente qui le contienne**. 2014 et 2015 n'existent que dans celle d'avril 2019 ; 2016 à 2018 sont pris dans celle d'avril 2021 ; 2019 et 2020 dans celle d'avril 2024. La clé porte la plus ancienne des trois, celle qui fixe ce qui ne peut plus être corrigé.",
+  "discovery": {
+    "catalog_entry": "https://data.cquest.org/dgfip_dvf/",
+    "provenance": "Archive TIERCE, pas le producteur. La DGFiP retire de ses pages les millésimes au-delà de cinq ans : geo-dvf ne publie que 2021 à 2025, et le jeu data.gouv.fr déclare la même fenêtre. data.cquest.org conserve onze publications semestrielles, de 201904 à 202504.",
+    "fidelity_check": "Contrôle préalable exigé par D8, sur 2022, présent dans le miroir et dans geo-dvf. La publication 202504 du miroir donne 78 448 lignes et 37 337 408 616 € sur le 35, identiques au centime près à geo-dvf. L'écart de la publication 202404 — 21 lignes, 0,027 % — est une révision DGFiP entre deux éditions, pas une infidélité. Voir docs/data/dvf-quality-35.md.",
+    "format": "Format DGFiP brut : séparateur « | », virgule décimale, dates en JJ/MM/AAAA, fichiers nationaux. Ni id_parcelle ni id_mutation constitués. La mise à la forme geo-dvf est dans immo_pipelines.market_data.dvf_archive, et l'identifiant cadastral reconstruit y coïncide à l'ensemble près avec celui d'Etalab sur 2022 — 42 990 parcelles, zéro écart de part et d'autre.",
+    "mutation_identity": "Le brut ne porte pas d'id_mutation. La clé retenue — date, commune, valeur foncière, numéro de disposition — donne 31 112 mutations sur 2022 contre 31 072 publiées par Etalab, soit +0,13 %. Aucune clé testée ne reproduit exactement la partition ; l'écart est publié plutôt qu'absorbé.",
+    "publication_completeness": "La publication la plus ancienne d'un millésime est INCOMPLÈTE, et silencieusement. Mesuré sur le 35 : 2018 compte 36 879 lignes dans la publication d'avril 2019 contre 60 828 dans celle d'avril 2021, soit 39 % manquants — les actes enregistrés tardivement n'y figuraient pas encore. 2017 gagne 103 lignes entre les deux, ce sont des révisions. D'où la règle : chaque millésime vient de la publication la plus récente qui le contienne. 2014 et 2015 n'ont pas cette chance et restent dans leur version d'avril 2019 — c'est une limite connue, pas un choix."
+  },
+  "assets": [
+    {
+      "layer": "mutations-raw-2014",
+      "url": "https://data.cquest.org/dgfip_dvf/201904/valeursfoncieres-2014.txt",
+      "sha256": "6dc459665ddfd27b0fa90060a780a7ab0a1a1ba60d8db125c36f9874ad611e0b",
+      "byte_size": 333151629,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2014.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2015",
+      "url": "https://data.cquest.org/dgfip_dvf/201904/valeursfoncieres-2015.txt",
+      "sha256": "0e34c703dd7d98cc018fb3637ac58a36049eaa76a20ac4988c1632b25ae6917f",
+      "byte_size": 365246929,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2015.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2016",
+      "url": "https://data.cquest.org/dgfip_dvf/202104/valeursfoncieres-2016.txt",
+      "sha256": "20a41e2e98d17042740ee7ecac2e20a4e569675864650c6479c54156dc8bdbc2",
+      "byte_size": 391545490,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2016.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2017",
+      "url": "https://data.cquest.org/dgfip_dvf/202104/valeursfoncieres-2017.txt",
+      "sha256": "e7c7c07cda80d7093b1d3382d2b921ce4d96fd0ee8ed1fabb691c8c4f099acf2",
+      "byte_size": 452706694,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2017.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2018",
+      "url": "https://data.cquest.org/dgfip_dvf/202104/valeursfoncieres-2018.txt",
+      "sha256": "f3de0f6c9cf21a92727a9baa44a88cd9fea7376d6d63328bcfd2521a5174750e",
+      "byte_size": 445045855,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2018.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2019",
+      "url": "https://data.cquest.org/dgfip_dvf/202404/valeursfoncieres-2019.txt",
+      "sha256": "aaa3c680a58f5a5f6ce14b61c4b845c052fcd8b68f82c1b63f324e83c77ade3c",
+      "byte_size": 485330780,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2019.txt"
+      }
+    },
+    {
+      "layer": "mutations-raw-2020",
+      "url": "https://data.cquest.org/dgfip_dvf/202404/valeursfoncieres-2020.txt",
+      "sha256": "4a8f841e3210a9fc02c93be07d08514154e391661f23d70786f242ab2ac7361e",
+      "byte_size": 470993871,
+      "media_type": "text/plain",
+      "archive": {
+        "object_key": "ds-06/2019-04-archive/35/mutations-raw-2020.txt"
+      }
+    }
+  ]
+}

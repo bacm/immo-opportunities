@@ -35,9 +35,15 @@ difficile à contester — ce qui le rend plus dangereux, pas moins.
 
 ## Ce qui rend la demande légitime malgré tout
 
-**152 communes sur 332** atteignent 30 ventes de maison exploitables sur cinq ans. Les 180 autres
-n'auront jamais de médiane robuste, et un utilisateur qui cherche un bien en rural profond reçoit
-aujourd'hui une absence.
+**282 communes sur 332** atteignent 30 ventes de maison exploitables — sur **douze** millésimes,
+depuis que [D8](./D8-historique-dvf-2014.md) a remonté l'historique à 2014. Les 50 autres n'auront
+pas de médiane robuste, et un utilisateur qui y cherche un bien reçoit une absence.
+
+> **Ce ticket a été ouvert sur un chiffre qui n'est plus le bon.** Il annonçait 152 communes sur
+> 332 et 180 sans support — sur cinq millésimes, et sous la version 2 de transformation. Sous la
+> version 4 et sur douze millésimes, les communes sans support passent de 147 à **50**. L'écart
+> qui motivait la question s'est réduit d'un facteur trois : l'issue « refermer » en devient
+> nettement plus tenable, et c'est au décideur de le dire.
 
 [E6](./E6-segmentation-observee.md) en récupérera une partie : un segment bien tracé fait
 bénéficier une commune pauvre en données du support de ses semblables — **sans rien prédire**,
@@ -65,7 +71,7 @@ l'écart justifie d'amender la spécification.
 - si amendement : ADR et sections modifiées de `SPEC.md` et `ARCHITECTURE.md` ;
 - si refus : la raison est consignée pour que la question ne se rouvre pas sans élément nouveau ;
 - dans tous les cas, le nombre de communes sans support **après** E6 est publié — c'est le chiffre
-  qui fonde la décision.
+  qui fonde la décision, et il part désormais de 50, non de 180.
 
 ## Preuve à produire
 

@@ -1,7 +1,8 @@
 # DVF — qualité et couverture, département 35
 
 **Date :** 14 septembre 2026 · **Ticket :** [D1](../backlog/D1-import-dvf-ds06.md)
-**Release :** `DS-06@2026-09-13`, millésimes 2021 à 2025 · **Transformation :** version 2
+**Releases :** `DS-06@2026-09-13` millésimes 2021-2025, `DS-06@2019-04-archive` millésimes
+2014-2020 · **Transformation :** version 4
 
 ## La source a changé, et le contrat dit pourquoi
 
@@ -112,6 +113,81 @@ Le signal « ce bien n'a pas changé de mains depuis longtemps », marqueur de s
 **n'est pas exploitable sur cinq ans** : sur le 35051, 1 390 parcelles sur 9 329 — 14,9 % — portent
 au moins une mutation. Les 85,1 % restantes ne forment pas une population remarquable, ne pas avoir
 vendu en cinq ans étant le cas ordinaire. Sur douze ans, l'absence redevient discriminante.
+
+## L'import archivé, millésime par millésime — D8 livré
+
+**312 639 mutations et 731 861 lots** sur douze millésimes, dont **179 573 mutations et 394 842
+lots** apportés par la release `DS-06@2019-04-archive`.
+
+| Millésime | Publication | Mutations | Lots | Rattachés | Taux |
+|---|---|---:|---:|---:|---:|
+| 2014 | `201904` | 19 588 | 42 099 | 38 617 | 91,73 % |
+| 2015 | `201904` | 22 384 | 48 791 | 45 504 | 93,26 % |
+| 2016 | `202104` | 24 305 | 52 259 | 49 140 | 94,03 % |
+| 2017 | `202104` | 28 762 | 63 008 | 60 122 | 95,42 % |
+| 2018 | `202104` | 27 279 | 60 828 | 58 049 | 95,43 % |
+| 2019 | `202404` | 29 315 | 64 311 | 61 867 | 96,20 % |
+| 2020 | `202404` | 27 940 | 63 546 | 61 610 | 96,95 % |
+| 2021 | geo-dvf | 32 288 | 77 928 | 75 057 | 96,32 % |
+| 2022 | geo-dvf | 31 072 | 78 448 | 76 287 | 97,25 % |
+| 2023 | geo-dvf | 24 519 | 63 251 | 61 721 | 97,58 % |
+| 2024 | geo-dvf | 21 690 | 57 147 | 55 659 | 97,40 % |
+| 2025 | geo-dvf | 23 497 | 60 245 | 59 847 | 99,34 % |
+
+Le taux monte **de 91,73 % à 99,34 % sans une seule inversion**. C'est la même dérive de
+numérotation parcellaire que D1 avait diagnostiquée sur cinq millésimes, désormais vérifiée sur
+douze : plus une vente est ancienne, plus la parcelle qu'elle désigne a eu d'occasions de
+disparaître. Aucun appariement meilleur ne récupérerait ces lots.
+
+### La publication la plus ancienne d'un millésime est incomplète, et silencieusement
+
+Premier import fait, tous contrôles verts — checksums vérifiés, aucune ligne sans parcelle, aucune
+sans date. Et **39 % de 2018 manquaient**.
+
+| Millésime | Publication `201904` | Publication `202104` | Écart |
+|---|---:|---:|---:|
+| 2017 | 62 905 | 63 008 | +103 — révisions ordinaires |
+| **2018** | **36 879** | **60 828** | **+23 949 — 39 %** |
+
+Les actes enregistrés tardivement ne figuraient pas encore dans le fichier d'avril 2019. Rien ne
+le signalait : le fichier couvre bien douze mois, il est seulement moins dense. Le défaut n'a été
+vu qu'en lisant 36 879 entre 62 905 et 64 311.
+
+**Règle retenue, écrite dans le manifeste : chaque millésime vient de la publication la plus
+récente qui le contienne.** 2014 et 2015 n'ont pas cette chance — aucune publication ultérieure ne
+les porte. Ils restent dans leur version d'avril 2019, et ce sont donc les deux seuls millésimes
+dont l'incomplétude ne peut pas être corrigée. C'est une limite connue, pas un choix.
+
+### Ce que douze ans changent, recompté
+
+Les deux chiffres sont comptés sous la **même définition et la même version de transformation**
+des deux côtés — ventes de maison exploitables au sens du tableau de support ci-dessous, sur les
+332 communes du référentiel cadastral. Un recompte a d'abord produit ici une comparaison fausse,
+et la note qui suit dit laquelle.
+
+| Mesure | Sur 5 millésimes | Sur 12 millésimes |
+|---|---:|---:|
+| Communes atteignant 30 ventes de maison exploitables | 185 sur 332 | **282 sur 332** |
+| Parcelles du 35051 sans aucune mutation | 85,1 % | **70,8 %** |
+
+> **Correction consignée.** La première rédaction annonçait « 152 sur 332 » contre « 344 sur 353 »,
+> soit un écart réduit d'un facteur vingt. Les deux chiffres étaient incomparables. Le 344 comptait
+> des **lots** de type maison, sans la condition « exploitable », et rapportés aux 353 communes que
+> DVF voit au lieu des 332 du référentiel. Le 152, lui, datait de la **version 2** de
+> transformation ; sous la version 4, qui déduplique les lots répétés, le même comptage sur cinq
+> ans donne 185. La comparaison honnête est donc **185 → 282**.
+
+Le premier chiffre fonde [E7](../backlog/E7-decision-valorisation.md) : les communes sans support
+passent de **147 à 50**. C'est trois fois moins, pas vingt fois moins — mais assez pour que
+**E7 soit rouvert**, son argumentaire reposant sur l'ampleur de cet écart.
+
+Le second ne doit pas être surinterprété : 70,8 % des parcelles restent sans mutation connue.
+L'absence gagne en pouvoir discriminant — elle désignait 85 % de la population, elle en désigne
+71 % — mais elle reste **majoritaire**, donc faible seule. Elle ne devient un signal qu'associée
+à d'autres.
+
+Les 353 communes vues par DVF contre 332 au cadastre sont le même phénomène de communes fusionnées
+que sur cinq ans, amplifié par l'ancienneté.
 
 ## Rattachement au référentiel spatial
 
@@ -227,19 +303,23 @@ pas d'un découpage choisi ici.
 
 ## Support statistique par commune
 
-Ventes de maison exploitables — allouables, rattachées, de nature marchande — sur cinq ans :
+Ventes de maison exploitables — allouables, rattachées, de nature marchande — recomptées sous la
+**version 4** de transformation, sur cinq millésimes et sur douze :
 
-| Seuil | Communes |
-|---|---:|
-| Au moins 5 ventes | 305 sur 332 |
-| Au moins 10 ventes | 267 sur 332 |
-| Au moins 30 ventes | **152 sur 332** |
-| Aucune vente exploitable | 4 |
+| Seuil | Sur 5 ans | Sur 12 ans |
+|---|---:|---:|
+| Au moins 5 ventes | 316 sur 332 | 328 sur 332 |
+| Au moins 10 ventes | 284 sur 332 | 320 sur 332 |
+| Au moins 30 ventes | **185 sur 332** | **282 sur 332** |
+| Aucune vente exploitable | 2 | **0** |
+
+Les valeurs sur cinq ans remplacent celles publiées sous la version 2 — 305, 267, 152 et 4 — que la
+déduplication des lots répétés a rendues caduques sans que le rapport le signale.
 
 Ces seuils sont donnés **à titre de lecture, pas de décision**. Le support minimal requis pour
 qu'une médiane soit exploitable vient du profiling de E1, jamais d'une valeur choisie ici. Le
 risque déclaré de la v0.5 — la fausse précision de prix — se lit dans ce tableau : si E1 retient
-un support de 30 ventes, **moins d'une commune sur deux** disposera d'une médiane maison.
+un support de 30 ventes, **cinquante communes** resteront sans médiane maison sur douze ans.
 
 Une commune sans comparable exploitable est un résultat légitime. Elle doit produire une feature
 absente motivée et une confiance réduite, jamais un repli sur la moyenne départementale.
