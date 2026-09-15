@@ -1,6 +1,6 @@
 # E8d — Supprimer le plancher de surface et exposer les seuils, à commencer par la largeur du lot
 
-**Version :** v0.6 · **Taille :** S · **État :** En cours
+**Version :** v0.6 · **Taille :** S · **État :** Terminé
 **Nature :** implémentation · **Touche :** pipelines/scripts/exploratory_candidates.py, pipelines/tests/test_exploratory_candidates.py, docs/data/exploratory-candidates/, Makefile
 **Dépend de :** E8c · **Bloque :** E9
 **Demandé par :** arbitrage du 15 septembre 2026
