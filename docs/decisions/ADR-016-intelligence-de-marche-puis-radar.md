@@ -35,6 +35,13 @@ sans modèle ni seuil inventé.
   négociation longue.
 - *V7, arrêt et capitalisation open source.* Non retenue tant qu'une variante n'a pas été
   confrontée à un professionnel.
+- *V8, biens à l'abandon — l'idée initiale du projet, ajoutée le 15 septembre au soir.* Écartée
+  comme promesse directe : les données ouvertes ne portent aucun signal discriminant
+  ([`docs/data/sonde-abandon-35.md`](../data/sonde-abandon-35.md) — deux tiers des maisons du 35
+  n'ont ni DPE ni mutation depuis 2014, 39 sont « en ruine »), et ce qui discrimine (LOVAC,
+  Fichiers fonciers, successions) est fermé ou interdit. Économiquement juste — la marge est dans
+  le prix d'entrée — elle ne s'atteint que par V4 (EPCI ayant droit), V3 (sociétés en
+  liquidation) ou le radar V2 au moment où un bien sort du silence.
 
 **Décision.**
 

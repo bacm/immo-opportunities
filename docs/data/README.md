@@ -11,6 +11,7 @@ en sort passe par `recompte-preuve` avant d'être repris ailleurs.
 - [Qualité DVF](./dvf-quality-35.md) et [vérification](./dvf-verification-35.md)
 - [Appariement DPE](./dpe-matching-35.md) et [vérification](./dpe-verification-35.md)
 - [Qualité, couverture et fraîcheur métier par commune](./market-data-quality-35.md)
+- [Sonde : un signal d'abandon dans l'open data ?](./sonde-abandon-35.md) — non, sondage non recompté
 
 ## Référentiel spatial
 
