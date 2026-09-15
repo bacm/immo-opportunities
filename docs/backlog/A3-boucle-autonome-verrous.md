@@ -1,7 +1,7 @@
 # A3 — Verrous humains et invariants de la boucle de développement
 
 **Version :** transverse · **Taille :** M · **État :** Terminé
-**Touche :** .github/workflows/ci.yml, scripts/backlog-status, scripts/check-diff-invariants, scripts/check-ticket-dod, scripts/tests/, Makefile, CLAUDE.md, .claude/skills/, docs/backlog/B4-revue-manuelle-appariements.md, docs/backlog/D6-revue-manuelle-metier.md, docs/backlog/E7-decision-valorisation.md, docs/backlog/G8-pilote-trois-professionnels.md, docs/backlog/G9-decision-finale.md
+**Touche :** ARCHITECTURE.md, .github/workflows/ci.yml, scripts/backlog-status, scripts/check-diff-invariants, scripts/check-ticket-dod, scripts/tests/, Makefile, CLAUDE.md, .claude/skills/, docs/backlog/B4-revue-manuelle-appariements.md, docs/backlog/D6-revue-manuelle-metier.md, docs/backlog/E7-decision-valorisation.md, docs/backlog/G8-pilote-trois-professionnels.md, docs/backlog/G9-decision-finale.md
 **Dépend de :** — · **Bloque :** —
 **DoD :** preuve sans objet — outillage : la preuve est la suite `scripts/tests/`
 **Demandé par :** conversation du 15 septembre 2026
@@ -60,6 +60,8 @@ implémentable.
    ticket, celui-ci étant reconstitué depuis les commits dont le sujet porte son identifiant.
 5. Compétence `recompte-preuve` — le contrôle adversarial, décrit comme un recalcul depuis les
    sources et non comme une relecture de diff.
+6. ADR-015 dans `ARCHITECTURE.md` §23 — le choix lui-même, avec les alternatives écartées. Les
+   règles d'usage vivent dans `CLAUDE.md` ; la décision et son motif vivent là où sont les autres.
 
 ## Critères d'acceptation
 
