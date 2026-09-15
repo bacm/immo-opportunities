@@ -138,6 +138,16 @@ règle contraint, sous pression d'achèvement. `make ticket-check` le vérifie �
 porte un identifiant connu du backlog, `D5 — …`, `D1, D6a — …`, selon la convention dont `make dod`
 dépend déjà. Échappatoire explicite `ticket-ok: <raison>` dans le corps du message.
 
+**Un manque n'est pas une décision.** Combler un écart qu'un ticket a déjà tranché — un critère
+d'acceptation écrit mais non câblé, un contrôle outillé mais branché nulle part — n'ouvre pas de
+ticket : le commit porte l'identifiant de **ce** ticket-là, et reste donc attribué, visible de
+`make dod` et de `make ticket-check`.
+
+Le test n'est pas « est-ce petit ? » mais : *puis-je désigner le ticket, l'ADR ou le critère que ce
+changement se contente d'honorer ?* Si oui, c'est un manque — il est déjà écrit, on ne fait que le
+rendre vrai. Sinon, c'est une décision, et une décision que personne n'a écrite ne se retrouve
+nulle part.
+
 ## Definition of Done d'une tâche
 
 Terminé **seulement si** :

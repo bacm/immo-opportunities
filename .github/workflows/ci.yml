@@ -21,7 +21,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          # Les invariants de diff comparent la branche a sa base : un clone superficiel
+          # Les controles de plage comparent la branche a sa base : un clone superficiel
           # n'a pas le commit de base.
           fetch-depth: 0
 
@@ -38,15 +38,6 @@ jobs:
           version: "0.9.16"
           enable-cache: true
 
-      - name: Sync Python workspace
-        run: uv sync --all-packages --all-groups --locked
-
-      - name: Check Python
-        run: make python-check
-
-      - name: Verify OpenAPI contract
-        run: make openapi-check
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -58,20 +49,22 @@ jobs:
           node-version: "24"
           cache: pnpm
 
+      - name: Sync Python workspace
+        run: uv sync --all-packages --all-groups --locked
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check frontend
-        run: make web-check
+      # Une seule etape, et non la liste des cibles : enumerer les controles fait diverger
+      # la CI de `make check` a chaque cible ajoutee. C'est arrive le 15 septembre 2026,
+      # trois heures apres que A1 eut etabli l'invariant « la CI execute au moins
+      # `make check` » : `doc-budget` etait dans la cible et absent du workflow.
+      - name: Run make check
+        run: make check
 
-      - name: Validate Compose
-        run: make config
-
-      # `make check` verifie les lignes ajoutees du travail en cours : sur un arbre propre,
-      # il n'a rien a lire. C'est ici que le controle porte reellement, sur le diff pousse.
-      # Sur push comme sur pull request : une CI qui controle moins que `make check` n'est pas
-      # une preuve de ce que `make check` etablit.
-      - name: Check diff invariants
+      # Ce que `make check` ne peut pas voir : il lit l'arbre de travail, propre en CI.
+      # Les deux controles ci-dessous portent sur la plage de commits poussee.
+      - name: Check pushed range
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
@@ -85,3 +78,4 @@ jobs:
             exit 0
           fi
           ./scripts/check-diff-invariants --base "$BASE"
+          ./scripts/check-commit-ticket --base "$BASE"
