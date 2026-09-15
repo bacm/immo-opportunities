@@ -92,6 +92,7 @@ dérivée du graphe de dépendances.
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
 | [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | En cours | en cours |
+| [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -150,7 +151,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**29/58 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**30/59 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 

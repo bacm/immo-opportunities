@@ -87,3 +87,19 @@ def test_nature_hors_nomenclature_est_une_erreur(backlog_status):
 
 def test_le_backlog_reel_est_coherent(backlog_status):
     assert backlog_status.check_integrity(backlog_status.load()) == []
+
+
+def test_deux_fichiers_de_meme_identifiant_sont_signales(backlog_status, tmp_path, monkeypatch):
+    """La collision faisait disparaître un ticket du tableau sans bruit — BUG-15."""
+    for name in ("A4-premier.md", "A4-second.md", "A5-seul.md", "README.md"):
+        (tmp_path / name).write_text("# X — t\n\n**État :** À faire\n", encoding="utf-8")
+    monkeypatch.setattr(backlog_status, "BACKLOG", tmp_path)
+
+    errors = backlog_status.duplicate_ids()
+
+    assert len(errors) == 1
+    assert "A4-premier.md" in errors[0] and "A4-second.md" in errors[0]
+
+
+def test_le_backlog_reel_n_a_pas_de_doublon(backlog_status):
+    assert backlog_status.duplicate_ids() == []

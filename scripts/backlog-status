@@ -107,8 +107,27 @@ def load() -> dict:
     return tickets
 
 
+def duplicate_ids() -> list[str]:
+    """Deux fichiers pour un identifiant : `load` n'en garde qu'un, dans l'ordre alphabetique.
+
+    Le controle porte sur les fichiers presents, non sur le dictionnaire deja charge : au
+    moment ou l'on tient ce dictionnaire, le ticket ecrase est precisement ce qui manque.
+    Constate le 15 septembre 2026, deux sessions ayant ouvert chacune un ticket `A4` — le
+    tableau annoncait 57 tickets pour 58 fichiers, sans rien signaler. Voir BUG-15.
+    """
+    by_id: dict[str, list[str]] = {}
+    for path in sorted(BACKLOG.glob("*.md")):
+        if path.name not in SKIP:
+            by_id.setdefault(ticket_id(path.name), []).append(path.name)
+    return [
+        f"{tid} : {len(files)} fichiers portent cet identifiant — {', '.join(files)}"
+        for tid, files in sorted(by_id.items())
+        if len(files) > 1
+    ]
+
+
 def check_integrity(tickets: dict) -> list[str]:
-    errors = []
+    errors = duplicate_ids()
     for t in tickets.values():
         if t["state"] not in STATES:
             errors.append(f"{t['id']} : état « {t['state']} » hors nomenclature {sorted(STATES)}")
