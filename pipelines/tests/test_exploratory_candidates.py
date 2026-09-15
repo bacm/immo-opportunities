@@ -158,7 +158,13 @@ def _render_data(module: Any, **overrides: Any) -> dict[str, Any]:
     blind_rows, _ = module.blind(rows, rows, 3)
     for row in blind_rows:
         row.update(
-            last_mutation=None, mutations=0, dpe_count=0, dpe_label=None, dpe_note="", risks=""
+            last_mutation=None,
+            mutations=0,
+            dpe_count=0,
+            dpe_label=None,
+            dpe_note="",
+            risks="",
+            developer_signal="",
         )
     data: dict[str, Any] = {
         "commune": "35051",
@@ -474,3 +480,67 @@ def test_la_liste_aveugle_porte_la_position_mais_aucune_adresse() -> None:
     for column in ('"latitude"', '"longitude"', '"map_url"', '"position_missing"'):
         assert column in source
     assert "address" not in source.lower()
+
+
+# --- E8i : les ZAC sont écartées, la signature d'un aménageur est montrée ---
+
+
+def _zac(intersection: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "constraint_type": "information",
+            "constraint_code": "02",
+            "intersection_m2": intersection,
+        },
+        {"constraint_type": "prescription", "constraint_code": "18", "intersection_m2": 2372.0},
+    ]
+
+
+def test_une_zac_couvrant_la_parcelle_exclut_une_bande_n_exclut_pas() -> None:
+    module = load()
+    parameters = module.Parameters()
+    assert module.in_zac(unit("a", parcel_area_m2=2372.0, constraints=_zac(2372.1)), parameters)
+    assert module.in_zac(unit("b", parcel_area_m2=2372.0, constraints=_zac(1200.0)), parameters)
+    assert not module.in_zac(unit("c", parcel_area_m2=2372.0, constraints=_zac(0.1)), parameters)
+    assert not module.in_zac(unit("d", parcel_area_m2=2372.0, constraints=_zac(1100.0)), parameters)
+    # Le code d'une prescription 02 n'est pas celui d'une information 02.
+    other = [
+        {"constraint_type": "prescription", "constraint_code": "02", "intersection_m2": 2372.0}
+    ]
+    assert not module.in_zac(unit("e", parcel_area_m2=2372.0, constraints=other), parameters)
+
+
+def test_des_contraintes_absentes_restent_absentes_jamais_hors_zac() -> None:
+    module = load()
+    parameters = module.Parameters()
+    absent = unit("a", constraints=None, constraints_missing="source_not_accepted")
+    assert module.in_zac(absent, parameters) is None
+    rows = [absent, unit("b", constraints=_zac(2372.1)), unit("c", constraints=[])]
+    kept, funnel = module.eligible(rows, parameters)
+    assert funnel["contraintes connues"] == 2
+    assert funnel["hors ZAC"] == 1
+    assert [row["cadastral_id"] for row in kept] == ["c"]
+
+
+def test_la_signature_d_amenageur_ne_lit_que_des_voisines_contigues() -> None:
+    source = GENERATOR.read_text(encoding="utf-8")
+    enrich = source[source.index("def enrich(") : source.index("def constraint_summary(")]
+    assert "ST_Touches(candidate.geom, neighbour.geom)" in enrich
+    assert "mutation_nature = 'Vente terrain à bâtir'" in enrich
+    assert "act.parcels >= %(min_parcels)s" in enrich
+    # Contexte, jamais filtre : rien dans l'entonnoir ne lit la signature.
+    eligible = source[source.index("def eligible(") : source.index("def orderings(")]
+    assert "developer" not in eligible
+
+
+def test_le_rapport_porte_le_voisinage_et_dit_que_les_zac_sont_ecartees() -> None:
+    module = load()
+    data = _render_data(module)
+    data["blind"][0]["developer_signal"] = (
+        "voisine dans un acte terrain à bâtir de 10 parcelles, 2020-12-28"
+    )
+    rendu = module.render(data, "2026-09-15")
+    assert "voisine dans un acte terrain à bâtir de 10 parcelles, 2020-12-28" in rendu
+    assert "aucun signal" in rendu
+    assert "zone d'aménagement concerté sont écartées" in rendu
+    assert "50%" in rendu or "50 %" in rendu

@@ -61,6 +61,11 @@ class Parameters:
     zone_type: str = "U"
     max_dwellings_per_building: int = 2
     setback_m: float = 3.0
+    # Une parcelle est en ZAC si le périmètre en couvre plus de la moitié : la distribution
+    # observée est bimodale, la règle ne tranche presque rien à la marge. Arbitraire, déclaré.
+    zac_min_coverage: float = 0.5
+    # Un acte de terrain à bâtir portant au moins autant de parcelles signe un aménageur.
+    developer_min_parcels: int = 3
     # Le seul seuil de sens métier, et le seul qu'un professionnel puisse fixer. Il suppose un
     # retrait obligatoire par rapport aux limites séparatives : construire en limite changerait
     # la réponse, et cette règle est dans le règlement du PLU — profils D2b, non livrés.
@@ -176,6 +181,27 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
     )
 
 
+ZAC_CODE = ("information", "02")
+
+
+def in_zac(row: dict[str, Any], parameters: Parameters) -> bool | None:
+    """Lire un code CNIG typé n'est pas interpréter un règlement — D2 interdit le second.
+
+    `information 02` désigne une zone d'aménagement concerté. Contraintes absentes → absent,
+    jamais « hors ZAC ».
+    """
+    value = row.get("constraints")
+    if value is None or row.get("parcel_area_m2") is None:
+        return None
+    entries = value if isinstance(value, list) else json.loads(value)
+    covered = sum(
+        float(entry.get("intersection_m2") or 0)
+        for entry in entries
+        if (entry.get("constraint_type"), entry.get("constraint_code")) == ZAC_CODE
+    )
+    return covered > parameters.zac_min_coverage * float(row["parcel_area_m2"])
+
+
 def eligible(
     rows: list[dict[str, Any]], parameters: Parameters
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
@@ -191,6 +217,8 @@ def eligible(
         ("largeur suffisante", lambda r: r["width_m"] >= parameters.min_width_m),
         ("zone connue", lambda r: r["zone"] is not None),
         ("zone constructible", lambda r: zone_type(r["zone"]) == parameters.zone_type),
+        ("contraintes connues", lambda r: in_zac(r, parameters) is not None),
+        ("hors ZAC", lambda r: in_zac(r, parameters) is False),
         ("usage résidentiel connu", is_residential),
         ("nature résidentielle", lambda r: not has_non_residential_nature(r)),
         (
@@ -314,9 +342,45 @@ def divisible(
     return kept
 
 
-def enrich(connection: psycopg.Connection[Any], rows: list[dict[str, Any]]) -> None:
-    """Mutations, DPE et risques fins des seuls candidats retenus."""
+def enrich(
+    connection: psycopg.Connection[Any], rows: list[dict[str, Any]], parameters: Parameters
+) -> None:
+    """Mutations, DPE, risques fins et voisinage d'aménageur des seuls candidats retenus."""
     parcels = [row["cadastral_id"] for row in rows]
+    # Une voisine contiguë entrée dans un acte de terrain à bâtir multi-parcelles : la signature
+    # d'un aménageur, indépendante du PLU. Contexte écrit sur la ligne, jamais un filtre.
+    developers: dict[str, dict[str, Any]] = {}
+    for record in fetch(
+        connection,
+        """
+        WITH size AS (
+            SELECT transaction_id, count(DISTINCT parcel_id) AS parcels
+              FROM observation.transaction_property
+             GROUP BY transaction_id
+        ),
+        act AS (
+            SELECT property.parcel_id, mutation.mutation_date, size.parcels
+              FROM observation.transaction AS mutation
+              JOIN size ON size.transaction_id = mutation.id
+              JOIN observation.transaction_property AS property
+                ON property.transaction_id = mutation.id
+             WHERE mutation.mutation_nature = 'Vente terrain à bâtir'
+        )
+        SELECT candidate.cadastral_id, max(act.mutation_date) AS last_act,
+               max(act.parcels) AS parcels
+          FROM reference.parcel_geometry AS candidate
+          JOIN reference.parcel_geometry AS neighbour
+            ON ST_Touches(candidate.geom, neighbour.geom)
+          JOIN reference.parcel ON reference.parcel.cadastral_id = neighbour.cadastral_id
+          JOIN act ON act.parcel_id = reference.parcel.id
+         WHERE candidate.cadastral_id = ANY(%(parcels)s::text[])
+           AND act.parcels >= %(min_parcels)s
+         GROUP BY candidate.cadastral_id
+        """,
+        parcels=parcels,
+        min_parcels=parameters.developer_min_parcels,
+    ):
+        developers[record["cadastral_id"]] = record
     mutations = {
         record["cadastral_id"]: record
         for record in fetch(
@@ -374,6 +438,13 @@ def enrich(connection: psycopg.Connection[Any], rows: list[dict[str, Any]]) -> N
         row["dpe_label"] = labels[0]["energy_label"] if len(labels) == 1 else None
         row["dpe_note"] = "plusieurs diagnostics — appariement ambigu" if len(labels) > 1 else ""
         row["risks"] = ", ".join(sorted(set(risks.get(row["cadastral_id"], [])))) or ""
+        developer = developers.get(row["cadastral_id"])
+        row["developer_signal"] = (
+            f"voisine dans un acte terrain à bâtir de {developer['parcels']} parcelles, "
+            f"{developer['last_act'].isoformat()}"
+            if developer
+            else ""
+        )
 
 
 def constraint_summary(value: Any) -> str:
@@ -532,6 +603,23 @@ def render(data: dict[str, Any], today: str) -> str:
         "relecteur, pas un réglage à défendre."
     )
     add("")
+    add(
+        "**Les parcelles en zone d'aménagement concerté sont écartées** depuis "
+        "[E8i](../backlog/E8i-exclure-les-zac.md). Lire le code CNIG `information 02` n'est pas "
+        "interpréter un règlement : c'est une entrée de dictionnaire, comme le type `U`. Le "
+        "foncier d'une ZAC est sous la main de l'aménageur et du droit de préemption ; le premier "
+        "passage en avait retenu dix sur trente-cinq, dont une dont les deux voisines avaient été "
+        "achetées par un aménageur en 2020. Une parcelle est en ZAC si le périmètre couvre plus de "
+        f"{parameters.zac_min_coverage:.0%} de sa surface — paramètre déclaré."
+    )
+    add("")
+    add(
+        "La colonne « Voisinage » porte la signature d'un aménageur quand elle existe : une "
+        "voisine contiguë entrée dans un acte « Vente terrain à bâtir » d'au moins "
+        f"{parameters.developer_min_parcels} parcelles. Contexte, jamais filtre — elle ne dépend "
+        "pas du PLU."
+    )
+    add("")
     add("## Le plancher de surface a été supprimé")
     add("")
     add(
@@ -639,9 +727,9 @@ def render(data: dict[str, Any], today: str) -> str:
     add(
         "| Réf. | Parcelle | Année | Surface m² | Emprise | Rayon libre m | Voirie m | "
         "Largeur m | Recul m | Bât. | Usage | Log. | Zone | Contraintes | Mutation | DPE | "
-        "Risques fins |"
+        "Risques fins | Voisinage |"
     )
-    add("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
+    add("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|---|")
     for row in rows:
         dpe = row["dpe_label"] or (row["dpe_note"] or "aucun")
         mutation = row["last_mutation"].isoformat() if row["last_mutation"] else "aucune"
@@ -655,7 +743,7 @@ def render(data: dict[str, Any], today: str) -> str:
             f"{row['max_dwellings'] if row['max_dwellings'] is not None else 'inconnu'} | "
             f"{row['zone'] or 'absent'} | "
             f"{constraint_summary(row['constraints'])} | {mutation} | {dpe} | "
-            f"{row['risks'] or 'aucun'} |"
+            f"{row['risks'] or 'aucun'} | {row.get('developer_signal') or 'aucun signal'} |"
         )
     add("")
     add("## Ce que la revue doit produire")
@@ -718,7 +806,7 @@ def main() -> int:
             return 1
         baseline, ranked = orderings(rows, arguments.size)
         blind_rows, key_rows = blind(baseline, ranked, arguments.seed)
-        enrich(connection, blind_rows)
+        enrich(connection, blind_rows, parameters)
         locate(connection, blind_rows)
 
     root = arguments.output_dir or (Path(__file__).resolve().parents[2] / "docs" / "data")
@@ -744,6 +832,7 @@ def main() -> int:
             "dpe_label",
             "dpe_note",
             "risks",
+            "developer_signal",
             "latitude",
             "longitude",
             "map_url",

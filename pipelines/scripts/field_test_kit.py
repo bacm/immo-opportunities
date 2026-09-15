@@ -84,6 +84,7 @@ LISTS: tuple[ListSpec, ...] = (
             Field("Étiquette DPE", "dpe_label"),
             Field("Note DPE", "dpe_note"),
             Field("Risques à la parcelle", "risks"),
+            Field("Voisinage — signature d'un aménageur", "developer_signal"),
         ),
     ),
     ListSpec(

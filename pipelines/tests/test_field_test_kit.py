@@ -48,6 +48,9 @@ def fixtures(root: Path) -> None:
                 "dpe_label": "",
                 "dpe_note": "",
                 "risks": "clay",
+                "developer_signal": (
+                    "voisine dans un acte terrain à bâtir de 10 parcelles, 2020-12-28"
+                ),
                 "latitude": "48.12345",
                 "longitude": "-1.60001",
                 "map_url": "https://www.geoportail.gouv.fr/carte?c=-1.600010,48.123450&z=19",
@@ -68,6 +71,7 @@ def fixtures(root: Path) -> None:
                 "dpe_label": "D",
                 "dpe_note": "",
                 "risks": "",
+                "developer_signal": "",
                 "latitude": "",
                 "longitude": "",
                 "map_url": "",
@@ -166,6 +170,8 @@ def test_une_adresse_ou_une_position_absente_s_affiche_absente_avec_son_motif(
     ).read_text()
     assert "Position :</b> absente — géométrie absente" in divisibles
     assert "Adresse" not in divisibles  # aucune adresse n'est rattachée à une parcelle divisible
+    assert "acte terrain à bâtir de 10 parcelles" in divisibles
+    assert "signature d&#x27;un aménageur</th><td>absent</td>" in divisibles
 
 
 def test_le_lien_de_carte_n_est_emis_qu_avec_une_position(tmp_path: Path) -> None:
