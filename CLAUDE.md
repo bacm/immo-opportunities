@@ -120,6 +120,24 @@ contrainte est le graphe de dépendances, pas un décompte.
 Les nice-to-have (exports, alertes, collaboration, indice de vacance) ne démarrent pas avant qu'un
 top-N réel soit publiable sur le 35 — voir [`docs/backlog/NICE-backlog.md`](docs/backlog/NICE-backlog.md).
 
+## Toute modification passe par un ticket
+
+Une demande qui touche le code, un schéma, l'infrastructure ou le comportement de l'application
+s'ouvre en ticket **avant la première ligne modifiée** — y compris une demande directe en cours de
+conversation. Le ticket peut être minimal ; ce qu'il doit porter, c'est la demande et **les choix
+retenus**. C'est lui qui réserve les chemins, qui rend `make dod` applicable, et qui fait qu'une
+décision est retrouvable ailleurs que dans un message de commit.
+
+Seul `docs/` en est dispensé : le backlog, les preuves, les versions et les décisions sont la
+sortie du processus, pas son objet — ouvrir un ticket ne peut pas demander un ticket. `SPEC.md`,
+`ARCHITECTURE.md` et `CLAUDE.md` en demandent un.
+
+Le critère porte sur les **chemins touchés**, jamais sur l'importance qu'on prête au changement :
+juger « c'est trop petit pour un ticket » est une appréciation portée par celui-là même que la
+règle contraint, sous pression d'achèvement. `make ticket-check` le vérifie — le sujet du commit
+porte un identifiant connu du backlog, `D5 — …`, `D1, D6a — …`, selon la convention dont `make dod`
+dépend déjà. Échappatoire explicite `ticket-ok: <raison>` dans le corps du message.
+
 ## Definition of Done d'une tâche
 
 Terminé **seulement si** :

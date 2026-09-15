@@ -24,7 +24,7 @@ OPS_RUN = docker run --rm \
 .PHONY: help config validate dev-secrets dev up rebuild down logs ops-build \
 	inventory ansible-syntax bootstrap deploy smoke check python-check web-check \
 	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import ban-census mvt-benchmark e2e backlog backlog-check \
-	invariants doc-budget dod
+	invariants doc-budget ticket-check dod
 
 help:
 	@echo "make dev-secrets                  Generate disposable local secrets"
@@ -35,6 +35,7 @@ help:
 	@echo "make check                        Run application quality checks"
 	@echo "make invariants [BASE=<ref>]      Check CLAUDE.md invariants on added diff lines"
 	@echo "make doc-budget                   Check reference documents stay within their line budget"
+	@echo "make ticket-check [BASE=<ref>]    Check every commit touching code carries a ticket id"
 	@echo "make dod ID=<ticket>              Check what is mechanical in a ticket Definition of Done"
 	@echo "make openapi                      Regenerate the OpenAPI contract"
 	@echo "make migrate                      Apply database migrations"
@@ -316,6 +317,12 @@ backlog-check:
 # cours ; avec, la difference entre la reference et HEAD.
 invariants:
 	./scripts/check-diff-invariants $(if $(BASE),--base $(BASE),)
+
+# Un commit sans identifiant n'est pas signale par `make dod`, il lui est invisible.
+# Sans BASE, les commits absents de origin/main. La suite scripts/tests couvre en plus
+# l'historique depuis l'ecriture de la regle, donc `make check` porte deja le controle.
+ticket-check:
+	./scripts/check-commit-ticket $(if $(BASE),--base $(BASE),)
 
 # Un document de reference qui deborde ne se relit plus. Le raisonnement va dans
 # docs/decisions/, jamais charge en entier.

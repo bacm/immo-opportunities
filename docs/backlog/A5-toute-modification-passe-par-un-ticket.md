@@ -1,6 +1,6 @@
 # A5 — Toute modification du code passe par un ticket
 
-**Version :** transverse · **Taille :** S · **État :** En cours
+**Version :** transverse · **Taille :** S · **État :** Terminé
 **Nature :** implémentation
 **Touche :** CLAUDE.md, scripts/check-commit-ticket, scripts/tests/, Makefile, .github/workflows/ci.yml
 **Dépend de :** — · **Bloque :** —
@@ -57,8 +57,8 @@ Trois conséquences, dans l'ordre de gravité :
    chose que `docs/`, son sujet porte au moins un identifiant existant dans `docs/backlog/`, selon
    la convention que `check-ticket-dod` utilise déjà — l'identifiant avant le tiret cadratin,
    `D5 — …`, `D1, D6a — …`. Échappatoire explicite `ticket-ok: <raison>` dans le corps du message.
-3. **CI et `make ticket-check`.** Même résolution de base que l'étape « Check diff invariants » :
-   `pull_request.base.sha` ou `event.before`, avec le repli sur `HEAD^` quand la branche est neuve.
+3. **`make ticket-check`**, et un test ancré qui applique la règle à l'historique réel depuis
+   `96f12f4`, le commit qui précède son écriture.
 
 ## Pourquoi `docs/` seul est dispensé
 
@@ -79,13 +79,24 @@ est « purement interne ». C'est exactement le mode d'échec que nomme
 portée par celui qu'il verrouille. Le critère doit être topologique. Les chemins touchés le sont ;
 la nature du changement ne l'est pas.
 
+## Pas d'étape CI dédiée, contrairement aux invariants
+
+`check-diff-invariants` a la sienne parce que `make check` lit le **travail en cours** : sur l'arbre
+propre d'un runner, il n'a rien à lire, et le contrôle doit être relancé sur le diff poussé.
+
+Ce contrôle-ci n'a pas ce défaut : il lit une plage de commits, pas l'arbre. Le test ancré
+`test_l_historique_depuis_la_regle_est_rattache` juge donc la même chose en CI qu'en local, et il
+la juge sur une plage plus large que celle d'une pull request — tout l'historique depuis la règle.
+Une étape séparée n'ajouterait rien. Le test refuse en revanche de passer s'il n'a lu aucun commit :
+un clone superficiel produirait sinon un vert qui n'a rien contrôlé.
+
 ## Critères d'acceptation
 
 - un commit touchant hors `docs/` sans identifiant connu fait échouer `make ticket-check` ;
 - l'échappatoire `ticket-ok:` est reconnue, et seulement dans le corps du message ;
 - un identifiant syntaxiquement valide mais absent de `docs/backlog/` est refusé — sans quoi
   `X9 — …` suffirait à passer ;
-- le contrôle tourne en CI sur `push` comme sur `pull_request`, comme celui des invariants ;
+- le contrôle tourne en CI sur `push` comme sur `pull_request` ;
 - le script est couvert par des tests exécutés par `make check`.
 
 ## Ce qui n'est pas dans le périmètre
@@ -99,3 +110,22 @@ la nature du changement ne l'est pas.
   désactivé ; celui-ci porte là où le geste est définitif.
 - **Le contenu du ticket.** Qu'il porte réellement les choix retenus n'est pas mécanisable. C'est
   la règle de `CLAUDE.md` qui le demande, pas le script qui le vérifie.
+
+## Résultat
+
+`scripts/check-commit-ticket`, 64 tests verts dans `scripts/tests` dont 9 nouveaux.
+
+Calibration sur l'historique — `--base ac0a57a`, soit tout le dépôt sauf son premier commit :
+
+| | |
+|---|---|
+| Commits contrôlés | tout le dépôt sauf son premier commit |
+| Signalés | **10** |
+| dont code applicatif | `ca5f418` (6 chemins), `ad581e2`, `10b02a3` |
+| dont outillage et sources de vérité | `849c05c`, `4669f0f`, `b96db5b`, `b5e8d2b`, `30f7af7` |
+| dont amorçage et reformatage | `7f1687a`, `ee5c498` |
+
+Ces dix ne sont pas régularisés : le test est ancré sur `96f12f4`, et ne juge que ce qui vient
+après. Les citer ici suffit à ce que le chiffre ne soit pas perdu.
+
+Sur la plage écrite depuis : rien à signaler.

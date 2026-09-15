@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""Un commit qui modifie autre chose que `docs/` porte l'identifiant de son ticket.
+
+`check-ticket-dod` reconstitue le diff d'un ticket depuis le sujet des commits qui
+portent son identifiant. Un commit sans identifiant n'est donc pas *signalé* : il est
+**invisible**. Aucun des sept points de la DoD ne s'y applique, il n'occupe aucun des
+chemins déclarés par `**Touche :**`, et les choix qu'il contient ne sont retrouvables
+que par qui pense à lire son message.
+
+Seul `docs/` est dispensé : le backlog, les preuves, les versions et les décisions sont
+la sortie du processus, pas son objet — ouvrir un ticket ne peut pas demander un ticket.
+`SPEC.md`, `ARCHITECTURE.md` et `CLAUDE.md` en demandent un : les modifier est
+précisément ce qu'on veut voir passer par une décision écrite.
+
+Le critère porte sur les **chemins touchés**, pas sur la nature du changement. Demander
+à l'agent qui produit le diff si son changement est « assez important pour un ticket »,
+c'est le lui demander sous pression d'achèvement — ADR-015.
+
+Échappatoire : `ticket-ok: <raison>` dans le corps du message. Un contrôle sans
+échappatoire est désactivé au premier faux positif.
+
+Usage :
+    scripts/check-commit-ticket                          les commits absents de origin/main
+    scripts/check-commit-ticket --base <ref>             de <ref> à HEAD
+    scripts/check-commit-ticket --base <ref> --head <ref>
+"""
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ESCAPE = "ticket-ok:"
+EXEMPT = ("docs/",)
+
+# La même convention que `check-ticket-dod` : l'identifiant précède le tiret cadratin,
+# seul ou en liste. Faire respecter une autre convention rendrait `make dod` aveugle.
+ID_RE = re.compile(r"^(BUG-\d+|[A-G]\d[ab]?)$")
+
+SEP, FIELD = "\x1e", "\x1f"
+
+
+def run(args: list[str]) -> str:
+    return subprocess.run(args, cwd=ROOT, capture_output=True, text=True).stdout
+
+
+def known_ids(root: Path) -> set[str]:
+    """Les identifiants qui existent réellement — sans quoi `X9 — …` suffirait à passer."""
+    ids = set()
+    for path in (root / "docs" / "backlog").glob("*.md"):
+        match = re.match(r"^(BUG-\d+|[A-G]\d[ab]?)-", path.name)
+        if match:
+            ids.add(match.group(1))
+    return ids
+
+
+def subject_ids(subject: str) -> set[str]:
+    """`D5 — …` donne {D5} ; `D1, D6a — …` donne {D1, D6a} ; sans tiret, rien."""
+    prefix, sep, _ = subject.partition("—")
+    if not sep:
+        return set()
+    return {part.strip() for part in prefix.split(",") if ID_RE.match(part.strip())}
+
+
+def touches_more_than_docs(paths: list[str]) -> bool:
+    return any(path and not path.startswith(EXEMPT) for path in paths)
+
+
+def commits(base: str | None, head: str) -> list[dict]:
+    """Un commit par bloc, quatre champs délimités : le corps contient des lignes vides,
+    et les chemins ne peuvent donc pas être repérés par une ligne vide."""
+    rev = f"{base}..{head}" if base else f"origin/main..{head}"
+    out = run(["git", "log", f"--format={SEP}%H{FIELD}%s{FIELD}%b{FIELD}", "--name-only", rev])
+    parsed = []
+    for block in out.split(SEP):
+        if not block.strip():
+            continue
+        sha, subject, body, paths = (block.split(FIELD) + ["", "", ""])[:4]
+        parsed.append(
+            {
+                "sha": sha.strip()[:7],
+                "subject": subject,
+                "body": body,
+                "paths": [line for line in paths.splitlines() if line],
+            }
+        )
+    return parsed
+
+
+def check(entries: list[dict], known: set[str]) -> list[str]:
+    """Les commits qui modifient hors `docs/` sans ticket connu ni échappatoire."""
+    findings = []
+    for entry in entries:
+        if not touches_more_than_docs(entry["paths"]):
+            continue
+        if ESCAPE in entry["body"]:
+            continue
+        ids = subject_ids(entry["subject"])
+        if ids & known:
+            continue
+        detail = (
+            f"identifiant « {', '.join(sorted(ids))} » inconnu du backlog"
+            if ids
+            else "aucun identifiant dans le sujet"
+        )
+        outside = [p for p in entry["paths"] if not p.startswith(EXEMPT)]
+        findings.append(
+            f"{entry['sha']} {entry['subject']} — {detail} "
+            f"({len(outside)} chemin(s) hors docs/, dont {outside[0]})"
+        )
+    return findings
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    base = argv[argv.index("--base") + 1] if "--base" in argv else None
+    head = argv[argv.index("--head") + 1] if "--head" in argv else "HEAD"
+    if base is None and not run(["git", "rev-parse", "--verify", "--quiet", "origin/main"]):
+        print(
+            "origin/main est introuvable : la plage par défaut n'a pas de base.\n"
+            "Passer --base <ref> plutôt que contrôler zéro commit en silence.",
+            file=sys.stderr,
+        )
+        return 2
+    entries = commits(base, head)
+    findings = check(entries, known_ids(ROOT))
+    if not findings:
+        print(f"Rattachement aux tickets : {len(entries)} commit(s) contrôlé(s), rien à signaler.")
+        return 0
+    print(f"Rattachement aux tickets : {len(findings)} commit(s) sans ticket.", file=sys.stderr)
+    for finding in findings:
+        print(f"  - {finding}", file=sys.stderr)
+    print(
+        "\nOuvrir le ticket et reprendre le sujet — « D5 — … », « D1, D6a — … » —,\n"
+        f"ou justifier dans le corps du message avec « {ESCAPE} <raison> ».",
+        file=sys.stderr,
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

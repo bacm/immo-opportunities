@@ -37,3 +37,8 @@ def ticket_dod() -> ModuleType:
 @pytest.fixture(scope="session")
 def doc_budget() -> ModuleType:
     return load("check-doc-budget")
+
+
+@pytest.fixture(scope="session")
+def commit_ticket() -> ModuleType:
+    return load("check-commit-ticket")
