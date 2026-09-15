@@ -86,3 +86,7 @@ imputable aux locations est inconnue.
 [`exploratory-candidates-35051.md`](./exploratory-candidates-35051.md) : celle-ci répond à « où
 pourrait-on construire », celui-là à « qui est sur le marché ». Ce sont deux promesses distinctes,
 et rien n'établit que le même professionnel veuille les deux.
+
+Les prolongements envisagés de cette mesure — courbe de conversion, cohortes 2022 et 2023,
+stratification par étiquette, ventes répétées — sont notés dans
+[`pistes-analyse-marche-35.md`](./pistes-analyse-marche-35.md), sans être mesurés.

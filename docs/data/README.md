@@ -13,4 +13,5 @@ rapport et les contrôles persistés dans `meta.data_quality_check` concordent.
 - [Matrice d'acceptation Bretagne v0.8](./brittany-acceptance-matrix.md)
 - [Rapport régional du pilote v0.8](./brittany-pilot-v0.8-report.md)
 - [Traçabilité de la DoD MVP](./mvp-dod-traceability.md)
+- [Pistes d'analyse du signal de vente et de la valeur pour le marchand](./pistes-analyse-marche-35.md)
 - [Coût, capacité et performance du pilote](./pilot-operations-v0.8-report.md)
