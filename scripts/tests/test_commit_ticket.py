@@ -87,3 +87,9 @@ def test_l_historique_depuis_la_regle_est_rattache(commit_ticket):
     # Un clone superficiel ne verrait aucun commit et le test passerait sans rien lire.
     assert entries, f"aucun commit lu depuis {DEPUIS} — historique tronqué ?"
     assert commit_ticket.check(entries, commit_ticket.known_ids(ROOT)) == []
+
+
+def test_la_serie_h_est_un_identifiant_de_sujet(commit_ticket):
+    """ADR-016 ouvre la série H ; un `I1` reste refusé tant qu'aucune décision ne l'ouvre — A7."""
+    assert commit_ticket.subject_ids("H1 — Baromètre du marché du 35") == {"H1"}
+    assert commit_ticket.subject_ids("I1 — Série inconnue") == set()

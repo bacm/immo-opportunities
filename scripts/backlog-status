@@ -28,7 +28,7 @@ STATES = {"À faire", "En cours", "Terminé", "Abandonné"}
 NATURES = {"implémentation", "revue humaine", "décision humaine"}
 HUMAN_NATURES = {"revue humaine", "décision humaine"}
 BEGIN, END = "<!-- BEGIN:tickets -->", "<!-- END:tickets -->"
-ID_RE = re.compile(r"\b(BUG-\d+|[A-G]\d[a-z]?)\b")
+ID_RE = re.compile(r"\b(BUG-\d+|[A-H]\d[a-z]?)\b")
 
 SECTIONS = [
     ("A", "A — Clôture process", lambda i: i.startswith("A")),
@@ -39,6 +39,7 @@ SECTIONS = [
     ("E", "E — v0.6 Scoring", lambda i: i.startswith("E")),
     ("F", "F — v0.7 Activation", lambda i: i.startswith("F")),
     ("G", "G — v0.8 Pilote Bretagne", lambda i: i.startswith("G")),
+    ("H", "H — Intelligence de marché, puis radar (ADR-016)", lambda i: i.startswith("H")),
 ]
 
 

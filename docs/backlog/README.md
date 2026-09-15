@@ -9,67 +9,47 @@ Ce dossier est un **plan d'exécution**, pas une source de vérité produit. L'o
 `SPEC.md` → `ARCHITECTURE.md` → [`docs/versions/`](../versions/) → [`contracts/`](../../contracts/) →
 [`docs/data/mvp-dod-traceability.md`](../data/mvp-dod-traceability.md).
 
-## Verdict d'état
+## Verdict d'état — 15 septembre 2026
 
-Le logiciel est écrit. La DoD n'est pas atteinte, et le goulot n'est pas l'interface : c'est
-l'absence de **données réelles acceptées** au-delà du cadastre, donc l'absence de tout
-`OpportunitySnapshot` publié.
+Le logiciel est écrit. Personne ne l'a vu. L'audit du 15 septembre
+([`docs/audit-critique-2026-09-15.md`](../audit-critique-2026-09-15.md)) établit que la
+définition initiale n'est pas tenable avec les données autorisées, et
+[ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) redéfinit le produit.
 
 | Constat | Preuve |
 |---|---|
-| DS-01 Cadastre 35 accepté, 1 333 327 parcelles | [v0.2](../versions/v0.2-cadastre-35.md) |
-| DS-02 RNB 35 importé, 741 376 bâtiments, revue manuelle non faite | [rapport spatial 35](../data/spatial-reference-35-report.md) |
-| DS-05 BAN 35 archivé et checksumé, acceptation débloquée par la décision du 4 septembre 2026 | [audit spatial](../data/spatial-sources-audit.md), [BUG-03](./BUG-03-quarantaine-par-attribut.md) |
-| DS-03, DS-04, DS-06 à DS-09 : contrats seulement, aucune release réelle | [audit spatial](../data/spatial-sources-audit.md), [audit métier](../data/market-data-sources-audit.md) |
-| Moteur de score reproductible, définitions en `publication_eligible: false` | [rapport v0.6](../data/scoring-v0.6-report.md) |
-| v0.7 entièrement codé, aucun candidat réel à afficher | [rapport v0.7](../data/connected-mvp-v0.7-report.md) |
+| Référentiel spatial 35 accepté : DS-01, DS-02 ; DS-03 à DS-09 importés en `display_only` | [audit spatial](../data/spatial-sources-audit.md), [qualité métier](../data/market-data-quality-35.md) |
+| Signal DPE → vente, lift × 11,8, non recompté | [`dpe-signal-vente-35.md`](../data/dpe-signal-vente-35.md) |
+| Marge de revente par prix d'entrée, décote énergétique 3-4 %, non recomptés | [`pistes-analyse-marche-35.md`](../data/pistes-analyse-marche-35.md) §5 |
+| Moteur de score sans appelant, aucun `OpportunitySnapshot`, aucun utilisateur, aucun entretien | [audit](../audit-critique-2026-09-15.md) §0, §7 |
 
-Le dépôt ne versionne pas l'état de la base : une copie fraîche part d'une base vide. La séquence
-qui rétablit l'état sur lequel ces preuves ont été mesurées est dans
-[`docs/operations/referentiel-local-35.md`](../operations/referentiel-local-35.md).
+Le dépôt ne versionne pas l'état de la base. La séquence qui rétablit le référentiel est dans
+[`docs/operations/referentiel-local-35.md`](../operations/referentiel-local-35.md) — elle ne
+couvre que quatre datasets sur neuf et doit être complétée avant toute reconstitution.
 
-## Chemin critique — révisé le 15 septembre 2026
+## Chemin critique — ADR-016, 15 septembre 2026
 
-> Montrer une liste à un professionnel avant de construire quoi que ce soit d'autre.
-
-Le chemin précédent — *débloquer BAN, importer DVF+, profiler, publier un premier score* — est
-**parcouru jusqu'à D5** : les quatre sources métier sont importées et mesurées. Il reste valable
-techniquement, et c'est précisément ce qui pose problème : il place la seule validation qui compte,
-[G8](./G8-pilote-trois-professionnels.md), derrière onze tickets dont une extension XL à trois
-départements. H1 à H5 ne sont mesurées nulle part, et `SPEC.md` §25 demande encore quel est le
-volume de travail hebdomadaire du premier marchand de biens.
-
-La base contient pourtant déjà de quoi répondre : 1 333 327 unités, 20 M de valeurs de features,
-133 066 mutations, 21 136 zones d'urbanisme. Une sonde sur Cesson-Sévigné ramène 679 candidats
-plausibles sur 9 329 unités.
+> Produire le baromètre du 35, le mettre entre les mains de cinq professionnels, obtenir un avis
+> juridique, puis lancer le radar.
 
 ```text
-E8 ──► E9 ──┬──► poursuivre : D6 ──► E1 ──► E2 ──► E3 ──► F1 ──► G*
-            ├──► recadrer : périmètre produit amendé, puis reprise
-            └──► arrêter : G9
+A7 ──► H1 ──► H2 ──► H3 ──┬──► H5 radar (H4 avis juridique en parallèle, requis)
+                          └──► H6 SPEC.md réécrit
 ```
-
-Deux tickets seulement, et le second est un verrou humain :
 
 | | |
 |---|---|
-| [E8](./E8-liste-exploratoire-terrain.md) | une liste exploratoire et sa baseline, sur une commune, sans rien publier |
-| [E9](./E9-test-terrain-deux-professionnels.md) | deux professionnels, en aveugle, H1 · H2 · H5 |
+| [H1](./H1-barometre-marche-35-mesures.md) | les mesures du baromètre, reproductibles et recomptées |
+| [H2](./H2-barometre-document-publiable.md) | un document publiable par EPCI, hors plateforme |
+| [H3](./H3-entretiens-professionnels-barometre.md) | cinq professionnels, le prix du baromètre et celui du radar — **verrou humain** |
+| [H4](./H4-avis-juridique-donnees.md) | avis juridique écrit, préalable au radar — **verrou humain** |
+| [H5](./H5-radar-mise-en-vente.md) | le radar hebdomadaire de mise en vente |
+| [H6](./H6-reecrire-spec.md) | `SPEC.md` réécrit après le premier retour client |
 
-Le reste du backlog n'est pas annulé : il est **suspendu à un verdict**. Les tickets de dette
-sans lien avec la promesse produit ([BUG-02](./BUG-02-scripts-import-hors-dagster.md),
-[BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md), [G6](./G6-exploitation-restauration.md),
-[G7](./G7-observabilite-minimale.md)) restent menables, mais ne sont plus prioritaires.
-
-[BUG-11](./BUG-11-unite-fonciere-degeneree.md) mérite une mention à part. Il est classé bug de
-résolution d'entités ; c'est en réalité la question de savoir si l'objet que le produit vend — un
-bien — est constructible avec les données autorisées. Le propriétaire est hors périmètre par
-décision, et la contiguïté est mesurée puis disqualifiée. E9 est le moyen le moins cher de savoir
-si cette limite est rédhibitoire ou seulement gênante : le relecteur du cas 90 l'avait signalée
-spontanément, sans connaître le modèle.
-
-Aucun ticket des sections `NICE-*` ne démarre tant que E3 (premier top-N réel publiable sur le 35)
-n'est pas livré.
+**Tout le reste est gelé**, pas abandonné : D6, E1 à E7, F1 à F3, G1 à G8, BUG-02, BUG-08,
+BUG-11, BUG-13, D7, A6, G6, G7 restent dans le tableau avec leur disponibilité dérivée, mais
+aucun ne se prend avant le verdict de H3. E9 reste disponible pour être joint aux entretiens de
+H3, à condition de corriger son protocole (aveugle cassé sur la liste E8f, audit §3.4).
 
 ## Tickets
 
@@ -89,6 +69,7 @@ dérivée du graphe de dépendances.
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
 | [A5](./A5-toute-modification-passe-par-un-ticket.md) | Toute modification du code passe par un ticket | transverse | — | S | Terminé | — |
 | [A6](./A6-demo-sous-ensemble-vps.md) | Démo déployable : un sous-ensemble de communes sur une petite machine | transverse | — | L | À faire | **prêt** |
+| [A7](./A7-ouvrir-la-serie-h.md) | Ouvrir la série H dans les outils du backlog, et aligner les documents de pilotage sur ADR-016 | transverse | — | S | Terminé | — |
 
 ### B — v0.3 Référentiel spatial 35
 
@@ -190,7 +171,18 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**43/71 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+### H — Intelligence de marché, puis radar (ADR-016)
+
+| ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
+|---|---|---|---|---|---|---|
+| [H1](./H1-barometre-marche-35-mesures.md) | Baromètre du marché du 35 : les mesures, reproductibles et recomptées | V5 | A7 | L | À faire | **prêt** |
+| [H2](./H2-barometre-document-publiable.md) | Mettre en forme le baromètre : un document publiable par EPCI, hors plateforme | V5 | H1 | M | À faire | attend H1 |
+| [H3](./H3-entretiens-professionnels-barometre.md) | Présenter le baromètre à cinq professionnels, et recueillir ce qu'ils paieraient | V5 | H2 | M | À faire | attend H2 |
+| [H4](./H4-avis-juridique-donnees.md) | Obtenir un avis juridique écrit sur l'usage des données, préalable au radar | V2 | A7 | S | À faire | **verrou humain** |
+| [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
+| [H6](./H6-reecrire-spec.md) | Réécrire SPEC.md autour de l'intelligence de marché et du radar | transverse | H3 | M | À faire | attend H3 |
+
+**44/78 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H1.
 
 ### Verrous humains
 
@@ -198,12 +190,13 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 - **D6** — revue humaine · preuve attendue : `docs/data/market-data-manual-review-35.md`
 - **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
+- **H4** — décision humaine · preuve attendue : `docs/decisions/avis-juridique-donnees-2026.md`
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-08, D7, G6
+1. A6, BUG-02, BUG-08, D7, G6, H1
 2. BUG-11, G7
 3. BUG-13
 

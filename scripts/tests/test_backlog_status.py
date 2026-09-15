@@ -110,3 +110,10 @@ def test_une_dependance_suffixee_au_dela_de_b_est_lue(backlog_status) -> None:
     assert backlog_status.ID_RE.findall("E8c, E8d") == ["E8c", "E8d"]
     assert backlog_status.ID_RE.findall("E8") == ["E8"]
     assert backlog_status.ID_RE.findall("D6a, BUG-12") == ["D6a", "BUG-12"]
+
+
+def test_la_serie_h_est_reconnue_et_la_serie_i_ne_l_est_pas(backlog_status) -> None:
+    """`[A-G]` bornait les séries ; ADR-016 ouvre H, et le dépassement doit rester visible — A7."""
+    assert backlog_status.ID_RE.findall("H1, H5") == ["H1", "H5"]
+    assert backlog_status.ID_RE.findall("I1") == []
+    assert any(key == "H" for key, _, _ in backlog_status.SECTIONS)

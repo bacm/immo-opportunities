@@ -36,7 +36,7 @@ EXEMPT = ("docs/",)
 
 # La même convention que `check-ticket-dod` : l'identifiant précède le tiret cadratin,
 # seul ou en liste. Faire respecter une autre convention rendrait `make dod` aveugle.
-ID_RE = re.compile(r"^(BUG-\d+|[A-G]\d[a-z]?)$")
+ID_RE = re.compile(r"^(BUG-\d+|[A-H]\d[a-z]?)$")
 
 SEP, FIELD = "\x1e", "\x1f"
 
@@ -49,7 +49,7 @@ def known_ids(root: Path) -> set[str]:
     """Les identifiants qui existent réellement — sans quoi `X9 — …` suffirait à passer."""
     ids = set()
     for path in (root / "docs" / "backlog").glob("*.md"):
-        match = re.match(r"^(BUG-\d+|[A-G]\d[a-z]?)-", path.name)
+        match = re.match(r"^(BUG-\d+|[A-H]\d[a-z]?)-", path.name)
         if match:
             ids.add(match.group(1))
     return ids

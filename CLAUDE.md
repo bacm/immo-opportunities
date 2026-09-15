@@ -11,47 +11,47 @@ urbanistique opposable.
 
 **Répondre et documenter en français.**
 
-## État au 13 septembre 2026
+## État au 15 septembre 2026
 
-Le logiciel MVP est largement écrit — API, Explorer carte/liste/fiche, OIDC, RLS, moteur de score,
-administration. **La DoD produit n'est pas atteinte, et le goulot est la donnée réelle, pas l'UI.**
+Le logiciel MVP est largement écrit — API, Explorer, OIDC, RLS, moteur de score, administration.
+**Personne ne l'a vu, aucun score n'est publié, et le moteur de score n'a aucun appelant.**
+L'audit du 15 septembre ([`docs/audit-critique-2026-09-15.md`](docs/audit-critique-2026-09-15.md))
+établit que la définition initiale n'est pas tenable avec les données autorisées : l'objet
+« bien » se réduit à la parcelle, « off-market » suppose un propriétaire exclu par la spec, et la
+rénovation-revente est infondée par les données du projet (décote énergétique de 3 à 4 %).
 
-| Version | État |
+**[ADR-016](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) redéfinit le produit :**
+une intelligence de marché d'abord (V5, un baromètre du 35 par EPCI, reproductible, sans
+plateforme), un radar hebdomadaire de mise en vente ensuite (V2), derrière un avis juridique et
+des entretiens. **La plateforme est gelée** : D6, E1 à E7, F1 à F3, G1 à G8 et la dette
+transverse sont suspendus, pas abandonnés, jusqu'au verdict de H3.
+
+| Ce qui existe | État |
 |---|---|
-| v0.1 Foundation | Terminée le 15 septembre 2026 |
-| v0.2 Cadastre 35 | Terminée |
-| v0.3 Référentiel spatial | Terminée le 13 septembre 2026 |
-| **v0.4 Carte réelle** | **En cours — seule version active** |
-| v0.5 → v0.8 | En attente |
+| v0.1 à v0.5 | Terminées : référentiel spatial 35, adresse réelle, quatre sources métier importées |
+| v0.6 à v0.8 | Codées ou spécifiées, **gelées par ADR-016** |
+| Sources acceptées | DS-01 Cadastre, DS-02 RNB ; **toutes les autres en `display_only`** |
+| Base locale | 29 Go pour le seul 35 ; 1 333 327 unités, 20 M de valeurs de features, 285 k mutations, 208 k DPE |
 
-**Deux releases acceptées** sur le 35 : DS-01 Cadastre et DS-02 RNB. DS-03 BDNB, DS-04 BD TOPO et
-DS-05 BAN sont `display_only`. DS-06 à DS-09 : contrats seulement, aucun import réel.
+### Ce que le référentiel a établi, à ne pas redécouvrir
 
-v0.6 : moteur reproductible, définitions en `publication_eligible: false`.
-v0.7 : entièrement codé, inutilisable faute de candidats publiés.
+Résultats négatifs mesurés : la relation adresse ↔ parcelle n'est vérifiable par aucune règle
+géométrique, ~24 % d'erreur irréductible ; l'unité foncière est dégénérée à une parcelle par unité
+(BUG-11) et la contiguïté ne peut y suppléer ; le DPE se rattache au bâtiment à 59 % ; 65 % des
+mutations DVF n'ont pas de prix allouable ; aucune zone inondable typée sur le 35.
 
-### Ce que v0.3 a livré, et ce qu'elle a laissé
-
-Features morphologiques matérialisées sur **1 333 327 unités** — `LAND-001..007` et `LAND-009`
-calculées, `LAND-008`, `LAND-010` et `BLD-001..003` absentes avec motif. Bâtiments regroupés en
-**514 859 bâtiments physiques** côté RNB, 517 615 côté cadastre.
-
-La revue manuelle B4 a produit une acceptation — l'identité BD TOPO ↔ RNB, 60 cas sur 60 — et
-**trois défauts structurels qu'aucun contrôle automatique n'avait vus**, tous corrigés : BUG-09
-(1,24 M de relations bâtiment ↔ parcelle toutes déclarées certaines), BUG-10 (personne ne pouvait
-se connecter), BUG-12 (comptage d'enregistrements, faux de 44 %).
-
-Elle a aussi établi un **résultat négatif** à ne pas redécouvrir : la relation adresse ↔ parcelle
-n'est vérifiable par aucune règle géométrique — ni containment, ni proximité, ni distance. Son
-taux d'erreur d'environ 24 % est réel et irréductible avec les sources disponibles.
+Résultats positifs mesurés, non recomptés : le dépôt d'un DPE prédit une mutation à douze mois à
+35 % contre 3 % de base (lift × 11,8, deux cohortes) ; sur 7 024 paires de reventes, la plus-value
+nette est × 1,90 sous 60 % du prix de marché et × 1,01 au prix. Voir
+`docs/data/dpe-signal-vente-35.md` et `docs/data/pistes-analyse-marche-35.md`.
 
 ### Le chemin critique tient en une phrase
 
-> Importer DVF+, profiler les distributions réelles, publier un premier score. v0.7 est déjà
-> écrit et n'attend que des candidats.
+> Produire le baromètre du 35, le mettre entre les mains de cinq professionnels, obtenir un avis
+> juridique, puis lancer le radar. Rien d'autre.
 
-Si on demande « le plus important maintenant » : **D1, l'import DVF+ sur le 35.** Sans
-transactions, pas de comparables, pas de valorisation, et le classement n'a rien à classer.
+Si on demande « le plus important maintenant » : **H1, le baromètre du marché du 35.** Sans lui,
+aucun entretien n'a de prétexte et aucun prix ne peut être posé.
 
 ## Carte du contexte — à lire avant de charger quoi que ce soit
 
@@ -109,16 +109,17 @@ vacance, LOVAC ou données propriétaires sans droit, DPE simulés.
 ## Ordre d'exécution
 
 ```text
-v0.1 preuve CI → v0.3 données spatiales 35 → v0.4 adresse réelle → v0.5 imports métier 35
-→ profiling → v0.6 publication score → activation v0.7 → v0.8 extension 22/29/56 + pilote
+H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ─┬─► H5 radar (après H4 avis juridique)
+                                                              └─► H6 SPEC.md réécrit
 ```
 
-Ne pas sauter une étape. **Ne pas enrichir l'UI tant qu'aucun `OpportunitySnapshot` publié
-n'existe.** Plusieurs versions peuvent être `En cours` si aucune ne dépend de l'autre — la
-contrainte est le graphe de dépendances, pas un décompte.
+Ne pas sauter une étape. **Aucune ligne dans le front, l'API, l'infrastructure ni le moteur de
+score tant que H3 n'a pas rendu son verdict.** Les tickets des séries D, E, F, G et la dette
+transverse sont gelés par ADR-016 ; E9 reste disponible mais hors chemin critique, et son
+protocole doit être corrigé avant usage (audit §3.4).
 
-Les nice-to-have (exports, alertes, collaboration, indice de vacance) ne démarrent pas avant qu'un
-top-N réel soit publiable sur le 35 — voir [`docs/backlog/NICE-backlog.md`](docs/backlog/NICE-backlog.md).
+Les nice-to-have ne démarrent pas avant qu'un abonné du 35 existe — voir
+[`docs/backlog/NICE-backlog.md`](docs/backlog/NICE-backlog.md).
 
 ## Toute modification passe par un ticket
 

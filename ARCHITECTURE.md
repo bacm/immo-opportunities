@@ -1183,6 +1183,7 @@ Le futur indice de vacance reste un modèle et un dataset séparés des stratég
 | ADR-013 | Sauvegardes obligatoirement hors du serveur cible | Acceptée | — |
 | ADR-014 | SOPS + `age` pour les secrets versionnés | Acceptée | — |
 | ADR-015 | Boucle de développement : contrôle déterministe, recompte adversarial, verrou humain déclaré | Acceptée | [note](docs/decisions/ADR-015-boucle-autonome.md) |
+| ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
 
 Ce tableau est l'état courant : une ligne par décision. Le raisonnement n'y tient pas, il vit
 dans [`docs/decisions/`](docs/decisions/) — un fichier daté par décision, indiquant le contexte,
