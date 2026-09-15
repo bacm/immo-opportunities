@@ -1,6 +1,6 @@
 # D8 — Remonter l'historique DVF à 2014, depuis les publications DGFiP archivées
 
-**Version :** v0.5 · **Taille :** L · **État :** À faire
+**Version :** v0.5 · **Taille :** L · **État :** En cours
 **Nature :** implémentation · **Touche :** contracts/datasets/DS-06/, pipelines/src/immo_pipelines/market_data/, pipelines/scripts/import_dvf_release.py, docs/data/dvf-quality-35.md
 **Dépend de :** D1 · **Bloque :** —
 **Demandé par :** conversation du 15 septembre 2026

@@ -59,6 +59,53 @@ soit douze ans.
 
 Le travail est porté par [D8](../backlog/D8-historique-dvf-2014.md).
 
+### Le miroir coïncide avec la source officielle — contrôle préalable de D8
+
+[D8](../backlog/D8-historique-dvf-2014.md) interdit d'importer l'archive avant d'avoir vérifié
+qu'elle reproduit la source. Le contrôle porte sur **2022**, présent des deux côtés, au niveau
+**ligne** — plus strict qu'un recomptage de mutations, et indépendant du regroupement.
+
+| Source | Lignes | Somme valeur foncière | Communes |
+|---|---:|---:|---:|
+| miroir `202404` — avril 2024 | 78 427 | 37 333 825 102 € | 333 |
+| miroir `202504` — avril 2025 | **78 448** | **37 337 408 616 €** | 333 |
+| geo-dvf `latest` — décembre 2025 | **78 448** | **37 337 408 616 €** | 333 |
+
+**La publication la plus récente du miroir coïncide au centime près** avec la donnée officielle
+courante. L'écart de `202404` — 21 lignes, 0,027 % — n'est pas une infidélité du miroir : la DGFiP
+**révise** ses fichiers d'une publication à l'autre.
+
+Conséquence à porter dans le contrat : un millésime ancien n'existe que dans la version publiée à
+sa date. 2014 à 2018 ne sont disponibles que dans la publication d'**avril 2019**, et aucune
+correction ultérieure ne les atteindra. La publication fait partie de l'identité de la release,
+pas de sa provenance seulement.
+
+### L'identité de mutation d'Etalab n'est pas reproductible, et l'écart est mesuré
+
+Le format DGFiP brut ne porte **pas** d'`id_mutation` : Etalab le fabrique. Le regroupement doit
+donc être reconstruit, et il a été calibré contre la vérité d'Etalab sur 2022, où les deux
+sources existent — 31 072 mutations pour 78 448 lignes.
+
+| Clé reconstruite | Mutations | Écart |
+|---|---:|---:|
+| date + commune + valeur + n° disposition | **31 112** | **+40 — 0,13 %** |
+| date + commune + valeur + disposition + nature | 31 148 | +76 |
+| date + commune + valeur | 30 935 | −137 |
+| date + valeur + disposition, sans commune | 28 171 | −2 901 |
+| date + commune + disposition, sans valeur | 18 319 | −12 753 |
+
+Aucune clé ne reproduit exactement la partition. La meilleure s'en écarte de **0,13 %**, et la
+distribution des tailles de groupe suit de près — écarts de quelques dizaines par taille.
+
+Ce que cet écart affecte, et ce qu'il n'affecte pas :
+
+- **sans effet** sur « cette parcelle a-t-elle jamais été vendue » : la question se pose au niveau
+  de la ligne, pas de la mutation ;
+- **avec effet** sur la qualification de complexité, donc sur les comparables : 0,13 % des
+  mutations d'un millésime archivé seront groupées autrement qu'Etalab ne l'aurait fait.
+
+Le chiffre est publié plutôt qu'absorbé, et il porte la version de transformation.
+
 ### Ce que douze ans changeraient
 
 Le signal « ce bien n'a pas changé de mains depuis longtemps », marqueur de succession latente,
