@@ -42,6 +42,15 @@ sans modèle ni seuil inventé.
   Fichiers fonciers, successions) est fermé ou interdit. Économiquement juste — la marge est dans
   le prix d'entrée — elle ne s'atteint que par V4 (EPCI ayant droit), V3 (sociétés en
   liquidation) ou le radar V2 au moment où un bien sort du silence.
+- *V9, détection visuelle de l'abandon par imagerie — mise de côté le 15 septembre au soir, à
+  rouvrir après V5.* Seule voie ouverte vers l'état physique d'un bâtiment. L'ortho IGN gratuite
+  (20 cm, deux à quatre ans d'âge, déjà branchée dans l'Explorer) montre l'essentiel ; le
+  sub-métrique récent coûte des dizaines de milliers d'euros par département ; Panoramax donne la
+  vue rue là où il couvre. La vision produit des candidats à vérifier, jamais des verdicts
+  (`SPEC.md` §13.6, ADR-012), et le dépôt n'a que 39 étiquettes. Première étape quand la
+  bifurcation s'ouvre : une sonde d'une journée, 39 maisons « en ruine » contre 39 tirées au
+  hasard, tuiles d'ortho IGN soumises en aveugle à un modèle de vision généraliste, avant tout
+  achat d'image. Même question juridique que H4, en plus sensible.
 
 **Décision.**
 
