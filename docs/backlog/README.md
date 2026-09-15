@@ -60,7 +60,8 @@ dérivée du graphe de dépendances.
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
-| [A5](./A5-toute-modification-passe-par-un-ticket.md) | Toute modification du code passe par un ticket | transverse | — | S | En cours | en cours |
+| [A5](./A5-toute-modification-passe-par-un-ticket.md) | Toute modification du code passe par un ticket | transverse | — | S | Terminé | — |
+| [A6](./A6-demo-sous-ensemble-vps.md) | Démo déployable : un sous-ensemble de communes sur une petite machine | transverse | — | L | À faire | **prêt** |
 
 ### B — v0.3 Référentiel spatial 35
 
@@ -112,6 +113,7 @@ dérivée du graphe de dépendances.
 | [D5](./D5-rapports-qualite-metier.md) | Rapports qualité, couverture et fraîcheur par commune | v0.5 | D1, D2, D3, D4 | M | Terminé | — |
 | [D6](./D6-revue-manuelle-metier.md) | Revue manuelle stratifiée comparables / GPU / DPE / risques | v0.5 | D5 | M | À faire | **verrou humain** |
 | [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | Terminé | — |
+| [D6b](./D6b-verification-diagnostics-parcelle.md) | Voir les diagnostics d'une parcelle, pour vérifier que l'appariement DPE tient | v0.5 | D4 | S | En cours | en cours |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
 
 ### E — v0.6 Scoring
@@ -148,7 +150,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**28/56 terminés.** Prêts à démarrer : BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**29/58 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 
@@ -160,14 +162,14 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
 
-- **A5** — CLAUDE.md, scripts/check-commit-ticket, scripts/tests/, Makefile, .github/workflows/ci.yml
 - **BUG-14** — pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
+- **D6b** — backend/src/immo/explorer.py, backend/src/immo/api/routes/explorer.py, apps/web/src/App.tsx, docs/data/dpe-verification-35.md
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. BUG-02, BUG-08, D7, G6
+1. A6, BUG-02, BUG-08, D7, G6
 2. BUG-11, G7
 3. BUG-13
 
