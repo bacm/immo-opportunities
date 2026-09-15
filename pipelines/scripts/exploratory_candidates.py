@@ -45,7 +45,6 @@ from immo_pipelines.cadastre.settings import CadastreSettings
 
 @dataclass(frozen=True)
 class Parameters:
-    min_parcel_area_m2: float = 800.0
     max_parcel_area_m2: float = 3000.0
     max_footprint_ratio: float = 0.20
     min_width_m: float = 15.0
@@ -53,7 +52,14 @@ class Parameters:
     zone_type: str = "U"
     max_dwellings_per_building: int = 2
     setback_m: float = 3.0
-    min_free_radius_m: float = 6.0
+    # Le seul seuil de sens métier, et le seul qu'un professionnel puisse fixer. Il suppose un
+    # retrait obligatoire par rapport aux limites séparatives : construire en limite changerait
+    # la réponse, et cette règle est dans le règlement du PLU — profils D2b, non livrés.
+    min_lot_width_m: float = 12.0
+
+    @property
+    def min_free_radius_m(self) -> float:
+        return self.min_lot_width_m / 2
 
 
 # Les signaux du classement, et le sens qui les ordonne. Tous morphologiques : sur une commune
@@ -220,7 +226,6 @@ def eligible(
     steps: tuple[tuple[str, Any], ...] = (
         ("bâtie", lambda r: (r["building_count"] or 0) >= parameters.min_building_count),
         ("surface connue", lambda r: r["parcel_area_m2"] is not None),
-        ("surface suffisante", lambda r: r["parcel_area_m2"] >= parameters.min_parcel_area_m2),
         ("surface plafonnée", lambda r: r["parcel_area_m2"] <= parameters.max_parcel_area_m2),
         ("emprise connue", lambda r: r["footprint_ratio"] is not None),
         ("emprise faible", lambda r: r["footprint_ratio"] <= parameters.max_footprint_ratio),
@@ -278,6 +283,24 @@ def orderings(
     for row in rows:
         row["rank_score"], row["rank_signals"] = ranks[row["property_unit_id"]]
     return baseline, ranked
+
+
+SURFACE_BANDS: tuple[tuple[str, float, float], ...] = (
+    ("moins de 400 m²", 0.0, 400.0),
+    ("400 à 600 m²", 400.0, 600.0),
+    ("600 à 800 m²", 600.0, 800.0),
+    ("800 à 1 000 m²", 800.0, 1000.0),
+    ("1 000 à 1 500 m²", 1000.0, 1500.0),
+    ("plus de 1 500 m²", 1500.0, float("inf")),
+)
+
+
+def surface_bands(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Bornes semi-ouvertes : chaque unité tombe dans une tranche et une seule."""
+    return {
+        label: sum(1 for row in rows if low <= row["parcel_area_m2"] < high)
+        for label, low, high in SURFACE_BANDS
+    }
 
 
 def blind(
@@ -593,6 +616,39 @@ def render(data: dict[str, Any], today: str) -> str:
         "relecteur, pas un réglage à défendre."
     )
     add("")
+    add("## Le plancher de surface a été supprimé")
+    add("")
+    add(
+        "Il valait 800 m² et faisait doublon : proxy grossier d'une divisibilité que le rayon "
+        "inscriptible mesure directement depuis "
+        "[E8c](../backlog/E8c-divisibilite-geometrique.md). Il écartait **348 parcelles pourtant "
+        "divisibles** — 262 entre 600 et 800 m², 86 entre 400 et 600 — pour un vivier retenu de "
+        "357. Un seul critère décide désormais : le lot est-il inscriptible ? Voir "
+        "[E8d](../backlog/E8d-seuils-parametrables.md)."
+    )
+    add("")
+    add("| Tranche de surface | Unités du vivier |")
+    add("|---|---:|")
+    for label, count in data["surface_bands"].items():
+        add(f"| {label} | {count:,} |".replace(",", " "))
+    add("")
+    add(
+        f"**La largeur minimale du lot vaut {parameters.min_lot_width_m:.0f} m** — soit un rayon "
+        f"inscriptible de {parameters.min_free_radius_m:.1f} m — et se règle par "
+        "`make exploratory-candidates COMMUNE=… LOT_WIDTH=…`. C'est le seul seuil de sens métier "
+        "de ce rapport."
+    )
+    add("")
+    add(
+        "**Cette valeur suppose un retrait obligatoire par rapport aux limites "
+        "séparatives.** Là où le règlement autorise la construction en limite, un lot plus "
+        "étroit reste constructible et la question change. Cette règle est dans le "
+        "règlement du PLU, que "
+        "[D2b](../backlog/D2b-profils-de-regles.md) doit rendre lisible et qui n'est pas livré : "
+        "`URB-001` ne donne que le code de zone, jamais ce qu'il autorise. La valeur "
+        "retenue est donc une hypothèse de travail, pas une contrainte physique."
+    )
+    add("")
     add("## Paramètres — arbitraires, et c'est délibéré")
     add("")
     add(
@@ -708,6 +764,17 @@ def main() -> int:
     parser.add_argument("--commune", required=True, help="Code INSEE, par exemple 35051")
     parser.add_argument("--size", type=int, default=20, help="Candidats retenus par ordre")
     parser.add_argument("--seed", type=int, default=20260915, help="Graine du mélange")
+    defaults = Parameters()
+    parser.add_argument(
+        "--lot-width",
+        type=float,
+        default=defaults.min_lot_width_m,
+        help="Largeur minimale du lot à détacher, en mètres",
+    )
+    parser.add_argument("--max-area", type=float, default=defaults.max_parcel_area_m2)
+    parser.add_argument("--max-footprint-ratio", type=float, default=defaults.max_footprint_ratio)
+    parser.add_argument("--min-width", type=float, default=defaults.min_width_m)
+    parser.add_argument("--setback", type=float, default=defaults.setback_m)
     parser.add_argument("--output-dir", type=Path, default=None)
     arguments = parser.parse_args()
 
@@ -720,7 +787,13 @@ def main() -> int:
         password=settings.database_password,
     ) as connection:
         connection.execute("SET LOCAL statement_timeout = '600s'")
-        parameters = Parameters()
+        parameters = Parameters(
+            max_parcel_area_m2=arguments.max_area,
+            max_footprint_ratio=arguments.max_footprint_ratio,
+            min_width_m=arguments.min_width,
+            setback_m=arguments.setback,
+            min_lot_width_m=arguments.lot_width,
+        )
         units = population(connection, arguments.commune)
         populations = use_populations(units)
         rows, funnel = eligible(units, parameters)
@@ -772,6 +845,7 @@ def main() -> int:
                 "parameters": parameters,
                 "funnel": funnel,
                 "use_populations": populations,
+                "surface_bands": surface_bands(rows),
                 "blind": blind_rows,
                 "seed": arguments.seed,
                 "size": arguments.size,

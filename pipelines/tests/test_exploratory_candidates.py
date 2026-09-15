@@ -164,6 +164,7 @@ def _render_data(module: Any, **overrides: Any) -> dict[str, Any]:
         "parameters": module.Parameters(),
         "funnel": {"population": 10, "habitat individuel": 2},
         "use_populations": {"usage résidentiel connu": 2},
+        "surface_bands": {"600 à 800 m²": 2},
         "blind": blind_rows,
         "seed": 3,
         "size": 2,
@@ -367,3 +368,41 @@ def test_les_ex_aequo_partagent_leur_rang_quel_que_soit_l_ordre_d_arrivee() -> N
     inverse = [unit("B"), unit("A")]
     assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(rows)["property-unit:B"]
     assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(inverse)["property-unit:A"]
+
+
+def test_aucune_etape_ne_porte_sur_un_plancher_de_surface() -> None:
+    """Le plancher faisait doublon avec le test géométrique et écartait 348 parcelles divisibles."""
+    module = load()
+    _, funnel = module.eligible([unit("A", parcel_area_m2=450.0)], module.Parameters())
+    assert "surface suffisante" not in funnel
+    assert funnel[list(funnel)[-1]] == 1
+
+
+def test_la_largeur_du_lot_commande_le_rayon_exige() -> None:
+    module = load()
+    assert module.Parameters().min_lot_width_m == 12.0
+    assert module.Parameters().min_free_radius_m == 6.0
+    assert module.Parameters(min_lot_width_m=15.0).min_free_radius_m == 7.5
+
+
+def test_un_lot_de_15_m_est_plus_exigeant_qu_un_lot_de_12() -> None:
+    module = load()
+    rows = [unit("A", free_radius_m=6.5)]
+    assert module.divisible(list(rows), module.Parameters(), {}) != []
+    assert module.divisible(list(rows), module.Parameters(min_lot_width_m=15.0), {}) == []
+
+
+def test_les_tranches_de_surface_couvrent_le_vivier_sans_trou_ni_recouvrement() -> None:
+    module = load()
+    rows = [
+        unit("a", parcel_area_m2=399.0),
+        unit("b", parcel_area_m2=400.0),
+        unit("c", parcel_area_m2=599.0),
+        unit("d", parcel_area_m2=1500.0),
+        unit("e", parcel_area_m2=99999.0),
+    ]
+    bands = module.surface_bands(rows)
+    assert sum(bands.values()) == len(rows)
+    assert bands["moins de 400 m²"] == 1
+    assert bands["400 à 600 m²"] == 2
+    assert bands["plus de 1 500 m²"] == 2

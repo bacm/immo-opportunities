@@ -194,7 +194,8 @@ exploratory-candidates:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		-v $(PWD)/docs/data:/workspace/docs/data \
 		dagster-code python pipelines/scripts/exploratory_candidates.py \
-		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),)
+		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
+		$(if $(LOT_WIDTH),--lot-width $(LOT_WIDTH),)
 
 morphology-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
