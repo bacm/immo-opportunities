@@ -1433,8 +1433,9 @@ class RnbImporter:
                    'building', 'building:rnb:' || ranked.rnb_id,
                    'parcel', ranked.parcel_id, 'source_relation', 'rnb-plot-relation', '2',
                    -- Le recouvrement observe, sans plancher. Absent, il vaut 0 : il n'y a
-                   -- alors aucune preuve de recouvrement, et la decision sera `ambiguous`.
-                   coalesce(ranked.cover_ratio, 0),
+                   -- alors aucune preuve de recouvrement, et la decision sera `ambiguous`,
+                   -- avec un motif distinct de celui du contact de limite.
+                   coalesce(ranked.cover_ratio, 0),  -- invariant-ok: qualifie par le CASE
                    CASE
                        WHEN ranked.cover_ratio IS NULL OR ranked.cover_ratio = 0
                            THEN 'ambiguous'

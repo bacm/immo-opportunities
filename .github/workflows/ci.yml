@@ -33,7 +33,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "0.10.6"
+          # Doit rester la version qui a produit `uv.lock`. Un `uv` plus recent peut vouloir
+          # bumper la revision du lock, et `--locked` echoue alors sur un depot pourtant sain.
+          version: "0.9.16"
           enable-cache: true
 
       - name: Sync Python workspace
@@ -66,8 +68,20 @@ jobs:
         run: make config
 
       # `make check` verifie les lignes ajoutees du travail en cours : sur un arbre propre,
-      # il n'a rien a lire. C'est ici que le controle porte reellement, sur le diff de la
-      # branche.
+      # il n'a rien a lire. C'est ici que le controle porte reellement, sur le diff pousse.
+      # Sur push comme sur pull request : une CI qui controle moins que `make check` n'est pas
+      # une preuve de ce que `make check` etablit.
       - name: Check diff invariants
-        if: github.event_name == 'pull_request'
-        run: ./scripts/check-diff-invariants --base ${{ github.event.pull_request.base.sha }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # `before` vaut 0000... sur une branche neuve ou apres force-push.
+          case "$BASE" in
+            "" | 0000000000000000000000000000000000000000)
+              BASE="$(git rev-parse --verify --quiet HEAD^ || true)" ;;
+          esac
+          if [ -z "$BASE" ]; then
+            echo "Aucune base comparable : premier commit de l'historique, controle sans objet."
+            exit 0
+          fi
+          ./scripts/check-diff-invariants --base "$BASE"
