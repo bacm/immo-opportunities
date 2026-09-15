@@ -41,6 +41,8 @@ def unit(identifier: str, **overrides: Any) -> dict[str, Any]:
         "zone_missing": None,
         "constraints": [],
         "constraints_missing": None,
+        "uses": "Résidentiel",
+        "max_dwellings": 1,
     }
     row.update(overrides)
     return row
@@ -156,7 +158,8 @@ def _render_data(module: Any, **overrides: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
         "commune": "35051",
         "parameters": module.Parameters(),
-        "funnel": {"population": 10, "zone constructible": 2},
+        "funnel": {"population": 10, "habitat individuel": 2},
+        "use_populations": {"usage résidentiel connu": 2},
         "blind": blind_rows,
         "seed": 3,
         "size": 2,
@@ -211,3 +214,69 @@ def test_les_diagnostics_ne_viennent_que_de_relations_certaines() -> None:
 def test_les_risques_communaux_ne_sont_pas_presentes_comme_parcellaires() -> None:
     source = GENERATOR.read_text(encoding="utf-8")
     assert "observation.granularity <> 'commune'" in source
+
+
+def test_un_usage_non_residentiel_connu_ecarte_la_parcelle() -> None:
+    """Les parcelles industrielles et commerciales de la première liste venaient de là."""
+    module = load()
+    kept, funnel = module.eligible(
+        [unit("A"), unit("commerce", uses="Commercial et services")], module.Parameters()
+    )
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+    assert funnel["usage résidentiel connu"] == 1
+
+
+def test_un_usage_inconnu_n_est_pas_compte_comme_non_residentiel() -> None:
+    """`Indifférencié` et « aucun bâtiment rattaché » sont deux inconnus, pas deux refus."""
+    module = load()
+    populations = module.use_populations(
+        [
+            unit("residentiel"),
+            unit("commerce", uses="Commercial et services"),
+            unit("indifferencie", uses="Indifférencié"),
+            unit("sans", uses=None),
+        ]
+    )
+    assert populations["usage résidentiel connu"] == 1
+    assert populations["usage non résidentiel connu"] == 1
+    assert populations["usage indifférencié"] == 1
+    assert populations["aucun bâtiment BD TOPO rattaché"] == 1
+
+
+def test_une_parcelle_melant_residentiel_et_annexe_est_retenue() -> None:
+    module = load()
+    kept, _ = module.eligible([unit("A", uses="Annexe · Résidentiel")], module.Parameters())
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+
+
+def test_un_immeuble_est_ecarte_par_le_nombre_de_logements() -> None:
+    module = load()
+    kept, funnel = module.eligible(
+        [unit("A"), unit("immeuble", max_dwellings=7)], module.Parameters()
+    )
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+    assert funnel["habitat individuel"] == 1
+
+
+def test_un_nombre_de_logements_inconnu_ne_disqualifie_pas() -> None:
+    """Une absence n'est pas un immeuble : elle reste une absence."""
+    module = load()
+    kept, _ = module.eligible([unit("A", max_dwellings=None)], module.Parameters())
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+
+
+def test_l_usage_se_rattache_par_identifiant_declare_et_multivalue() -> None:
+    """`identifiants_rnb` est multivalué par `/` sur 29 236 bâtiments : sans le découpage,
+    ces bâtiments sont perdus."""
+    source = GENERATOR.read_text(encoding="utf-8")
+    assert "string_to_array(properties->>'identifiants_rnb', '/')" in source
+    assert "ST_Intersects" not in source.split("def enrich")[0]
+
+
+def test_le_rapport_dit_que_l_usage_vient_d_une_release_display_only() -> None:
+    module = load()
+    data = _render_data(module)
+    data["use_populations"] = {"usage résidentiel connu": 4291}
+    rendu = module.render(data, "2026-09-15")
+    assert "display_only" in rendu
+    assert "identifiants_rnb" in rendu

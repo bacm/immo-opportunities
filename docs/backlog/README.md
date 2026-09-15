@@ -156,6 +156,7 @@ dérivée du graphe de dépendances.
 | [E6](./E6-segmentation-observee.md) | Segmenter les marchés sur distribution observée, et mesurer ce que ça change | v0.6 | D7, E1 | M | À faire | attend D7, E1 |
 | [E7](./E7-decision-valorisation.md) | Décider si le produit estime la valeur des biens non vendus | v0.6 | E6 | M | À faire | attend E6 |
 | [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | Terminé | — |
+| [E8b](./E8b-usage-du-bati.md) | Distinguer l'usage du bâti, faute de quoi la liste sélectionne des routes et des espaces verts | v0.6 | E8 | M | Terminé | — |
 | [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | **verrou humain** |
 
 ### F — v0.7 Activation
@@ -180,7 +181,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**32/61 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**33/62 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 

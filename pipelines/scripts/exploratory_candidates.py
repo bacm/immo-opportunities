@@ -51,6 +51,7 @@ class Parameters:
     min_width_m: float = 15.0
     min_building_count: int = 1
     zone_type: str = "U"
+    max_dwellings_per_building: int = 2
 
 
 # Les signaux du classement, et le sens qui les ordonne. Tous morphologiques : sur une commune
@@ -61,6 +62,11 @@ RANK_SIGNALS: tuple[tuple[str, bool], ...] = (
     ("width_m", True),
     ("boundary_distance_m", True),
 )
+
+# Valeur publiée par BD TOPO. La liste des usages non résidentiels n'est pas énumérée :
+# c'est « résidentiel » qui est exigé, et tout le reste — y compris l'inconnu — en est distinct.
+RESIDENTIAL_USE = "Résidentiel"
+UNKNOWN_USE = "Indifférencié"
 
 FEATURES = {
     "parcel_area_m2": ("LAND-001", "numeric"),
@@ -103,7 +109,15 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
     return fetch(
         connection,
         f"""
-        WITH unit AS (
+        WITH bdtopo AS (
+            SELECT unnest(string_to_array(properties->>'identifiants_rnb', '/')) AS rnb_id,
+                   properties->>'usage_1' AS use,
+                   nullif(properties->>'nombre_de_logements', '')::int AS dwellings
+              FROM meta.entity_source_observation
+             WHERE source_entity_type = 'bdtopo_building'
+               AND properties->>'identifiants_rnb' IS NOT NULL
+        ),
+        unit AS (
             SELECT pu.id, member.entity_id AS parcel_id
               FROM reference.property_unit AS pu
               JOIN reference.property_unit_member AS member
@@ -111,11 +125,24 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
                AND member.entity_type = 'parcel'
                AND member.member_role = 'primary'
              WHERE pu.commune_code = %(commune)s
+        ),
+        use AS (
+            SELECT link.parcel_id,
+                   string_agg(DISTINCT bdtopo.use, ' · ') AS uses,
+                   max(bdtopo.dwellings) AS max_dwellings
+              FROM unit
+              JOIN reference.building_parcel AS link
+                ON link.parcel_id = unit.parcel_id
+               AND link.relation_status = 'certain'
+              JOIN bdtopo ON 'building:rnb:' || bdtopo.rnb_id = link.building_id
+             GROUP BY link.parcel_id
         )
         SELECT unit.id AS property_unit_id, parcel.cadastral_id,
+               min(use.uses) AS uses, min(use.max_dwellings) AS max_dwellings,
                {_pivot()}
           FROM unit
           JOIN reference.parcel AS parcel ON parcel.id = unit.parcel_id
+          LEFT JOIN use ON use.parcel_id = unit.parcel_id
           LEFT JOIN feature.feature_value AS fv ON fv.property_unit_id = unit.id
          GROUP BY unit.id, parcel.cadastral_id
         """,
@@ -126,6 +153,33 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
 def zone_type(zone: str | None) -> str | None:
     """`U|UE2c(d)` — le type CNIG précède la barre, le libellé local la suit."""
     return zone.split("|", 1)[0] if zone else None
+
+
+def uses(row: dict[str, Any]) -> list[str]:
+    return [use for use in (row.get("uses") or "").split(" · ") if use]
+
+
+def is_residential(row: dict[str, Any]) -> bool:
+    """Au moins un bâtiment que BD TOPO déclare résidentiel.
+
+    `Indifférencié` n'est pas « non résidentiel » : c'est un inconnu, et il est compté comme tel
+    par `use_populations`. Exiger le résidentiel connu écarte donc aussi l'inconnu — la liste est
+    un échantillon à contester, pas un inventaire, et ce qu'elle perd est publié.
+    """
+    return RESIDENTIAL_USE in uses(row)
+
+
+def use_populations(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Trois populations distinctes, jamais fondues en un seul taux d'absence."""
+    known = [row for row in rows if uses(row)]
+    return {
+        "usage résidentiel connu": sum(1 for row in known if is_residential(row)),
+        "usage non résidentiel connu": sum(
+            1 for row in known if not is_residential(row) and uses(row) != [UNKNOWN_USE]
+        ),
+        "usage indifférencié": sum(1 for row in known if uses(row) == [UNKNOWN_USE]),
+        "aucun bâtiment BD TOPO rattaché": len(rows) - len(known),
+    }
 
 
 def eligible(
@@ -144,6 +198,14 @@ def eligible(
         ("largeur suffisante", lambda r: r["width_m"] >= parameters.min_width_m),
         ("zone connue", lambda r: r["zone"] is not None),
         ("zone constructible", lambda r: zone_type(r["zone"]) == parameters.zone_type),
+        ("usage résidentiel connu", is_residential),
+        (
+            "habitat individuel",
+            lambda r: (
+                r["max_dwellings"] is None
+                or r["max_dwellings"] <= parameters.max_dwellings_per_building
+            ),
+        ),
     )
     kept = rows
     for label, predicate in steps:
@@ -331,6 +393,35 @@ def render(data: dict[str, Any], today: str) -> str:
         "est rédhibitoire fait partie de ce que la revue doit établir."
     )
     add("")
+    add("## L'usage du bâti, et la source d'où il vient")
+    add("")
+    add(
+        "Dix candidats de la première liste relus à la main : **deux d'intérêt**, les autres des "
+        "délaissés de voirie, des parcelles industrielles, des espaces verts et des immeubles. La "
+        "cause est nommée dans [E8b](../backlog/E8b-usage-du-bati.md) : « grande parcelle, petit "
+        "bâtiment » décrit aussi bien un jardin de maison qu'un espace vert communal. Le filtre "
+        "exige désormais un usage **résidentiel** et un habitat **individuel**."
+    )
+    add("")
+    add(
+        "**L'usage vient de DS-04 BD TOPO, release `display_only`.** Ce n'est acceptable que parce "
+        "que cette liste ne publie rien et sert à être contestée. Un score publié ne pourrait pas "
+        "s'appuyer dessus. Le rattachement se fait par `identifiants_rnb`, déclaré par le "
+        "producteur — aucun appariement géométrique, donc aucune des erreurs mesurées par "
+        "[B4](../backlog/B4-revue-manuelle-appariements.md)."
+    )
+    add("")
+    add("| Population avant filtre d'usage | Unités |")
+    add("|---|---:|")
+    for label, count in data["use_populations"].items():
+        add(f"| {label} | {count:,} |".replace(",", " "))
+    add("")
+    add(
+        "`Indifférencié` n'est pas « non résidentiel » : c'est un inconnu. Exiger le résidentiel "
+        "connu écarte donc aussi l'inconnu, et le volume perdu est publié ci-dessus plutôt que "
+        "fondu dans un taux unique."
+    )
+    add("")
     add("## Ce que le zonage ne permet pas de faire")
     add("")
     add(
@@ -421,10 +512,10 @@ def render(data: dict[str, Any], today: str) -> str:
     )
     add("")
     add(
-        "| Réf. | Parcelle | Surface m² | Emprise | Libre m² | Largeur m | Recul m | Bât. | Zone | "
-        "Contraintes | Dernière mutation | DPE | Risques fins |"
+        "| Réf. | Parcelle | Surface m² | Emprise | Libre m² | Largeur m | Recul m | Bât. | "
+        "Usage | Log. | Zone | Contraintes | Dernière mutation | DPE | Risques fins |"
     )
-    add("|---|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|")
+    add("|---|---|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
     for row in rows:
         dpe = row["dpe_label"] or (row["dpe_note"] or "aucun")
         mutation = row["last_mutation"].isoformat() if row["last_mutation"] else "aucune"
@@ -432,7 +523,9 @@ def render(data: dict[str, Any], today: str) -> str:
             f"| {row['reference']} | `{row['cadastral_id']}` | {cell(row, 'parcel_area_m2')} | "
             f"{cell(row, 'footprint_ratio', 3)} | {cell(row, 'unbuilt_area_m2')} | "
             f"{cell(row, 'width_m', 1)} | {cell(row, 'boundary_distance_m', 1)} | "
-            f"{cell(row, 'building_count')} | {row['zone'] or 'absent'} | "
+            f"{cell(row, 'building_count')} | {row['uses'] or 'inconnu'} | "
+            f"{row['max_dwellings'] if row['max_dwellings'] is not None else 'inconnu'} | "
+            f"{row['zone'] or 'absent'} | "
             f"{constraint_summary(row['constraints'])} | {mutation} | {dpe} | "
             f"{row['risks'] or 'aucun'} |"
         )
@@ -474,7 +567,9 @@ def main() -> int:
     ) as connection:
         connection.execute("SET LOCAL statement_timeout = '600s'")
         parameters = Parameters()
-        rows, funnel = eligible(population(connection, arguments.commune), parameters)
+        units = population(connection, arguments.commune)
+        populations = use_populations(units)
+        rows, funnel = eligible(units, parameters)
         if not rows:
             print(f"Aucune unité éligible sur {arguments.commune} — entonnoir : {funnel}")
             return 1
@@ -517,6 +612,7 @@ def main() -> int:
                 "commune": arguments.commune,
                 "parameters": parameters,
                 "funnel": funnel,
+                "use_populations": populations,
                 "blind": blind_rows,
                 "seed": arguments.seed,
                 "size": arguments.size,
