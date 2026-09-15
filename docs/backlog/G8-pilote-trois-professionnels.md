@@ -1,6 +1,7 @@
 # G8 — Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5
 
 **Version :** v0.8 · **Taille :** XL · **État :** À faire
+**Nature :** revue humaine · **Preuve :** docs/data/field-pilot-results.md
 **Dépend de :** G3, G4 · **Bloque :** G9
 
 > **C'est la validation décisive du produit.** Tout le reste est de l'instrumentation. Aucun test

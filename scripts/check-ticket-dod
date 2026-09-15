@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Vérifie mécaniquement ce qui est vérifiable des sept points de la DoD d'un ticket.
+
+Le diff du ticket est reconstitué depuis la convention de commit du dépôt — le sujet
+porte l'identifiant, `D5 — …`, `D1, D6a — …` — augmenté du travail en cours.
+
+Le script ne prétend pas rendre le verdict complet : le point 7, relire les dépendances
+des tickets débloqués, n'est pas mécanisable. Il les affiche plutôt que de les déclarer
+verts, parce qu'une checklist qui se coche toute seule n'est plus une checklist.
+
+Usage :
+    scripts/check-ticket-dod D6a
+    make dod ID=D6a          enchaîne `make check` et `make backlog-check` au préalable
+"""
+
+import importlib.machinery
+import importlib.util
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+OK, KO, NA = "  ✓", "  ✗", "  ·"
+
+
+def load_backlog():
+    """Le parseur de tickets vit dans `backlog-status` : une seule lecture des en-têtes."""
+    path = ROOT / "scripts" / "backlog-status"
+    loader = importlib.machinery.SourceFileLoader("backlog_status", str(path))
+    spec = importlib.util.spec_from_loader("backlog_status", loader)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def run(cmd: list[str]) -> str:
+    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True).stdout
+
+
+def subject_matches(tid: str, subject: str) -> bool:
+    """Le sujet porte-t-il cet identifiant ? `D5 — …`, `D1, D6a — …`, `BUG-12 — …`."""
+    prefix, sep, _ = subject.partition("—")
+    return bool(sep) and tid in [part.strip() for part in prefix.split(",")]
+
+
+def ticket_commits(tid: str) -> list[str]:
+    """Les commits dont le sujet porte l'identifiant, du plus récent au plus ancien."""
+    out = []
+    for line in run(["git", "log", "--format=%H\t%s", "-200"]).splitlines():
+        sha, _, subject = line.partition("\t")
+        if subject_matches(tid, subject):
+            out.append(sha)
+    return out
+
+
+def changed_paths(shas: list[str]) -> set[str]:
+    paths = set()
+    for sha in shas:
+        paths |= set(run(["git", "show", "--name-only", "--format=", sha]).split("\n"))
+    # `-uall` : sans lui, un répertoire entièrement non suivi apparaît comme un seul
+    # chemin et l'on ne sait pas ce qu'il contient.
+    for line in run(["git", "status", "--porcelain", "-uall"]).splitlines():
+        paths.add(line[3:].strip().split(" -> ")[-1])
+    return {p for p in paths if p}
+
+
+def is_test(path: str) -> bool:
+    return "/tests/" in path or ".spec." in path or ".test." in path
+
+
+def report(label: str, state: str, detail: str = "") -> tuple[str, bool]:
+    return f"{state} {label}" + (f" — {detail}" if detail else ""), state != KO
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    if not argv:
+        print(__doc__, file=sys.stderr)
+        return 2
+    tid = argv[0]
+    check_ran = "--check-ran" in argv
+
+    backlog = load_backlog()
+    tickets = backlog.load()
+    if tid not in tickets:
+        print(f"Ticket inconnu : {tid}", file=sys.stderr)
+        return 2
+    ticket = tickets[tid]
+    waivers = (backlog.field((ROOT / "docs" / "backlog" / ticket["file"]).read_text("utf-8"),
+                             "DoD") or "")
+
+    shas = ticket_commits(tid)
+    paths = changed_paths(shas)
+    lines, results = [], []
+
+    def add(label, state, detail=""):
+        line, ok = report(label, state, detail)
+        lines.append(line)
+        results.append(ok)
+
+    print(f"DoD de {tid} — {ticket['title']}")
+    print(f"  {len(shas)} commit(s) portant l'identifiant, {len(paths)} chemin(s) touché(s)\n")
+
+    # 1 — test automatisé ajouté ou étendu
+    tests = sorted(p for p in paths if is_test(p))
+    if tests:
+        add("1. test ajouté ou étendu", OK, ", ".join(tests[:3]))
+    elif "test sans objet" in waivers:
+        add("1. test ajouté ou étendu", NA, "écarté par l'en-tête du ticket")
+    else:
+        add("1. test ajouté ou étendu", KO, "aucun chemin de test dans le diff")
+
+    # 2 — preuve écrite
+    proofs = sorted(p for p in paths if p.startswith(("docs/data/", "contracts/")))
+    if proofs:
+        add("2. preuve écrite", OK, ", ".join(proofs[:3]))
+    elif "preuve sans objet" in waivers:
+        add("2. preuve écrite", NA, "écartée par l'en-tête du ticket")
+    else:
+        add("2. preuve écrite", KO, "rien sous docs/data/ ni contracts/")
+
+    # 3 — contrat OpenAPI régénéré si l'API change
+    api = sorted(p for p in paths if p.startswith("backend/src/immo/api/"))
+    if not api:
+        add("3. OpenAPI régénéré", NA, "l'API n'est pas touchée")
+    elif "contracts/openapi/v1.json" in paths:
+        add("3. OpenAPI régénéré", OK)
+    else:
+        add("3. OpenAPI régénéré", KO, f"{api[0]} change, pas contracts/openapi/v1.json")
+
+    # 4 — make check vert
+    add("4. make check vert", OK if check_ran else NA,
+        "" if check_ran else "non vérifié ici — lancer `make dod ID=<ticket>`")
+
+    # 5 — aucune donnée simulée présentée comme réelle
+    #
+    # Commit par commit, et non de la base à HEAD : entre le premier commit du ticket et
+    # maintenant, d'autres tickets ont pu passer, et leurs lignes ne sont pas les siennes.
+    runs = [["./scripts/check-diff-invariants", "--base", f"{sha}^", "--head", sha] for sha in shas]
+    runs.append(["./scripts/check-diff-invariants"])
+    breaches = [subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True) for cmd in runs]
+    breaches = [r for r in breaches if r.returncode]
+    add("5. invariants de diff", KO if breaches else OK,
+        f"{len(breaches)} diff(s) en défaut" if breaches else f"{len(runs)} diff(s) contrôlé(s)")
+
+    # 6 — état du ticket à jour, tableau régénéré
+    state_ok = ticket["state"] in ("Terminé", "Abandonné")
+    add("6. état du ticket", OK if state_ok else KO, f"état actuel : {ticket['state']}")
+    fresh = subprocess.run(["./scripts/backlog-status", "--check"], cwd=ROOT, capture_output=True)
+    add("6. tableau régénéré", OK if fresh.returncode == 0 else KO,
+        "" if fresh.returncode == 0 else "lancer `make backlog`")
+
+    # 7 — relire les dépendances des tickets débloqués : non mécanisable
+    unblocked = sorted(t["id"] for t in tickets.values() if tid in t["deps"])
+    add("7. dépendances des tickets débloqués", NA,
+        ("à relire : " + ", ".join(unblocked)) if unblocked
+        else "ce ticket ne débloque aucun ticket")
+
+    print("\n".join(lines))
+    for breach in breaches:
+        print("\n" + breach.stderr.rstrip())
+    failed = results.count(False)
+    print(f"\n{failed} point(s) en échec." if failed else
+          "\nRien en échec. Le point 7 reste à faire à la main.")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

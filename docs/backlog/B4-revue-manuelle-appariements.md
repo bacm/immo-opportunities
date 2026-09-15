@@ -1,6 +1,7 @@
 # B4 — Revue manuelle stratifiée d'un échantillon d'appariements
 
 **Version :** v0.3 · **Taille :** M · **État :** Terminé
+**Nature :** revue humaine · **Preuve :** docs/data/spatial-matching-manual-review-35.md
 **Dépend de :** B3 · **Bloque :** B5, clôture de v0.3
 
 ## Contexte à charger

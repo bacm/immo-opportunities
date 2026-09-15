@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Les invariants de diff comparent la branche a sa base : un clone superficiel
+          # n'a pas le commit de base.
+          fetch-depth: 0
 
       - name: Install Python 3.13
         uses: actions/setup-python@v6
@@ -60,3 +64,10 @@ jobs:
 
       - name: Validate Compose
         run: make config
+
+      # `make check` verifie les lignes ajoutees du travail en cours : sur un arbre propre,
+      # il n'a rien a lire. C'est ici que le controle porte reellement, sur le diff de la
+      # branche.
+      - name: Check diff invariants
+        if: github.event_name == 'pull_request'
+        run: ./scripts/check-diff-invariants --base ${{ github.event.pull_request.base.sha }}

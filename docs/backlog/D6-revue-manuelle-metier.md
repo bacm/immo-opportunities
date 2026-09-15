@@ -1,6 +1,7 @@
 # D6 — Revue manuelle stratifiée comparables / GPU / DPE / risques
 
 **Version :** v0.5 · **Taille :** M · **État :** À faire
+**Nature :** revue humaine · **Preuve :** docs/data/market-data-manual-review-35.md
 **Dépend de :** D5 · **Bloque :** E1, clôture de v0.5
 
 ## Contexte à charger

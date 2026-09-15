@@ -132,6 +132,43 @@ Terminé **seulement si** :
 7. les dépendances des tickets que celui-ci débloque sont **relues** : une dépendance qui n'a plus
    d'objet se retire, sans quoi elle allonge le chemin critique indéfiniment.
 
+`make dod ID=<ticket>` vérifie ce qui est mécanisable de ces sept points sur le diff du ticket, et
+dit lesquels il ne peut pas vérifier plutôt que de les déclarer verts. Le point 7 n'est pas
+mécanisable : le script affiche les tickets débloqués, il ne les juge pas.
+
+Un ticket qui n'a légitimement ni test ni preuve — documentation pure — le déclare dans son en-tête
+par `**DoD :** test sans objet — <raison>` ou `preuve sans objet — <raison>`. Une dérogation écrite
+dans le ticket, pas une case décochée en silence.
+
+## Boucle de développement et verrous
+
+Trois natures de contrôle, distinctes et non interchangeables. Un agent validateur après chaque
+étape n'en est pas une : relire un diff avec le même contexte que son auteur valide la cohérence
+interne, ce que `make check` fait déjà, en reproductible.
+
+| Nature | Quoi | Quand |
+|---|---|---|
+| Déterministe | `make check` — qui inclut `make invariants` —, `make backlog-check`, `make dod` | à chaque étape |
+| Adversarial | compétence `recompte-preuve` : recalculer depuis les sources, **sans lire le code** qui a produit le chiffre | quand l'étape écrit une volumétrie ou un taux dans `docs/data/` ou `contracts/` |
+| Humain | les tickets de `**Nature :**` humaine | verdict sur l'exactitude dans le monde réel, ou arbitrage produit |
+
+`make invariants` vérifie les interdits ci-dessus sur les **lignes ajoutées** du diff : valeur
+manquante convertie en zéro, alias `latest`, seuil littéral dans le moteur, donnée simulée, test
+désactivé ou assertion supprimée. Le mode d'échec d'une boucle autonome n'est pas l'erreur, c'est
+l'arrangement. Une ligne légitimement signalée se justifie sur place : `invariant-ok: <raison>`.
+
+**La boucle s'arrête** — et rend la main plutôt que de contourner — sur :
+
+- un ticket de nature humaine, annoncé **verrou humain** et jamais « prêt » ;
+- deux échecs consécutifs du même gate sur le même ticket : au troisième essai, on ne corrige plus,
+  on contourne ;
+- une décision que `SPEC.md` ne tranche pas ;
+- une source externe indisponible ou un quota atteint — temporiser, jamais substituer une fixture ;
+- une contradiction entre deux sources de vérité.
+
+L'arrêt est explicite et bruyant. Une boucle qui s'arrête en silence ressemble à une boucle qui
+travaille.
+
 ## Commandes
 
 ```bash
@@ -141,6 +178,8 @@ make check                # lint, typecheck, tests, OpenAPI
 make openapi              # régénère le contrat et le client TypeScript
 make migrate              # migrations Alembic
 make backlog              # régénère le tableau de suivi depuis les en-têtes de tickets
+make invariants           # interdits vérifiés sur les lignes ajoutées du diff — BASE=<ref>
+make dod ID=<ticket>      # ce qui est mécanisable des sept points de la DoD
 make ban-import           # import BAN   (voir aussi rnb-import, cadastre-fixture)
 make physical-buildings   # regroupe les enregistrements en bâtiments physiques
 make morphology-features  # matérialise LAND-*/BLD-* sur les releases acceptées
@@ -164,6 +203,15 @@ les sources : un changement backend demande `make rebuild`, pas un `docker compo
 
 L'état d'un ticket vit **à un seul endroit** : la ligne `**État :**` de son fichier dans
 `docs/backlog/`. Valeurs autorisées : `À faire`, `En cours`, `Terminé`, `Abandonné`.
+
+`**Nature :**` vaut `implémentation` (défaut), `revue humaine` ou `décision humaine`. Les deux
+dernières sont des **verrous** : le ticket n'est jamais annoncé « prêt », il sort des lots menables
+de front, et il déclare par `**Preuve :**` le chemin du rapport ou de la décision attendue — fichier
+qui doit exister pour que `Terminé` soit accepté.
+
+Le verrou est une propriété **déclarée** du ticket, jamais une appréciation portée en cours de
+route : demander à un agent s'il a besoin d'un humain revient à lui demander de s'interrompre alors
+qu'il est sous pression d'achèvement. Il répondra non.
 
 La colonne « Disponibilité » du README est **dérivée** du graphe de dépendances — ne jamais la
 saisir à la main. `make backlog` régénère le tableau après tout changement d'état ;

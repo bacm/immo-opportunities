@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Vérifie les interdits de `CLAUDE.md` sur les lignes **ajoutées** d'un diff.
+
+Le mode d'échec d'une boucle de développement autonome n'est pas l'erreur, c'est
+l'arrangement : assouplir un test au lieu de corriger le code, convertir une valeur
+manquante en zéro pour qu'un calcul passe, figer un alias `latest` parce que le
+checksum gêne. Chacun de ces gestes produit un `make check` vert et une donnée fausse.
+
+Ces interdits sont écrits dans `CLAUDE.md` depuis longtemps ; rien ne les vérifiait.
+
+Échappatoire : `invariant-ok: <raison>` sur la ligne signalée. Elle est volontaire —
+un contrôle sans échappatoire est désactivé au premier faux positif, et ne protège
+plus rien.
+
+Usage :
+    scripts/check-diff-invariants                          travail en cours (index, worktree, non suivis)
+    scripts/check-diff-invariants --base <ref>             de <ref> à HEAD
+    scripts/check-diff-invariants --base <ref> --head <ref>  un commit précis
+"""
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ESCAPE = "invariant-ok:"
+
+# Le fichier qui énonce les interdits les contient tous : s'exclure, sinon le contrôle
+# se signale lui-même. Les .md sont hors périmètre — la documentation est l'endroit où
+# ces règles s'écrivent.
+EXCLUDED = ("scripts/check-diff-invariants", "scripts/tests/")
+
+CODE = (".py", ".sql", ".ts", ".tsx", ".js")
+SOURCE_ROOTS = ("backend/src/", "pipelines/src/", "apps/web/src/")
+SCORING_ROOTS = ("pipelines/src/immo_pipelines/scoring/", "contracts/scoring/")
+
+
+def is_test(path: str) -> bool:
+    return (
+        "/tests/" in path
+        or path.startswith("tests/")
+        or ".spec." in path
+        or ".test." in path
+        or "/e2e/" in path
+    )
+
+
+def is_code(path: str) -> bool:
+    return path.endswith(CODE) and not is_test(path)
+
+
+def is_source(path: str) -> bool:
+    return path.startswith(SOURCE_ROOTS) and not is_test(path)
+
+
+def is_scoring(path: str) -> bool:
+    return path.startswith(SCORING_ROOTS)
+
+
+# (nom, périmètre, motif, explication)
+#
+# Chaque motif a été calibré contre l'historique du dépôt : il ne signale rien sur les
+# dix derniers commits. Les formulations trop larges ont été retirées plutôt que
+# tolérées — `or 0` sur une pagination, `coalesce(sum(x), 0)` sur un agrégat vide ou un
+# `test.skip(condition, raison)` de garde sont légitimes, et un contrôle qui les signale
+# apprend à passer outre.
+RULES = [
+    (
+        "valeur-manquante-en-zero",
+        is_code,
+        re.compile(
+            r"\.fillna\(\s*0|\?\?\s*0\b"
+            # coalesce(colonne, 0) : la colonne absente devient zéro. Un agrégat —
+            # sum, count, avg — sur un ensemble vide vaut légitimement zéro.
+            r"|coalesce\s*\(\s*(?!\s*(sum|count|avg|min|max|array_agg|jsonb_agg)\s*\()"
+            r"[^,()]+,\s*0(\.0+)?\s*\)",
+            re.I,
+        ),
+        "une valeur manquante reste manquante avec un motif, elle ne devient pas zéro",
+    ),
+    (
+        "alias-latest",
+        is_code,
+        re.compile(r"""["'/]latest["'/]|=\s*latest\b""", re.I),
+        "un import reproductible se pince sur une release datée et son checksum, pas sur `latest`",
+    ),
+    (
+        "seuil-invente",
+        is_scoring,
+        re.compile(r"\w*(threshold|seuil|percentile|cutoff|quantile|p(?:10|25|50|75|90))\w*"
+                   r"\s*[:=]\s*-?\d", re.I),
+        "les seuils et percentiles viennent du profiling observé, pas d'un littéral écrit "
+        "dans le moteur",
+    ),
+    (
+        "donnee-simulee",
+        is_source,
+        re.compile(r"\bfaker\b|\bfake_|\bdummy|\blorem\b|\bsynthet|\bsimulated\b"
+                   r"|données simulées", re.I),
+        "aucune donnée simulée ne peut satisfaire un critère « données réelles »",
+    ),
+    (
+        "test-affaibli",
+        is_test,
+        # Un test désactivé se reconnaît à ce qu'il porte un nom : `test.skip('...')`.
+        # `test.skip(condition, raison)` est une garde d'exécution, pas un renoncement.
+        re.compile(r"""@pytest\.mark\.(skip|xfail)"""
+                   r"""|\b(it|test|describe)\.(skip|only)\(\s*['"`]"""
+                   r"""|\bassert True\b|\bexpect\(true\)"""),
+        "un test qu'on saute ou qu'on vide ne prouve plus rien — corriger le code, pas le test",
+    ),
+]
+
+REMOVED_ASSERTION = re.compile(r"^-\s*(assert\b|expect\(|self\.assert)")
+
+
+def diff(base: str | None, head: str = "HEAD") -> str:
+    if base:
+        return run(["git", "diff", "--unified=0", base, head])
+    out = run(["git", "diff", "--unified=0", "HEAD"])
+    untracked = run(["git", "ls-files", "--others", "--exclude-standard"]).split()
+    for path in untracked:
+        out += run(["git", "diff", "--unified=0", "--no-index", "/dev/null", path], allow_fail=True)
+    return out
+
+
+def run(cmd: list[str], allow_fail: bool = False) -> str:
+    result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    if result.returncode and not allow_fail and not result.stdout:
+        print(result.stderr.strip(), file=sys.stderr)
+        raise SystemExit(2)
+    return result.stdout
+
+
+def parse(text: str) -> tuple[list[tuple[str, int, str]], list[tuple[str, str]]]:
+    """Lignes ajoutées (fichier, numéro, contenu) et lignes retirées (fichier, contenu)."""
+    added, removed, path, line_no = [], [], None, 0
+    for raw in text.splitlines():
+        if raw.startswith("+++ "):
+            target = raw[4:].strip()
+            path = None if target == "/dev/null" else target.removeprefix("b/")
+            continue
+        if raw.startswith("@@"):
+            m = re.search(r"\+(\d+)", raw)
+            line_no = int(m.group(1)) if m else 0
+            continue
+        if path is None or path.startswith(EXCLUDED):
+            continue
+        if raw.startswith("+") and not raw.startswith("+++"):
+            added.append((path, line_no, raw[1:]))
+            line_no += 1
+        elif raw.startswith("-") and not raw.startswith("---"):
+            removed.append((path, raw))
+    return added, removed
+
+
+def check(added, removed) -> list[str]:
+    findings = []
+    for path, line_no, content in added:
+        if ESCAPE in content:
+            continue
+        for name, scope, pattern, why in RULES:
+            if scope(path) and pattern.search(content):
+                findings.append(f"{path}:{line_no} [{name}] {why}\n    {content.strip()[:110]}")
+    waived = {p for p, _, c in added if f"{ESCAPE} assertion-supprimee" in c}
+    for path, content in removed:
+        if is_test(path) and path not in waived and REMOVED_ASSERTION.match(content):
+            findings.append(
+                f"{path} [assertion-supprimee] une assertion disparaît du test\n"
+                f"    {content.strip()[:110]}"
+            )
+    return findings
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    base = argv[argv.index("--base") + 1] if "--base" in argv else None
+    head = argv[argv.index("--head") + 1] if "--head" in argv else "HEAD"
+    findings = check(*parse(diff(base, head)))
+    if not findings:
+        print("Invariants de diff : rien à signaler.")
+        return 0
+    print(f"Invariants de diff : {len(findings)} signalement(s).", file=sys.stderr)
+    for f in findings:
+        print(f"  - {f}", file=sys.stderr)
+    print(
+        f"\nCorriger, ou justifier la ligne avec « {ESCAPE} <raison> ».",
+        file=sys.stderr,
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

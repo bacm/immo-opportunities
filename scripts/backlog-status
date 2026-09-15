@@ -5,6 +5,12 @@ L'état d'un ticket est saisi à un seul endroit : la ligne `**État :**` de son
 fichier. La disponibilité (`Prêt` / `En attente`) est *dérivée* du graphe de
 dépendances et n'est jamais saisie à la main.
 
+Un ticket de nature humaine — revue contre les sources, arbitrage produit — n'est
+jamais annoncé « prêt » mais « verrou humain » : la boucle de développement s'y
+arrête. Ce verrou est une propriété déclarée du ticket, pas une appréciation portée
+en cours de route ; un agent sous pression d'achèvement conclut toujours qu'il peut
+se passer d'un humain.
+
 Usage :
     scripts/backlog-status            régénère docs/backlog/README.md
     scripts/backlog-status --check    échoue si le README est périmé (CI)
@@ -14,10 +20,13 @@ import re
 import sys
 from pathlib import Path
 
-BACKLOG = Path(__file__).resolve().parents[1] / "docs" / "backlog"
+ROOT = Path(__file__).resolve().parents[1]
+BACKLOG = ROOT / "docs" / "backlog"
 README = BACKLOG / "README.md"
 SKIP = {"README.md", "NICE-backlog.md"}
 STATES = {"À faire", "En cours", "Terminé", "Abandonné"}
+NATURES = {"implémentation", "revue humaine", "décision humaine"}
+HUMAN_NATURES = {"revue humaine", "décision humaine"}
 BEGIN, END = "<!-- BEGIN:tickets -->", "<!-- END:tickets -->"
 ID_RE = re.compile(r"\b(BUG-\d+|[A-G]\d[ab]?)\b")
 
@@ -38,9 +47,30 @@ def ticket_id(name: str) -> str:
     return f"{parts[0]}-{parts[1]}" if parts[0] == "BUG" else parts[0]
 
 
+def header(text: str) -> str:
+    """L'en-tête du ticket, borné à la première section.
+
+    `Preuve :` réapparaît dans le corps de plusieurs tickets, en conclusion. Sans cette
+    borne, le champ d'en-tête serait ambigu.
+    """
+    m = re.search(r"^## ", text, flags=re.M)
+    return text[: m.start()] if m else text
+
+
 def field(text: str, label: str) -> str | None:
-    m = re.search(rf"\*\*{label} :\*\*\s*([^\n·]*)", text)
+    m = re.search(rf"\*\*{label} :\*\*\s*([^\n·]*)", header(text))
     return m.group(1).strip() if m else None
+
+
+def strip_link(value: str) -> str:
+    """Le chemin de preuve est écrit en lien Markdown dans les tickets."""
+    m = re.search(r"\[`?([^`\]]+)`?\]\(([^)]+)\)", value)
+    return (m.group(2) if m else value).strip().strip("`")
+
+
+def proof_path(proof: str) -> Path:
+    """Chemin de la preuve, écrit relatif au dépôt ou relatif au ticket."""
+    return (BACKLOG / proof) if proof.startswith(".") else (ROOT / proof)
 
 
 def load() -> dict:
@@ -59,6 +89,10 @@ def load() -> dict:
             "version": field(text, "Version") or "—",
             "size": field(text, "Taille") or "—",
             "state": field(text, "État") or "",
+            # Ce qui arrête la boucle. Voir `check_integrity` : un verrou humain ne se
+            # clôt pas sans sa preuve sur disque.
+            "nature": field(text, "Nature") or "implémentation",
+            "proof": strip_link(field(text, "Preuve") or ""),
             "deps": list(dict.fromkeys(d for d in ID_RE.findall(raw_deps) if d != tid)),
             # Les chemins que le ticket va **ecrire**. Distinct de « Contexte a charger », qui
             # dit ce qu'il faut lire. Deux tickets sans dependance entre eux peuvent tres bien
@@ -78,6 +112,21 @@ def check_integrity(tickets: dict) -> list[str]:
     for t in tickets.values():
         if t["state"] not in STATES:
             errors.append(f"{t['id']} : état « {t['state']} » hors nomenclature {sorted(STATES)}")
+        if t["nature"] not in NATURES:
+            errors.append(
+                f"{t['id']} : nature « {t['nature']} » hors nomenclature {sorted(NATURES)}"
+            )
+        if t["nature"] in HUMAN_NATURES:
+            if not t["proof"]:
+                errors.append(
+                    f"{t['id']} : verrou humain sans `**Preuve :**` déclarée — "
+                    "le chemin du rapport ou de la décision attendue est obligatoire"
+                )
+            elif t["state"] == "Terminé" and not proof_path(t["proof"]).exists():
+                errors.append(
+                    f"{t['id']} : déclaré Terminé mais la preuve {t['proof']} n'existe pas — "
+                    "un verrou humain ne se clôt pas sans le document qui porte le verdict"
+                )
         for dep in t["deps"]:
             if dep not in tickets:
                 errors.append(f"{t['id']} : dépendance inconnue {dep}")
@@ -107,7 +156,9 @@ def availability(t: dict, tickets: dict) -> str:
     if t["state"] == "En cours":
         return "en cours"
     blocking = [d for d in t["deps"] if tickets.get(d, {}).get("state") != "Terminé"]
-    return "**prêt**" if not blocking else "attend " + ", ".join(blocking)
+    if blocking:
+        return "attend " + ", ".join(blocking)
+    return "**verrou humain**" if t["nature"] in HUMAN_NATURES else "**prêt**"
 
 
 def collides(left: dict, right: dict) -> bool:
@@ -179,6 +230,18 @@ def render(tickets: dict) -> str:
     done = sum(1 for t in tickets.values() if t["state"] == "Terminé")
     out += [f"**{done}/{len(tickets)} terminés.** Prêts à démarrer : "
             + (", ".join(ready) if ready else "aucun") + ".", ""]
+    locked = sorted(
+        (t for t in tickets.values() if availability(t, tickets) == "**verrou humain**"),
+        key=lambda t: t["id"],
+    )
+    if locked:
+        out += ["### Verrous humains", "",
+                "Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur "
+                "verdict porte sur l'exactitude dans le monde réel ou sur un arbitrage produit. "
+                "Une boucle de développement s'y arrête et rend la main.", ""]
+        for t in locked:
+            out.append(f"- **{t['id']}** — {t['nature']} · preuve attendue : `{t['proof']}`")
+        out.append("")
     running = sorted(t["id"] for t in tickets.values() if t["state"] == "En cours")
     if running:
         out += ["### Déjà démarré", "",

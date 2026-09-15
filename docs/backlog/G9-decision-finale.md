@@ -1,6 +1,7 @@
 # G9 — Décision documentée : poursuivre / pivoter / arrêter
 
 **Version :** v0.8 · **Taille :** S · **État :** À faire
+**Nature :** décision humaine · **Preuve :** docs/data/mvp-decision.md
 **Dépend de :** G8 · **Bloque :** clôture du MVP
 
 ## Contexte à charger

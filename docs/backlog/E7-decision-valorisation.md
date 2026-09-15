@@ -1,6 +1,7 @@
 # E7 — Décider si le produit estime la valeur des biens non vendus
 
 **Version :** v0.6 · **Taille :** M · **État :** À faire
+**Nature :** décision humaine · **Preuve :** docs/data/valuation-decision.md
 **Dépend de :** E6 · **Bloque :** —
 **Demandé par :** conversation du 14 septembre 2026
 
@@ -65,3 +66,9 @@ l'écart justifie d'amender la spécification.
 - si refus : la raison est consignée pour que la question ne se rouvre pas sans élément nouveau ;
 - dans tous les cas, le nombre de communes sans support **après** E6 est publié — c'est le chiffre
   qui fonde la décision.
+
+## Preuve à produire
+
+`docs/data/valuation-decision.md` : la décision, sa date, son auteur, les mesures qui la fondent —
+dont le nombre de communes sans support après E6 — et, en cas de refus, la raison qui referme la
+question.

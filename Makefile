@@ -23,7 +23,8 @@ OPS_RUN = docker run --rm \
 
 .PHONY: help config validate dev-secrets dev up rebuild down logs ops-build \
 	inventory ansible-syntax bootstrap deploy smoke check python-check web-check \
-	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import ban-census mvt-benchmark e2e backlog backlog-check
+	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import ban-census mvt-benchmark e2e backlog backlog-check \
+	invariants dod
 
 help:
 	@echo "make dev-secrets                  Generate disposable local secrets"
@@ -32,6 +33,8 @@ help:
 	@echo "make rebuild                      Rebuild and recreate all containers"
 	@echo "make validate                     Validate Compose and Ansible syntax"
 	@echo "make check                        Run application quality checks"
+	@echo "make invariants [BASE=<ref>]      Check CLAUDE.md invariants on added diff lines"
+	@echo "make dod ID=<ticket>              Check what is mechanical in a ticket Definition of Done"
 	@echo "make openapi                      Regenerate the OpenAPI contract"
 	@echo "make migrate                      Apply database migrations"
 	@echo "make cadastre-fixture             Verify DS-01 on local PostGIS and MinIO"
@@ -228,12 +231,13 @@ ban-census:
 		--department $(DEPARTMENT) --archive $(ARCHIVE)
 
 python-check:
-	uv run --package immo-backend ruff check backend pipelines
-	uv run --package immo-backend ruff format --check backend pipelines
+	uv run --package immo-backend ruff check backend pipelines scripts/tests
+	uv run --package immo-backend ruff format --check backend pipelines scripts/tests
 	uv run --package immo-backend pyright backend/src
 	uv run --package immo-pipelines pyright pipelines/src
 	uv run --package immo-backend pytest backend/tests
 	uv run --package immo-pipelines pytest pipelines/tests
+	uv run --package immo-pipelines pytest scripts/tests
 
 web-check:
 	pnpm typecheck
@@ -307,4 +311,14 @@ backlog:
 backlog-check:
 	./scripts/backlog-status --check
 
-check: python-check web-check openapi-check config
+# Les interdits de CLAUDE.md, verifies sur les lignes ajoutees. Sans BASE, le travail en
+# cours ; avec, la difference entre la reference et HEAD.
+invariants:
+	./scripts/check-diff-invariants $(if $(BASE),--base $(BASE),)
+
+# `check` et `backlog-check` d'abord : le script en depend pour les points 4 et 6.
+dod: check backlog-check
+	test -n "$(ID)"
+	./scripts/check-ticket-dod $(ID) --check-ran
+
+check: python-check web-check openapi-check config invariants
