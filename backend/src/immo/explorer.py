@@ -508,6 +508,85 @@ def list_parcel_transactions(parcel_id: str) -> list[dict[str, Any]]:
     ]
 
 
+def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
+    """Les diagnostics DPE rattachés à une parcelle — instrument de vérification, D6b.
+
+    **Ce n'est pas un consultatif DPE.** Comme les mutations de D6a, cette lecture existe pour
+    qu'un humain vérifie que le rattachement tient. Elle met à l'épreuve une hypothèse que rien
+    n'a jamais contrôlée : `match_confidence` vaut 1,0 pour tout diagnostic rattaché par
+    `id_rnb`, parce que l'identifiant est **déclaré par le producteur** et repris tel quel. Une
+    confiance héritée n'est pas une confiance vérifiée — d'où `identifier_provenance`, qui
+    distingue les 119 411 « Reprise RNB » des 17 217 saisis par un logiciel de diagnostiqueur.
+
+    Le chemin est `energy_assessment.building_id` → `reference.building` (RNB) →
+    `reference.building_parcel`. Les diagnostics rattachés à la seule adresse — 71 458 — en sont
+    absents : les poser sur une parcelle demanderait la relation adresse ↔ parcelle, que B4 a
+    établie non vérifiable avec environ 24 % d'erreur irréductible.
+
+    `relation_status` sort tel qu'il est en base. Un bâtiment chevauche 2,24 parcelles en
+    moyenne : montrer un rattachement ambigu comme certain attribuerait un diagnostic à la
+    mauvaise parcelle, et D6a a déjà établi qu'un tel écran est pire qu'un écran absent.
+    """
+    statement = text(
+        """
+        SELECT assessment.dpe_number,
+               assessment.assessment_date,
+               assessment.energy_label,
+               assessment.energy_consumption_kwh_m2_year,
+               assessment.building_id,
+               assessment.release_id,
+               relation.relation_status,
+               assessment.properties->>'type_batiment' AS building_type,
+               assessment.properties->>'provenance_id_rnb' AS identifier_provenance,
+               assessment.properties->>'adresse_ban' AS address_label,
+               -- Garde sur le cast : la surface est un texte cote source, vide pour 5 761
+               -- diagnostics. Sans ce filtre, un blanc deviendrait une erreur de conversion.
+               CASE WHEN assessment.properties->>'surface_habitable_logement'
+                         ~ '^[0-9]+(\\.[0-9]+)?$'
+                    THEN (assessment.properties->>'surface_habitable_logement')::numeric
+               END AS surface_habitable_m2
+          FROM observation.energy_assessment AS assessment
+          JOIN reference.building_parcel AS relation
+            ON relation.building_id = assessment.building_id
+          JOIN reference.parcel AS parcel ON parcel.id = relation.parcel_id
+         WHERE parcel.cadastral_id = :cadastral_id
+         ORDER BY relation.relation_status, assessment.assessment_date DESC,
+                  assessment.dpe_number
+        """
+    )
+    cadastral_id = parcel_id.removeprefix("parcel:cadastre:")
+    with get_engine().connect() as connection:
+        rows = connection.execute(statement, {"cadastral_id": cadastral_id}).mappings().all()
+    return [
+        {
+            "dpe_number": row["dpe_number"],
+            "assessment_date": (
+                row["assessment_date"].isoformat() if row["assessment_date"] else None
+            ),
+            "energy_label": row["energy_label"],
+            "energy_consumption_kwh_m2_year": (
+                float(row["energy_consumption_kwh_m2_year"])
+                if row["energy_consumption_kwh_m2_year"] is not None
+                else None
+            ),
+            "surface_habitable_m2": (
+                float(row["surface_habitable_m2"])
+                if row["surface_habitable_m2"] is not None
+                else None
+            ),
+            "building_type": row["building_type"],
+            "building_id": row["building_id"],
+            "relation_status": row["relation_status"],
+            "identifier_provenance": row["identifier_provenance"],
+            "address_label": row["address_label"],
+            # La release est montree pour que deux versions de transformation coexistantes se
+            # voient a l'ecran : D6a en a trouve 133 066 doublons sur DVF, apres coup.
+            "release_id": row["release_id"],
+        }
+        for row in rows
+    ]
+
+
 def find_property_unit(property_unit_id: str) -> EntityDetail | None:
     parcel_id = property_unit_id.removeprefix("property-unit:parcel:")
     if not parcel_id.startswith("parcel:cadastre:"):

@@ -412,6 +412,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/parcels/{parcel_id}/energy-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Parcel Energy Assessments
+         * @description Vérification D6b : les diagnostics d'une parcelle, sur l'API privée sous RLS.
+         *
+         *     Jamais par les tuiles — une étiquette énergétique n'est pas un attribut de rendu, et la
+         *     colorer de A à G en ferait un signal de dégradation que le produit s'interdit.
+         */
+        get: operations["parcel_energy_assessments_api_v1_parcels__parcel_id__energy_assessments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/parcels/{parcel_id}/transactions": {
         parameters: {
             query?: never;
@@ -1176,6 +1199,43 @@ export interface components {
              * @enum {string}
              */
             strategy: "division_extension" | "renovation_resale";
+        };
+        /**
+         * ParcelEnergyAssessmentResponse
+         * @description Un diagnostic DPE atteignant la parcelle par un de ses bâtiments RNB.
+         *
+         *     `relation_status` est celui du pont bâtiment ↔ parcelle, montré tel qu'il est en base : un
+         *     bâtiment chevauche 2,24 parcelles en moyenne, et un rattachement ambigu présenté comme
+         *     certain attribuerait le diagnostic à la mauvaise parcelle.
+         *
+         *     `identifier_provenance` dit d'où vient l'`id_rnb` qui a servi au rattachement — « Reprise
+         *     RNB » ou « Logiciel ». La confiance d'appariement ne figure pas ici : elle vaut 1,0 pour tous
+         *     ces diagnostics, l'identifiant étant déclaré par le producteur, et l'afficher laisserait
+         *     croire à une vérification qui n'a pas eu lieu.
+         */
+        ParcelEnergyAssessmentResponse: {
+            /** Address Label */
+            address_label: string | null;
+            /** Assessment Date */
+            assessment_date: string | null;
+            /** Building Id */
+            building_id: string | null;
+            /** Building Type */
+            building_type: string | null;
+            /** Dpe Number */
+            dpe_number: string;
+            /** Energy Consumption Kwh M2 Year */
+            energy_consumption_kwh_m2_year: number | null;
+            /** Energy Label */
+            energy_label: string | null;
+            /** Identifier Provenance */
+            identifier_provenance: string | null;
+            /** Relation Status */
+            relation_status: string;
+            /** Release Id */
+            release_id: string;
+            /** Surface Habitable M2 */
+            surface_habitable_m2: number | null;
         };
         /** ParcelProvenanceResponse */
         ParcelProvenanceResponse: {
@@ -2466,6 +2526,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EntityDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parcel_energy_assessments_api_v1_parcels__parcel_id__energy_assessments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parcel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParcelEnergyAssessmentResponse"][];
                 };
             };
             /** @description Validation Error */

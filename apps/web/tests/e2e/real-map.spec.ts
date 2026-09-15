@@ -344,3 +344,32 @@ test('changer de parcelle recharge ses mutations, sans garder celles de la préc
   await page.waitForTimeout(2000)
   expect(await page.locator('.transaction-row').count()).toBe(1)
 })
+
+
+/**
+ * Changer de parcelle doit recharger ses diagnostics — D6b.
+ *
+ * Même défaut que pour les mutations de D6a, même cause : la fiche est rendue à la même place
+ * d'une parcelle à l'autre, React réutilise l'instance, et son état survit au changement. Un
+ * écran de vérification qui attribue un diagnostic à la mauvaise parcelle est pire qu'un écran
+ * absent.
+ *
+ * Le second cas porte quatre diagnostics dont le rattachement est ambigu — un bâtiment
+ * chevauchant plusieurs parcelles. Ils doivent rester visibles et signalés comme tels : les
+ * masquer cacherait la population que cet écran existe pour montrer.
+ */
+test('changer de parcelle recharge ses diagnostics, et signale un rattachement ambigu', async ({ page }) => {
+  await page.goto('/?lon=-1.685&lat=48.1168&z=18&department=35&type=parcel&id=parcel:cadastre:35238000AB0005')
+  await page.waitForTimeout(4000)
+  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await page.waitForTimeout(2000)
+  expect(await page.locator('.assessment-row').count()).toBe(1)
+  await expect(page.getByText('Rattachement certain')).toBeVisible()
+
+  await page.goto('/?lon=-1.685&lat=48.1168&z=18&department=35&type=parcel&id=parcel:cadastre:35238000AB0303')
+  await page.waitForTimeout(4000)
+  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await page.waitForTimeout(2000)
+  expect(await page.locator('.assessment-row').count()).toBe(4)
+  expect(await page.getByText('Rattachement ambigu').count()).toBe(4)
+})

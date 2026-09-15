@@ -1414,6 +1414,126 @@
         "title": "OpportunitySummaryResponse",
         "type": "object"
       },
+      "ParcelEnergyAssessmentResponse": {
+        "description": "Un diagnostic DPE atteignant la parcelle par un de ses bâtiments RNB.\n\n`relation_status` est celui du pont bâtiment ↔ parcelle, montré tel qu'il est en base : un\nbâtiment chevauche 2,24 parcelles en moyenne, et un rattachement ambigu présenté comme\ncertain attribuerait le diagnostic à la mauvaise parcelle.\n\n`identifier_provenance` dit d'où vient l'`id_rnb` qui a servi au rattachement — « Reprise\nRNB » ou « Logiciel ». La confiance d'appariement ne figure pas ici : elle vaut 1,0 pour tous\nces diagnostics, l'identifiant étant déclaré par le producteur, et l'afficher laisserait\ncroire à une vérification qui n'a pas eu lieu.",
+        "properties": {
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "assessment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Date"
+          },
+          "building_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Id"
+          },
+          "building_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Type"
+          },
+          "dpe_number": {
+            "title": "Dpe Number",
+            "type": "string"
+          },
+          "energy_consumption_kwh_m2_year": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Consumption Kwh M2 Year"
+          },
+          "energy_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Label"
+          },
+          "identifier_provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier Provenance"
+          },
+          "relation_status": {
+            "title": "Relation Status",
+            "type": "string"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          },
+          "surface_habitable_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface Habitable M2"
+          }
+        },
+        "required": [
+          "dpe_number",
+          "assessment_date",
+          "energy_label",
+          "energy_consumption_kwh_m2_year",
+          "surface_habitable_m2",
+          "building_type",
+          "building_id",
+          "relation_status",
+          "identifier_provenance",
+          "address_label",
+          "release_id"
+        ],
+        "title": "ParcelEnergyAssessmentResponse",
+        "type": "object"
+      },
       "ParcelProvenanceResponse": {
         "properties": {
           "data_source_id": {
@@ -4281,6 +4401,53 @@
           }
         },
         "summary": "Parcel",
+        "tags": [
+          "real-map"
+        ]
+      }
+    },
+    "/api/v1/parcels/{parcel_id}/energy-assessments": {
+      "get": {
+        "description": "Vérification D6b : les diagnostics d'une parcelle, sur l'API privée sous RLS.\n\nJamais par les tuiles — une étiquette énergétique n'est pas un attribut de rendu, et la\ncolorer de A à G en ferait un signal de dégradation que le produit s'interdit.",
+        "operationId": "parcel_energy_assessments_api_v1_parcels__parcel_id__energy_assessments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parcel_id",
+            "required": true,
+            "schema": {
+              "title": "Parcel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ParcelEnergyAssessmentResponse"
+                  },
+                  "title": "Response Parcel Energy Assessments Api V1 Parcels  Parcel Id  Energy Assessments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parcel Energy Assessments",
         "tags": [
           "real-map"
         ]

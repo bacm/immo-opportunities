@@ -10,6 +10,7 @@ from immo.explorer import (
     find_parcel,
     find_property_unit,
     list_areas,
+    list_parcel_energy_assessments,
     list_parcel_transactions,
     list_property_units_in_viewport,
     search_entities,
@@ -187,6 +188,49 @@ def parcel_transactions(parcel_id: str) -> list[ParcelTransactionResponse]:
     except (OSError, SQLAlchemyError) as exc:
         raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
     return [ParcelTransactionResponse.model_validate(record) for record in records]
+
+
+class ParcelEnergyAssessmentResponse(BaseModel):
+    """Un diagnostic DPE atteignant la parcelle par un de ses bâtiments RNB.
+
+    `relation_status` est celui du pont bâtiment ↔ parcelle, montré tel qu'il est en base : un
+    bâtiment chevauche 2,24 parcelles en moyenne, et un rattachement ambigu présenté comme
+    certain attribuerait le diagnostic à la mauvaise parcelle.
+
+    `identifier_provenance` dit d'où vient l'`id_rnb` qui a servi au rattachement — « Reprise
+    RNB » ou « Logiciel ». La confiance d'appariement ne figure pas ici : elle vaut 1,0 pour tous
+    ces diagnostics, l'identifiant étant déclaré par le producteur, et l'afficher laisserait
+    croire à une vérification qui n'a pas eu lieu.
+    """
+
+    dpe_number: str
+    assessment_date: str | None
+    energy_label: str | None
+    energy_consumption_kwh_m2_year: float | None
+    surface_habitable_m2: float | None
+    building_type: str | None
+    building_id: str | None
+    relation_status: str
+    identifier_provenance: str | None
+    address_label: str | None
+    release_id: str
+
+
+@router.get(
+    "/parcels/{parcel_id}/energy-assessments",
+    response_model=list[ParcelEnergyAssessmentResponse],
+)
+def parcel_energy_assessments(parcel_id: str) -> list[ParcelEnergyAssessmentResponse]:
+    """Vérification D6b : les diagnostics d'une parcelle, sur l'API privée sous RLS.
+
+    Jamais par les tuiles — une étiquette énergétique n'est pas un attribut de rendu, et la
+    colorer de A à G en ferait un signal de dégradation que le produit s'interdit.
+    """
+    try:
+        records = list_parcel_energy_assessments(parcel_id)
+    except (OSError, SQLAlchemyError) as exc:
+        raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
+    return [ParcelEnergyAssessmentResponse.model_validate(record) for record in records]
 
 
 @router.get("/property-units/{property_unit_id}", response_model=EntityDetailResponse)

@@ -45,6 +45,17 @@ réel, et que la version du profil de règles est la bonne.
 Vérifier que le diagnostic retenu correspond bien au bâtiment, en particulier sur les cas
 `ambiguous_match` et en habitat collectif.
 
+[D6b](./D6b-verification-diagnostics-parcelle.md) a vérifié le **rattachement** — pas la
+sélection, qui reste entièrement ici — et laisse deux entrées à reprendre :
+
+- **La règle de sélection n'est pas neutre vis-à-vis de la fraîcheur.** Deux diagnostics périmés
+  sont retenus pendant que leur remplaçant, dépourvu d'`id_rnb`, est écarté. Deux cas seulement,
+  mais rien ne garantit qu'un diagnostic plus récent soit mieux rattaché.
+- **La confiance de 1,0 est héritée, pas vérifiée.** Elle vaut 1,0 pour tout rattachement par
+  `id_rnb`, l'identifiant étant déclaré par le producteur. Quand il vient du logiciel du
+  diagnostiqueur plutôt que d'une reprise RNB, l'incohérence est **5,8 fois plus fréquente** —
+  une stratification de la revue sur `provenance_id_rnb` vaut mieux qu'un tirage uniforme.
+
 ### Risques
 
 Vérifier qu'aucune observation communale n'a été présentée comme parcellaire, et que les absences

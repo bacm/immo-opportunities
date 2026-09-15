@@ -108,3 +108,75 @@ def test_entity_detail_contract(monkeypatch: Any) -> None:
 
     assert response.status_code == 200
     assert response.json()["sources"][0]["data_source_id"] == "DS-01"
+
+
+def assessment(relation_status: str = "certain", **overrides: Any) -> dict[str, Any]:
+    record = {
+        "dpe_number": "2435E2759411R",
+        "assessment_date": "2024-07-31",
+        "energy_label": "C",
+        "energy_consumption_kwh_m2_year": 165.8,
+        "surface_habitable_m2": 60.0,
+        "building_type": "appartement",
+        "building_id": "building:rnb:VVBARFKE1VCT",
+        "relation_status": relation_status,
+        "identifier_provenance": "Reprise RNB",
+        "address_label": "21 Rue Parmentier 35700 Rennes",
+        "release_id": "DS-07@2026-09-14-extract",
+    }
+    return record | overrides
+
+
+def test_parcel_energy_assessments_contract(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "immo.api.routes.explorer.list_parcel_energy_assessments",
+        lambda _: [assessment()],
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/parcels/parcel:cadastre:35238000AX0341/energy-assessments"
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["identifier_provenance"] == "Reprise RNB"
+
+
+def test_parcel_energy_assessments_keep_ambiguous_attachment_visible(monkeypatch: Any) -> None:
+    """Un rattachement ambigu doit traverser l'API, pas être filtré — D6b.
+
+    Un bâtiment chevauche 2,24 parcelles en moyenne. Si la route ne laissait passer que le
+    certain, l'écran de vérification cacherait précisément la population qu'il doit montrer ;
+    s'il la laissait passer sans la distinguer, il attribuerait le diagnostic à la mauvaise
+    parcelle. Les deux sont des défauts, et seul le second est visible à l'œil.
+    """
+    monkeypatch.setattr(
+        "immo.api.routes.explorer.list_parcel_energy_assessments",
+        lambda _: [assessment(relation_status="ambiguous")],
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/parcels/parcel:cadastre:35238000AX0341/energy-assessments"
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["relation_status"] == "ambiguous"
+
+
+def test_parcel_energy_assessments_keep_missing_values_missing(monkeypatch: Any) -> None:
+    """Une surface non déclarée reste nulle, jamais convertie en zéro.
+
+    5 761 diagnostics n'ont aucune surface habitable côté source, et les DPE « immeuble
+    collectif » n'en portent pas par construction. Un zéro laisserait croire à une surface
+    mesurée à zéro.
+    """
+    monkeypatch.setattr(
+        "immo.api.routes.explorer.list_parcel_energy_assessments",
+        lambda _: [assessment(surface_habitable_m2=None, building_type="immeuble")],
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/parcels/parcel:cadastre:35238000AX0341/energy-assessments"
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["surface_habitable_m2"] is None

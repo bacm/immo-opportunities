@@ -11,6 +11,7 @@ import {
   Euro,
   ExternalLink,
   FileText,
+  Gauge,
   Heart,
   Layers3,
   LoaderCircle,
@@ -738,8 +739,127 @@ function ParcelTransactions({ parcelId }: { parcelId: string }) {
   </section>
 }
 
+type ParcelEnergyAssessment = {
+  dpe_number: string
+  assessment_date: string | null
+  energy_label: string | null
+  energy_consumption_kwh_m2_year: number | null
+  surface_habitable_m2: number | null
+  building_type: string | null
+  building_id: string | null
+  relation_status: string
+  identifier_provenance: string | null
+  address_label: string | null
+}
+
+/** Plafond d'affichage, annoncé à l'écran et jamais silencieux : une parcelle rennaise porte
+ *  jusqu'à 526 diagnostics. Rendre les 526 noierait la vérification ; les couper sans le dire
+ *  ferait croire à une couverture complète. Le compte total reste affiché. */
+const ENERGY_ASSESSMENT_DISPLAY_LIMIT = 50
+
+/** Compte les rattachements ambigus d'une liste **déjà chargée**. Prendre la liste en paramètre
+ *  plutôt que de lire un état encore nul évite d'avoir à replier « pas de données » sur zéro :
+ *  les deux se liraient « aucun rattachement ambigu », et l'un des deux serait faux. */
+const countAmbiguousAttachments = (rows: ParcelEnergyAssessment[]) =>
+  rows.filter((row) => row.relation_status !== 'certain').length
+
+/**
+ * Les diagnostics DPE d'une parcelle — instrument de vérification D6b, pas fonctionnalité produit.
+ *
+ * Symétrique du bloc DVF de D6a, et pour la même raison : 208 086 diagnostics sont en base et
+ * rien ne les montrait. Ce bloc met à l'épreuve une hypothèse que rien n'a contrôlée — la
+ * confiance d'appariement vaut 1,0 pour tous, parce que l'`id_rnb` est déclaré par le producteur
+ * et repris tel quel. D'où la provenance de l'identifiant, montrée diagnostic par diagnostic.
+ *
+ * Aucune couleur de A à G, ici ni sur la carte : une classe F rendue en rouge deviendrait un
+ * signal de dégradation, et une observation de diagnostic n'est pas une preuve d'état du bâti.
+ * Aucune agrégation non plus — pas d'étiquette « dominante » sur la parcelle, qui fabriquerait
+ * une valeur n'existant nulle part.
+ */
+function ParcelEnergyAssessments({ parcelId }: { parcelId: string }) {
+  const [rows, setRows] = useState<ParcelEnergyAssessment[] | null>(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    // Même garde que pour les mutations : la fiche est rendue à la même place d'une parcelle à
+    // l'autre, React réutilise l'instance, et sans ce vidage la parcelle voisine garderait les
+    // diagnostics de la précédente. Attribuer un DPE à la mauvaise parcelle est exactement ce
+    // qu'un écran de vérification ne doit pas faire.
+    setRows(null)
+    fetch(`/api/v1/parcels/${encodeURIComponent(parcelId)}/energy-assessments`)
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => { if (!cancelled) setRows(data as ParcelEnergyAssessment[]) })
+      .catch(() => { if (!cancelled) setRows([]) })
+    return () => { cancelled = true }
+  }, [open, parcelId])
+
+  return <section className="detail-section">
+    <h3>
+      <button className="property-link" onClick={() => setOpen(!open)}>
+        <Gauge size={15} /> {open ? 'Masquer' : 'Voir'} les diagnostics DPE
+      </button>
+    </h3>
+    {open && rows === null && <p className="unknown-value">Chargement…</p>}
+    {open && rows !== null && rows.length === 0 &&
+      <p className="unknown-value">Aucun diagnostic rattaché aux bâtiments de cette parcelle.</p>}
+    {open && rows !== null && rows.length > 0 && <>
+      {/* Les classes du bloc DVF sont réutilisées pour le style, `assessment-*` s'y ajoute pour
+          que les deux blocs restent distincts à l'inspection — sans quoi un test qui compte des
+          lignes compterait celles de l'autre bloc dès que les deux sont ouverts. */}
+      <div className="transaction-list assessment-list">
+        {rows.slice(0, ENERGY_ASSESSMENT_DISPLAY_LIMIT).map((row) => <div
+          className="transaction-row assessment-row"
+          key={row.dpe_number}
+        >
+          <span>
+            <strong>{row.energy_label ?? 'Étiquette absente'}
+              {row.energy_consumption_kwh_m2_year !== null
+                ? ` · ${Math.round(row.energy_consumption_kwh_m2_year)} kWh/m²/an`
+                : ' · consommation absente'}
+            </strong>
+            <small>{row.assessment_date ?? 'Date inconnue'}
+              {row.building_type ? ` · ${row.building_type}` : ''}
+              {/* La surface du diagnostic est montrée telle quelle. Aucun ratio n'est dérivé :
+                  le produit ne juge pas un DPE, il vérifie qu'il est au bon endroit. */}
+              {row.surface_habitable_m2 !== null
+                ? ` · ${Math.round(row.surface_habitable_m2)} m²`
+                : ' · surface non déclarée'}
+            </small>
+            <small>{row.address_label ?? 'Adresse du diagnostic absente'}</small>
+            <small className="transaction-lot">{row.dpe_number}
+              {row.building_id ? ` · ${row.building_id}` : ''}
+            </small>
+          </span>
+          <span className={row.relation_status === 'certain' ? undefined : 'unknown-value'}>
+            {row.relation_status === 'certain' ? 'Rattachement certain' : 'Rattachement ambigu'}
+            <br /><small>Identifiant RNB : {row.identifier_provenance ?? 'provenance absente'}</small>
+          </span>
+        </div>)}
+      </div>
+      <p className="detail-note">
+        {rows.length} diagnostic{rows.length > 1 ? 's' : ''} sur cette parcelle
+        {rows.length > ENERGY_ASSESSMENT_DISPLAY_LIMIT
+          ? `, dont ${ENERGY_ASSESSMENT_DISPLAY_LIMIT} affichés`
+          : ''}
+        {countAmbiguousAttachments(rows) > 0
+          ? ` · ${countAmbiguousAttachments(rows)} par un bâtiment qui chevauche plusieurs parcelles`
+          : ''}. Les diagnostics rattachés à la seule adresse n’apparaissent pas ici : la relation
+        adresse ↔ parcelle n’est vérifiable par aucune règle géométrique, et l’inventer placerait
+        un diagnostic sur environ une parcelle sur quatre à tort. Une étiquette est l’observation
+        d’un diagnostic déposé, pas une preuve d’état du bâti.
+      </p>
+    </>}
+  </section>
+}
+
 function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onClose: () => void; onRelated: (type: EntityType, id: string) => void }) {
   const kind = detail.entity_type === 'building' ? 'Bâtiment' : detail.entity_type === 'property_unit' ? 'Unité foncière' : 'Parcelle'
+  // Les deux blocs de vérification — mutations D6a et diagnostics D6b — s'ancrent sur la même
+  // parcelle cadastrale. Nommée une fois ici plutôt que reconstruite dans chaque bloc.
+  const isParcelLike = detail.entity_type === 'parcel' || detail.entity_type === 'property_unit'
+  const parcelId = detail.entity_type === 'parcel' ? detail.id : String(detail.properties.parcel_id ?? detail.id)
   return <>
     <div className="detail-actions"><span className="eyebrow">{kind.toUpperCase()}</span><button className="icon-button" onClick={onClose} aria-label="Fermer la fiche"><X size={17} /></button></div>
     <div className="detail-scroll">
@@ -747,7 +867,8 @@ function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onC
       <section className="detail-section"><h3>Géométrie active</h3><dl className="facts"><div><dt>Surface calculée</dt><dd>{formatArea(detail.area_m2)}</dd></div><div><dt>Identifiant stable</dt><dd>{detail.id}</dd></div><div><dt>Commune INSEE</dt><dd>{detail.commune_code ?? 'Non disponible'}</dd></div></dl></section>
       {Object.keys(detail.properties).length > 0 && <section className="detail-section"><h3>Attributs</h3><dl className="facts">{Object.entries(detail.properties).map(([key, value]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd>{value === null ? 'Non disponible' : String(value)}</dd></div>)}</dl></section>}
       {detail.related_entities.length > 0 && <section className="detail-section"><h3>Entités liées</h3><div className="related-list">{detail.related_entities.map((entity) => <button key={`${entity.entity_type}:${entity.id}`} onClick={() => onRelated(entity.entity_type, entity.id)}>{entity.entity_type === 'building' ? <Building2 size={15} /> : <MapIcon size={15} />}<span>{entity.label}</span></button>)}</div></section>}
-      {(detail.entity_type === 'parcel' || detail.entity_type === 'property_unit') && <ParcelTransactions parcelId={detail.entity_type === 'parcel' ? detail.id : String(detail.properties.parcel_id ?? detail.id)} />}
+      {isParcelLike && <ParcelTransactions parcelId={parcelId} />}
+      {isParcelLike && <ParcelEnergyAssessments parcelId={parcelId} />}
       <section className="detail-section"><h3>Provenance</h3>{detail.sources.map((source, index) => <div className="source-row" key={`${source.data_source_id}:${index}`}><ExternalLink size={15} /><span><strong>{source.data_source_id}</strong><small>{source.producer ?? 'Producteur documenté'}{source.release_id ? ` · ${source.release_id}` : ''}</small></span></div>)}</section>
     </div>
   </>
