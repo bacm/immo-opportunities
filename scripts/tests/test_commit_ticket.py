@@ -25,6 +25,9 @@ def commit(subject: str, paths: list[str], body: str = "") -> dict:
         ("D5 — Rapports qualité métier", {"D5"}),
         ("D1, D6a — Un bien décrit deux fois", {"D1", "D6a"}),
         ("BUG-12 — Compter des enregistrements", {"BUG-12"}),
+        # Au-delà de `b` : trois sous-tickets d'affilée existent — BUG-16.
+        ("E8c — Mesurer la divisibilité", {"E8c"}),
+        ("E8c, E8d — Deux sous-tickets", {"E8c", "E8d"}),
         # Le tiret cadratin délimite : sans lui, aucun identifiant n'est déclaré.
         ("D5 Rapports qualité métier", set()),
         ("Pipelines — Annoncer l'avancement d'un lot long", set()),

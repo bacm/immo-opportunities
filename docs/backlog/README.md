@@ -120,6 +120,7 @@ dérivée du graphe de dépendances.
 | [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | En cours | en cours |
 | [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
+| [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -159,8 +160,8 @@ dérivée du graphe de dépendances.
 | [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | Terminé | — |
 | [E8b](./E8b-usage-du-bati.md) | Distinguer l'usage du bâti, faute de quoi la liste sélectionne des routes et des espaces verts | v0.6 | E8 | M | Terminé | — |
 | [E8c](./E8c-divisibilite-geometrique.md) | Mesurer la divisibilité par la forme du terrain libre, pas par sa surface | v0.6 | E8b | M | Terminé | — |
-| [E8d](./E8d-seuils-parametrables.md) | Supprimer le plancher de surface et exposer les seuils, à commencer par la largeur du lot | v0.6 | — | S | Terminé | — |
-| [E8e](./E8e-age-du-bati.md) | L'âge du bâti pèse plus que son implantation, et il manquait au classement | v0.6 | — | S | Terminé | — |
+| [E8d](./E8d-seuils-parametrables.md) | Supprimer le plancher de surface et exposer les seuils, à commencer par la largeur du lot | v0.6 | E8c | S | Terminé | — |
+| [E8e](./E8e-age-du-bati.md) | L'âge du bâti pèse plus que son implantation, et il manquait au classement | v0.6 | E8d | S | Terminé | — |
 | [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | **verrou humain** |
 
 ### F — v0.7 Activation
@@ -185,7 +186,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**36/66 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, D8, G6, G7.
+**37/67 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, D8, G6, G7.
 
 ### Verrous humains
 

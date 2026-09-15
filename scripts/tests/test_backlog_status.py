@@ -103,3 +103,10 @@ def test_deux_fichiers_de_meme_identifiant_sont_signales(backlog_status, tmp_pat
 
 def test_le_backlog_reel_n_a_pas_de_doublon(backlog_status):
     assert backlog_status.duplicate_ids() == []
+
+
+def test_une_dependance_suffixee_au_dela_de_b_est_lue(backlog_status) -> None:
+    """`[A-G]\\d[ab]?` plafonnait à deux sous-tickets, et le dépassement était muet — BUG-16."""
+    assert backlog_status.ID_RE.findall("E8c, E8d") == ["E8c", "E8d"]
+    assert backlog_status.ID_RE.findall("E8") == ["E8"]
+    assert backlog_status.ID_RE.findall("D6a, BUG-12") == ["D6a", "BUG-12"]
