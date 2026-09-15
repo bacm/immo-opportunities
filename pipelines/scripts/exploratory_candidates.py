@@ -67,7 +67,11 @@ class Parameters:
 # `boundary_distance_m` est la distance **minimale** du bâti à la limite parcellaire : un bâti
 # collé à une limite laisse un côté libre, un bâti loin de toute limite est centré. L'ordonner en
 # décroissant remontait donc les maisons les moins divisibles — défaut corrigé par E8c.
+# L'âge est un signal de **classement**, jamais un filtre : un pavillon récent n'est pas
+# disqualifié, il passe derrière. Une longère de 1950 plantée au milieu de son terrain intéresse
+# davantage qu'une maison de 2015 bien excentrée — E8e.
 RANK_SIGNALS: tuple[tuple[str, bool], ...] = (
+    ("built_year", False),
     ("free_radius_m", True),
     ("footprint_ratio", False),
     ("width_m", True),
@@ -140,6 +144,7 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
             SELECT unnest(string_to_array(properties->>'identifiants_rnb', '/')) AS rnb_id,
                    properties->>'usage_1' AS use,
                    properties->>'nature' AS nature,
+                   nullif(left(properties->>'date_d_apparition', 4), '')::int AS built_year,
                    nullif(properties->>'nombre_de_logements', '')::int AS dwellings
               FROM meta.entity_source_observation
              WHERE source_entity_type = 'bdtopo_building'
@@ -158,7 +163,8 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
             SELECT link.parcel_id,
                    string_agg(DISTINCT bdtopo.use, ' · ') AS uses,
                    string_agg(DISTINCT bdtopo.nature, ' · ') AS natures,
-                   max(bdtopo.dwellings) AS max_dwellings
+                   max(bdtopo.dwellings) AS max_dwellings,
+                   min(bdtopo.built_year) AS built_year
               FROM unit
               JOIN reference.building_parcel AS link
                 ON link.parcel_id = unit.parcel_id
@@ -168,7 +174,7 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
         )
         SELECT unit.id AS property_unit_id, parcel.cadastral_id,
                min(use.uses) AS uses, min(use.natures) AS natures,
-               min(use.max_dwellings) AS max_dwellings,
+               min(use.max_dwellings) AS max_dwellings, min(use.built_year) AS built_year,
                {_pivot()}
           FROM unit
           JOIN reference.parcel AS parcel ON parcel.id = unit.parcel_id
@@ -569,6 +575,28 @@ def render(data: dict[str, Any], today: str) -> str:
         "consignée telle quelle plutôt qu'écartée par un seuil taillé sur elle."
     )
     add("")
+    add("## L'âge du bâti, et ce qu'il vaut")
+    add("")
+    add(
+        "Une maison de 1950 plantée au milieu de son terrain intéresse davantage un marchand "
+        "qu'une maison de 2015 bien excentrée. L'âge est donc entré dans le classement — **en "
+        "signal, jamais en filtre** : un bien récent n'est pas écarté, il passe derrière."
+    )
+    add("")
+    add(
+        "La source est `date_d_apparition` de BD TOPO, **renseignée sur 44,6 %** des bâtiments et "
+        "**approximative pour l'ancien** : les valeurs se concentrent sur 1800, 1850, 1870, 1880 "
+        "et 1900, signature d'une datation historique arrondie. C'est une période, pas une date "
+        "d'acte, et une unité sans année reste classée sur les autres signaux."
+    )
+    add("")
+    add(
+        "BDNB porte la même information mieux : `ffo_bat_annee_construction`, renseignée à "
+        "**68,9 %** et distribuée sur toutes les périodes. Elle est hors de portée faute de "
+        "rattachement — aucun identifiant RNB, seul un appariement géométrique y mènerait. "
+        "Entrée de plus pour [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md)."
+    )
+    add("")
     add("## L'usage du bâti, et la source d'où il vient")
     add("")
     add(
@@ -721,15 +749,17 @@ def render(data: dict[str, Any], today: str) -> str:
     )
     add("")
     add(
-        "| Réf. | Parcelle | Surface m² | Emprise | Rayon libre m | Voirie m | Largeur m | "
-        "Recul m | Bât. | Usage | Log. | Zone | Contraintes | Mutation | DPE | Risques fins |"
+        "| Réf. | Parcelle | Année | Surface m² | Emprise | Rayon libre m | Voirie m | "
+        "Largeur m | Recul m | Bât. | Usage | Log. | Zone | Contraintes | Mutation | DPE | "
+        "Risques fins |"
     )
-    add("|---|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
+    add("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
     for row in rows:
         dpe = row["dpe_label"] or (row["dpe_note"] or "aucun")
         mutation = row["last_mutation"].isoformat() if row["last_mutation"] else "aucune"
         add(
-            f"| {row['reference']} | `{row['cadastral_id']}` | {cell(row, 'parcel_area_m2')} | "
+            f"| {row['reference']} | `{row['cadastral_id']}` | "
+            f"{row['built_year'] or 'inconnue'} | {cell(row, 'parcel_area_m2')} | "
             f"{cell(row, 'footprint_ratio', 3)} | {cell(row, 'free_radius_m', 1)} | "
             f"{cell(row, 'road_distance_m', 1)} | "
             f"{cell(row, 'width_m', 1)} | {cell(row, 'boundary_distance_m', 1)} | "
@@ -820,6 +850,7 @@ def main() -> int:
         [
             "reference",
             "cadastral_id",
+            "built_year",
             "parcel_area_m2",
             "footprint_ratio",
             "unbuilt_area_m2",

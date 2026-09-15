@@ -44,6 +44,7 @@ def unit(identifier: str, **overrides: Any) -> dict[str, Any]:
         "uses": "Résidentiel",
         "natures": "Indifférenciée",
         "max_dwellings": 1,
+        "built_year": 1990,
         "free_radius_m": 12.0,
         "free_radius_m_missing": None,
         "road_distance_m": 4.0,
@@ -406,3 +407,45 @@ def test_les_tranches_de_surface_couvrent_le_vivier_sans_trou_ni_recouvrement() 
     assert bands["moins de 400 m²"] == 1
     assert bands["400 à 600 m²"] == 2
     assert bands["plus de 1 500 m²"] == 2
+
+
+def test_a_geometrie_egale_le_bati_le_plus_ancien_est_mieux_classe() -> None:
+    """Une longère de 1950 au milieu de son terrain vaut mieux qu'un pavillon de 2015 excentré."""
+    module = load()
+    ancien = unit("ancien", built_year=1952)
+    recent = unit("recent", built_year=2015)
+    _, ranked = module.orderings([recent, ancien], 2)
+    assert [row["cadastral_id"] for row in ranked] == ["ancien", "recent"]
+
+
+def test_une_annee_absente_n_elimine_pas_et_ne_vaut_pas_zero() -> None:
+    module = load()
+    sans = unit("sans", built_year=None)
+    avec = unit("avec", built_year=1960)
+    kept, _ = module.eligible([sans, avec], module.Parameters())
+    assert {row["cadastral_id"] for row in kept} == {"sans", "avec"}
+    ranks = module.mean_rank([sans, avec])
+    assert ranks["property-unit:sans"][1] == len(module.RANK_SIGNALS) - 1
+    assert ranks["property-unit:avec"][1] == len(module.RANK_SIGNALS)
+
+
+def test_l_annee_remontee_est_la_plus_ancienne_de_la_parcelle() -> None:
+    """Une dépendance récente sur une parcelle ancienne ne doit pas rajeunir le candidat."""
+    source = GENERATOR.read_text(encoding="utf-8")
+    assert "min(bdtopo.built_year) AS built_year" in source
+    assert "max(bdtopo.built_year)" not in source
+
+
+def test_l_age_est_un_signal_de_classement_jamais_un_filtre() -> None:
+    module = load()
+    assert "built_year" in dict(module.RANK_SIGNALS)
+    _, funnel = module.eligible([unit("A", built_year=2020)], module.Parameters())
+    assert funnel[list(funnel)[-1]] == 1
+
+
+def test_le_rapport_publie_la_couverture_de_l_annee_et_sa_limite() -> None:
+    module = load()
+    rendu = module.render(_render_data(module), "2026-09-15")
+    assert "44,6 %" in rendu
+    assert "68,9 %" in rendu
+    assert "BUG-13" in rendu
