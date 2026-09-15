@@ -50,6 +50,14 @@ dans les 365 jours suivant ce dépôt. Témoin : toutes les parcelles portant un
 
 **Lift × 11,8.**
 
+**Écart de comptage, non expliqué.** Le 15 septembre 2026, [E8g](../backlog/E8g-rang-observe-liste-en-vente.md)
+a tenté de reproduire l'effectif de 14 532 parcelles sans y parvenir : premier DPE par parcelle
+avec relations bâtiment ↔ parcelle `certain`, 9 754 ; toutes relations confondues, 15 568 ;
+premier DPE par bâtiment puis parcelles distinctes, 9 942 avec `certain` et 17 640 sans ; par
+unité foncière, 9 754. Le taux, lui, se retrouve à 35,1 % sous le filtre `certain`. Le filtre
+appliqué ici n'a pas été écrit et n'est pas reconstituable ; les listes de E8f portent désormais
+leurs propres taux, mesurés à la génération, cohorte et filtre nommés.
+
 Le taux de base est corroboré indépendamment : sur la commune 35051, 1 390 parcelles sur 9 329
 portent une mutation sur cinq millésimes, soit 14,9 % — environ 3 % par an.
 

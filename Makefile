@@ -203,7 +203,7 @@ exploratory-candidates:
 		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
 		$(if $(LOT_WIDTH),--lot-width $(LOT_WIDTH),)
 
-listing-candidates:
+biens-en-vente:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		-v $(PWD)/docs/data:/workspace/docs/data \

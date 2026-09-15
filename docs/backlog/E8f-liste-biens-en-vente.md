@@ -91,5 +91,6 @@ rien ne le signale.
 
 ## Preuve à produire
 
-`docs/data/listing-candidates-<commune>.md` : cohortes, fenêtres, entonnoir, preuves par candidat,
+`docs/data/biens-en-vente-<commune>.md` — nommé `listing-candidates-<commune>.md` jusqu'à
+[E8g](./E8g-rang-observe-liste-en-vente.md) : cohortes, fenêtres, entonnoir, preuves par candidat,
 limites.

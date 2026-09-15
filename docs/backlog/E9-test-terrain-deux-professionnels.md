@@ -2,7 +2,7 @@
 
 **Version :** v0.6 · **Taille :** M · **État :** À faire
 **Nature :** revue humaine · **Preuve :** docs/data/field-test-results-35.md
-**Dépend de :** E8, E8f · **Bloque :** —
+**Dépend de :** E8, E8f, E8g · **Bloque :** —
 **Demandé par :** revue de but du 15 septembre 2026
 
 ## Contexte à charger
