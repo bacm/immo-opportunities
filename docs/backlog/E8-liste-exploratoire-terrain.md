@@ -1,7 +1,7 @@
 # E8 — Produire une liste exploratoire de candidats, confrontable à un professionnel
 
-**Version :** v0.6 · **Taille :** M · **État :** À faire
-**Nature :** implémentation · **Touche :** scripts/exploratory-candidates, docs/data/exploratory-candidates-35.md
+**Version :** v0.6 · **Taille :** M · **État :** Terminé
+**Nature :** implémentation · **Touche :** pipelines/scripts/exploratory_candidates.py, pipelines/tests/test_exploratory_candidates.py, docs/data/exploratory-candidates/, Makefile
 **Dépend de :** — · **Bloque :** E9
 **Demandé par :** revue de but du 15 septembre 2026
 

@@ -189,6 +189,13 @@ urban-features:
 		dagster-code python pipelines/scripts/compute_urban_features.py \
 		--department $(DEPARTMENT) $(if $(COMMUNE),--commune $(COMMUNE),)
 
+exploratory-candidates:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/exploratory_candidates.py \
+		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),)
+
 morphology-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

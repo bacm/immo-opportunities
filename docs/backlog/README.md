@@ -155,8 +155,8 @@ dérivée du graphe de dépendances.
 | [E5](./E5-resultats-par-segment.md) | Résultats par segment urbain / périurbain / littoral / rural | v0.6 | E4 | M | À faire | attend E4 |
 | [E6](./E6-segmentation-observee.md) | Segmenter les marchés sur distribution observée, et mesurer ce que ça change | v0.6 | D7, E1 | M | À faire | attend D7, E1 |
 | [E7](./E7-decision-valorisation.md) | Décider si le produit estime la valeur des biens non vendus | v0.6 | E6 | M | À faire | attend E6 |
-| [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | En cours | en cours |
-| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | attend E8 |
+| [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | Terminé | — |
+| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | **verrou humain** |
 
 ### F — v0.7 Activation
 
@@ -180,20 +180,20 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**31/61 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**32/61 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 
 Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur verdict porte sur l'exactitude dans le monde réel ou sur un arbitrage produit. Une boucle de développement s'y arrête et rend la main.
 
 - **D6** — revue humaine · preuve attendue : `docs/data/market-data-manual-review-35.md`
+- **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
 
 ### Déjà démarré
 
 Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
 
 - **BUG-14** — pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
-- **E8** — scripts/exploratory-candidates, docs/data/exploratory-candidates-35.md
 
 ### Lots menables de front
 
