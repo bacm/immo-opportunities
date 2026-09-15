@@ -143,6 +143,7 @@ dérivée du graphe de dépendances.
 | [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | Terminé | — |
 | [D6b](./D6b-verification-diagnostics-parcelle.md) | Voir les diagnostics d'une parcelle, pour vérifier que l'appariement DPE tient | v0.5 | D4 | S | Terminé | — |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
+| [D8](./D8-historique-dvf-2014.md) | Remonter l'historique DVF à 2014, depuis les publications DGFiP archivées | v0.5 | D1 | L | À faire | **prêt** |
 
 ### E — v0.6 Scoring
 
@@ -184,7 +185,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**36/65 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7.
+**36/66 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, D8, G6, G7.
 
 ### Verrous humains
 
@@ -198,6 +199,8 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
 
 - **BUG-14** — pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
+
+Prêts mais **retenus par un travail en cours** : D8.
 
 ### Lots menables de front
 

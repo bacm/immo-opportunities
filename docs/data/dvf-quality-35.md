@@ -25,30 +25,46 @@ qualification est devenue notre code, donc testable — et c'est elle que ce rap
 | Millésimes | 2021 à 2025 |
 | Communes vues | 333 |
 
-## La profondeur d'historique est de cinq ans, et rien ne la rallonge
+## La profondeur d'historique — cinq ans par les canaux officiels, douze par l'archive
 
-**Résultat négatif, vérifié le 15 septembre 2026.** Nos cinq millésimes ne sont pas un choix
-d'import : c'est tout ce que la source publie.
+**Vérifié le 15 septembre 2026.** Nos cinq millésimes ne sont pas un choix d'import : c'est tout ce
+que les canaux officiels publient aujourd'hui.
 
-| Voie | Constat |
+| Voie officielle | Constat |
 |---|---|
 | `files.data.gouv.fr/geo-dvf/latest/csv/` | ne liste que 2021 à 2025 ; 2014, 2019 et 2020 répondent 404 |
 | `files.data.gouv.fr/geo-dvf/2025-12/csv/` | même contenu — le millésimé n'est pas plus profond que `latest` |
-| jeu « Demandes de valeurs foncières », data.gouv.fr | couverture temporelle déclarée **2021-01-01 → 2025-12-31** |
-| `cadastre.data.gouv.fr/data/dvf/` | aucune liste de fichiers |
+| jeu « Demandes de valeurs foncières », data.gouv.fr | 5 ressources, couverture déclarée **2021-01-01 → 2025-12-31** |
+| `cadastre.data.gouv.fr/dvf` | renvoie au jeu ci-dessus, et à « DVF janvier 2021 - décembre 2025 » |
 
-DVF open data est une **fenêtre glissante** : la DGFiP retire les millésimes au-delà de cinq ans.
-Les Fichiers fonciers du Cerema portent un historique plus long **et** le propriétaire, mais sont
-hors périmètre par décision produit — la même qui rend
-[BUG-11](../backlog/BUG-11-unite-fonciere-degeneree.md) irrésoluble.
+DVF open data est une **fenêtre glissante** : la DGFiP retire de ses pages les millésimes au-delà
+de cinq ans.
 
-### Ce que cela interdit
+### Les publications antérieures existent, archivées par un tiers
 
-Le signal « ce bien n'a pas changé de mains depuis longtemps », proposé comme marqueur de
-succession latente, **n'est pas exploitable**. Sur le 35051, **1 390 parcelles sur 9 329 — 14,9 %**
-portent au moins une mutation sur les cinq millésimes. Les 85,1 % restantes ne forment pas une
-population remarquable : ne pas avoir vendu en cinq ans est le cas ordinaire. Il faudrait douze
-ans pour que l'absence devienne un signal, et ces douze ans ne sont pas publiés.
+`https://data.cquest.org/dgfip_dvf/` conserve **onze publications semestrielles DGFiP**, de
+`201904` à `202504`. Celle d'avril 2019 porte `valeursfoncieres-2014.txt` à
+`valeursfoncieres-2018.txt` — vérifiés accessibles, 333 Mo pour 2014, format DGFiP brut à
+séparateur `|`.
+
+En combinant les publications archivées et les millésimes courants, **l'historique atteint 2014**,
+soit douze ans.
+
+| Ce que ça coûte | Détail |
+|---|---|
+| Provenance | archive **tierce**, pas le producteur. Le répertoire daté `201904` est un meilleur ancrage qu'un alias `latest`, mais la publication doit être nommée et son checksum épinglé |
+| Format | DGFiP brut, pas le CSV géocodé d'Etalab : pas d'`id_parcelle` tout fait |
+| Transformation | l'identifiant cadastral se reconstruit par concaténation — `Code departement` + `Code commune` + `Prefixe de section` + `Section` + `No plan`, champs 19 à 23. C'est une transformation à tester, pas une jointure acquise |
+| Qualification | Etalab ne pré-qualifie pas ces fichiers ; notre code le fait déjà depuis D1 |
+
+Le travail est porté par [D8](../backlog/D8-historique-dvf-2014.md).
+
+### Ce que douze ans changeraient
+
+Le signal « ce bien n'a pas changé de mains depuis longtemps », marqueur de succession latente,
+**n'est pas exploitable sur cinq ans** : sur le 35051, 1 390 parcelles sur 9 329 — 14,9 % — portent
+au moins une mutation. Les 85,1 % restantes ne forment pas une population remarquable, ne pas avoir
+vendu en cinq ans étant le cas ordinaire. Sur douze ans, l'absence redevient discriminante.
 
 ## Rattachement au référentiel spatial
 
