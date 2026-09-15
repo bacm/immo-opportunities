@@ -94,7 +94,7 @@ def test_le_rang_moyen_n_additionne_que_les_signaux_presents() -> None:
         unit("A"),
         unit("B", boundary_distance_m=None, boundary_distance_m_missing="not_applicable"),
     ]
-    ranks = module.mean_rank(rows)
+    ranks = module.mean_rank(rows, module.RANK_SIGNALS)
     assert ranks["property-unit:A"][1] == len(module.RANK_SIGNALS)
     assert ranks["property-unit:B"][1] == len(module.RANK_SIGNALS) - 1
 
@@ -367,8 +367,13 @@ def test_les_ex_aequo_partagent_leur_rang_quel_que_soit_l_ordre_d_arrivee() -> N
     module = load()
     rows = [unit("A"), unit("B")]
     inverse = [unit("B"), unit("A")]
-    assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(rows)["property-unit:B"]
-    assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(inverse)["property-unit:A"]
+    # Les deux assertions sont inchangées ; seul l'appel prend désormais ses signaux en
+    # paramètre, mean_rank ayant été partagé entre les deux listes par E8f.
+    # invariant-ok: assertion-supprimee — réécriture d'appel, aucune assertion retirée
+    direct = module.mean_rank(rows, module.RANK_SIGNALS)
+    permute = module.mean_rank(inverse, module.RANK_SIGNALS)
+    assert direct["property-unit:A"] == direct["property-unit:B"]
+    assert direct["property-unit:A"] == permute["property-unit:A"]
 
 
 def test_aucune_etape_ne_porte_sur_un_plancher_de_surface() -> None:
@@ -424,7 +429,7 @@ def test_une_annee_absente_n_elimine_pas_et_ne_vaut_pas_zero() -> None:
     avec = unit("avec", built_year=1960)
     kept, _ = module.eligible([sans, avec], module.Parameters())
     assert {row["cadastral_id"] for row in kept} == {"sans", "avec"}
-    ranks = module.mean_rank([sans, avec])
+    ranks = module.mean_rank([sans, avec], module.RANK_SIGNALS)
     assert ranks["property-unit:sans"][1] == len(module.RANK_SIGNALS) - 1
     assert ranks["property-unit:avec"][1] == len(module.RANK_SIGNALS)
 

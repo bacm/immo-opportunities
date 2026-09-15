@@ -197,6 +197,14 @@ exploratory-candidates:
 		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
 		$(if $(LOT_WIDTH),--lot-width $(LOT_WIDTH),)
 
+listing-candidates:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/market_listing_candidates.py \
+		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
+		$(if $(FRESH_MONTHS),--fresh-months $(FRESH_MONTHS),)
+
 morphology-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

@@ -2,7 +2,7 @@
 
 **Version :** v0.6 · **Taille :** M · **État :** À faire
 **Nature :** revue humaine · **Preuve :** docs/data/field-test-results-35.md
-**Dépend de :** E8 · **Bloque :** —
+**Dépend de :** E8, E8f · **Bloque :** —
 **Demandé par :** revue de but du 15 septembre 2026
 
 ## Contexte à charger
@@ -25,8 +25,16 @@ ses exigences ; celui-ci sert à ne pas y arriver avec une promesse fausse.
 
 ## Prérequis
 
-Un seul : la liste de [E8](./E8-liste-exploratoire-terrain.md). Ni E1, ni E3, ni F1, ni
-l'extension régionale.
+**Deux listes, et deux promesses à départager** — ni E1, ni E3, ni F1, ni l'extension régionale.
+
+| Liste | Question posée | Vérité terrain |
+|---|---|---|
+| [E8](./E8-liste-exploratoire-terrain.md) | où pourrait-on construire ? | aucune |
+| [E8f](./E8f-liste-biens-en-vente.md) | qui est sur le marché ? | 35,65 % contre 3,03 %, mesurés |
+
+Rien n'établit que le même professionnel veuille les deux. La session doit donc mesurer la
+précision de chacune **et** laquelle il garderait — c'est cette seconde réponse qui oriente le
+produit, et aucune métrique automatique ne la donne.
 
 Le recrutement de deux à trois marchands de biens ou investisseurs-rénovateurs bretons est la
 première tâche, et elle conditionne la commune retenue par E8.

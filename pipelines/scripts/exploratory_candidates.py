@@ -26,9 +26,7 @@ descendre pour une raison qui n'existe pas.
 """
 
 import argparse
-import csv
 import json
-import random
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
@@ -38,6 +36,16 @@ import psycopg
 from psycopg.rows import dict_row
 
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.market_data.exploratory import (
+    blind,
+    cell,
+    has_non_residential_nature,
+    is_residential,
+    mean_rank,
+    use_populations,
+    write_csv,
+    zone_type,
+)
 
 # Seuils arbitraires. Aucun profiling ne les fonde ; ils bornent une population de travail.
 # invariant-ok: paramètres exploratoires déclarés, hors moteur de score — voir E8
@@ -80,25 +88,6 @@ RANK_SIGNALS: tuple[tuple[str, bool], ...] = (
 
 # Valeur publiée par BD TOPO. La liste des usages non résidentiels n'est pas énumérée :
 # c'est « résidentiel » qui est exigé, et tout le reste — y compris l'inconnu — en est distinct.
-RESIDENTIAL_USE = "Résidentiel"
-UNKNOWN_USE = "Indifférencié"
-# `usage_1` se contredit avec `nature` : un parking d'entreprise peut être déclaré
-# « Résidentiel » et « Industriel, agricole ou commercial » à la fois. On lit les deux.
-NON_RESIDENTIAL_NATURES = frozenset(
-    {
-        "Industriel, agricole ou commercial",
-        "Serre",
-        "Silo",
-        "Eglise",
-        "Chapelle",
-        "Tour, donjon",
-        "Tribune",
-        "Fort, blockhaus, casemate",
-        "Moulin à vent",
-        "Monument",
-    }
-)
-
 FEATURES = {
     "parcel_area_m2": ("LAND-001", "numeric"),
     "footprint_ratio": ("LAND-003", "numeric"),
@@ -186,44 +175,6 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
     )
 
 
-def zone_type(zone: str | None) -> str | None:
-    """`U|UE2c(d)` — le type CNIG précède la barre, le libellé local la suit."""
-    return zone.split("|", 1)[0] if zone else None
-
-
-def uses(row: dict[str, Any]) -> list[str]:
-    return [use for use in (row.get("uses") or "").split(" · ") if use]
-
-
-def is_residential(row: dict[str, Any]) -> bool:
-    """Au moins un bâtiment que BD TOPO déclare résidentiel.
-
-    `Indifférencié` n'est pas « non résidentiel » : c'est un inconnu, et il est compté comme tel
-    par `use_populations`. Exiger le résidentiel connu écarte donc aussi l'inconnu — la liste est
-    un échantillon à contester, pas un inventaire, et ce qu'elle perd est publié.
-    """
-    return RESIDENTIAL_USE in uses(row)
-
-
-def has_non_residential_nature(row: dict[str, Any]) -> bool:
-    """`nature` contredit parfois `usage_1`, et c'est elle qui a raison sur les cas vus."""
-    natures = {nature for nature in (row.get("natures") or "").split(" · ") if nature}
-    return bool(natures & NON_RESIDENTIAL_NATURES)
-
-
-def use_populations(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """Trois populations distinctes, jamais fondues en un seul taux d'absence."""
-    known = [row for row in rows if uses(row)]
-    return {
-        "usage résidentiel connu": sum(1 for row in known if is_residential(row)),
-        "usage non résidentiel connu": sum(
-            1 for row in known if not is_residential(row) and uses(row) != [UNKNOWN_USE]
-        ),
-        "usage indifférencié": sum(1 for row in known if uses(row) == [UNKNOWN_USE]),
-        "aucun bâtiment BD TOPO rattaché": len(rows) - len(known),
-    }
-
-
 def eligible(
     rows: list[dict[str, Any]], parameters: Parameters
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
@@ -256,35 +207,11 @@ def eligible(
     return kept, funnel
 
 
-def mean_rank(rows: list[dict[str, Any]]) -> dict[str, tuple[float, int]]:
-    """Rang moyen sur les seuls signaux présents, et leur nombre."""
-    totals: dict[str, list[float]] = {row["property_unit_id"]: [] for row in rows}
-    for signal, descending in RANK_SIGNALS:
-        present = [row for row in rows if row[signal] is not None]
-        present.sort(key=lambda row: row[signal], reverse=descending)
-        # Les ex æquo partagent leur rang. Sans ça, l'ordre d'arrivée des lignes SQL — qui
-        # n'est pas ordonné — départagerait deux unités identiques, et le classement ne serait
-        # pas reproductible.
-        start = 0
-        while start < len(present):
-            end = start
-            while end + 1 < len(present) and present[end + 1][signal] == present[start][signal]:
-                end += 1
-            shared = ((start + end) / 2 + 1) / len(present)
-            for row in present[start : end + 1]:
-                totals[row["property_unit_id"]].append(shared)
-            start = end + 1
-    return {
-        unit: (sum(ranks) / len(ranks) if ranks else 1.0, len(ranks))
-        for unit, ranks in totals.items()
-    }
-
-
 def orderings(
     rows: list[dict[str, Any]], size: int
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     baseline = sorted(rows, key=lambda row: -row["parcel_area_m2"])[:size]
-    ranks = mean_rank(rows)
+    ranks = mean_rank(rows, RANK_SIGNALS)
     ranked = sorted(rows, key=lambda row: ranks[row["property_unit_id"]][0])[:size]
     for row in rows:
         row["rank_score"], row["rank_signals"] = ranks[row["property_unit_id"]]
@@ -307,38 +234,6 @@ def surface_bands(rows: list[dict[str, Any]]) -> dict[str, int]:
         label: sum(1 for row in rows if low <= row["parcel_area_m2"] < high)
         for label, low, high in SURFACE_BANDS
     }
-
-
-def blind(
-    baseline: list[dict[str, Any]], ranked: list[dict[str, Any]], seed: int
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Mélange les deux listes et retourne (liste aveugle, correspondance).
-
-    Un candidat présent dans les deux ordres n'apparaît qu'une fois et porte les deux origines :
-    le dupliquer donnerait deux verdicts sur le même bien et fausserait la comparaison.
-    """
-    origins: dict[str, set[str]] = {}
-    by_id: dict[str, dict[str, Any]] = {}
-    for label, rows in (("baseline", baseline), ("classement", ranked)):
-        for row in rows:
-            origins.setdefault(row["property_unit_id"], set()).add(label)
-            by_id[row["property_unit_id"]] = row
-
-    units = sorted(by_id)
-    random.Random(seed).shuffle(units)
-    blind_rows, key_rows = [], []
-    for position, unit in enumerate(units, start=1):
-        reference = f"C{position:03d}"
-        blind_rows.append({"reference": reference, **by_id[unit]})
-        key_rows.append(
-            {
-                "reference": reference,
-                "property_unit_id": unit,
-                "cadastral_id": by_id[unit]["cadastral_id"],
-                "origine": "+".join(sorted(origins[unit])),
-            }
-        )
-    return blind_rows, key_rows
 
 
 def divisibility(
@@ -493,14 +388,6 @@ def constraint_summary(value: Any) -> str:
     for entry in entries:
         counts[entry["constraint_type"]] = counts.get(entry["constraint_type"], 0) + 1
     return ", ".join(f"{count} {kind}" for kind, count in sorted(counts.items()))
-
-
-def cell(row: dict[str, Any], name: str, digits: int = 0) -> str:
-    """Une valeur absente s'affiche absente, avec son motif."""
-    value = row.get(name)
-    if value is None:
-        return f"absent — {row.get(f'{name}_missing') or 'non calculé'}"
-    return f"{float(value):,.{digits}f}".replace(",", " ") if digits >= 0 else str(value)
 
 
 def render(data: dict[str, Any], today: str) -> str:
@@ -780,13 +667,6 @@ def render(data: dict[str, Any], today: str) -> str:
     )
     add("")
     return "\n".join(lines) + "\n"
-
-
-def write_csv(path: Path, rows: list[dict[str, Any]], columns: list[str]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def main() -> int:

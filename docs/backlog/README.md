@@ -162,7 +162,8 @@ dérivée du graphe de dépendances.
 | [E8c](./E8c-divisibilite-geometrique.md) | Mesurer la divisibilité par la forme du terrain libre, pas par sa surface | v0.6 | E8b | M | Terminé | — |
 | [E8d](./E8d-seuils-parametrables.md) | Supprimer le plancher de surface et exposer les seuils, à commencer par la largeur du lot | v0.6 | E8c | S | Terminé | — |
 | [E8e](./E8e-age-du-bati.md) | L'âge du bâti pèse plus que son implantation, et il manquait au classement | v0.6 | E8d | S | Terminé | — |
-| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8 | M | À faire | **verrou humain** |
+| [E8f](./E8f-liste-biens-en-vente.md) | Une seconde liste : les biens probablement en vente, pour que E9 teste deux promesses | v0.6 | E8e | M | Terminé | — |
+| [E9](./E9-test-terrain-deux-professionnels.md) | Confronter la liste à deux professionnels, et mesurer H1, H2 et H5 | v0.6 | E8, E8f | M | À faire | **verrou humain** |
 
 ### F — v0.7 Activation
 
@@ -186,7 +187,7 @@ dérivée du graphe de dépendances.
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
-**37/67 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, D8, G6, G7.
+**38/68 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, D8, G6, G7.
 
 ### Verrous humains
 
