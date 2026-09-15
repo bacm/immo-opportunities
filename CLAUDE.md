@@ -18,7 +18,7 @@ administration. **La DoD produit n'est pas atteinte, et le goulot est la donnée
 
 | Version | État |
 |---|---|
-| v0.1 Foundation | Bloquée — preuve CI GitHub manquante |
+| v0.1 Foundation | Terminée le 15 septembre 2026 |
 | v0.2 Cadastre 35 | Terminée |
 | v0.3 Référentiel spatial | Terminée le 13 septembre 2026 |
 | **v0.4 Carte réelle** | **En cours — seule version active** |

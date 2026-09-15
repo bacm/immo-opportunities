@@ -181,6 +181,12 @@ def commune_rows(
         if zone is None:
             # Aucune zone opposable ne couvre cette parcelle : c'est le RNU, ou une commune sans
             # document. Une absence motivee, jamais un blanc.
+            #
+            # Le motif est `source_value_missing` et **non** `source_not_accepted`. Les deux ont
+            # ete confondus jusqu'a BUG-14, et la confusion n'etait pas cosmetique : E1 aurait lu
+            # 776 499 absences comme « DS-08 inutilisable » alors que 554 714 parcelles portent
+            # une valeur reelle. `source_not_accepted` est desormais reserve a son seul sens —
+            # la release n'a pas de verdict — et decide en amont, pour toute la passe.
             rows.append(
                 (
                     unit,
@@ -189,7 +195,7 @@ def commune_rows(
                     None,
                     None,
                     None,
-                    "source_not_accepted",
+                    "source_value_missing",
                     json.dumps([]),
                     releases,
                     "representative overlap with opposable zone at snapshot",
@@ -237,8 +243,9 @@ def commune_rows(
 
         constraint = constraints.get(unit)
         if constraint is None:
-            # Zero contrainte n'est affirmable que sur une couverture acceptee complete, ce que
-            # DS-08 n'a pas — 300 communes sur 332. L'absence reste une absence.
+            # Zero contrainte n'est affirmable que sur une couverture complete, ce que DS-08
+            # n'a pas — 300 communes sur 332. L'absence reste une absence, et son motif dit
+            # « la source n'a pas de valeur ici », non « la source est refusee ».
             rows.append(
                 (
                     unit,
@@ -247,7 +254,7 @@ def commune_rows(
                     None,
                     None,
                     None,
-                    "source_not_accepted",
+                    "source_value_missing",
                     json.dumps([]),
                     releases,
                     "typed constraint count and intersection area",
@@ -310,6 +317,18 @@ def commune_rows(
     return rows, counters
 
 
+# Les verdicts qui autorisent un calcul. `pending` et `rejected` ne sont pas des degres : une
+# release sans verdict ne doit alimenter aucune feature, c'est la regle du projet.
+USABLE_ACCEPTANCE = ("accepted", "display_only")
+
+
+def acceptance_of(connection: psycopg.Connection[Any], release_id: str) -> str | None:
+    row = connection.execute(
+        "SELECT acceptance_status FROM meta.dataset_release WHERE id = %s", (release_id,)
+    ).fetchone()
+    return str(row[0]) if row else None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Matérialiser URB-001, URB-003 et URB-005")
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
@@ -326,6 +345,21 @@ def main() -> int:
         user=settings.database_user,
         password=settings.database_password,
     ) as connection:
+        # Une source sans verdict ne produit aucune feature calculee. Le script ne verifiait
+        # rien avant BUG-14 : 554 714 valeurs `URB-001` sont entrees en base sur une release
+        # `pending`, ce que la regle du projet interdit.
+        #
+        # L'arret est prefere a l'ecriture de `source_not_accepted` partout : ecraser des
+        # valeurs reelles parce qu'un verdict manque serait destructeur, et le motif serait de
+        # toute facon a recalculer des le verdict prononce.
+        acceptance = acceptance_of(connection, arguments.release)
+        if acceptance not in USABLE_ACCEPTANCE:
+            print(
+                f"{arguments.release} porte le verdict {acceptance!r} : aucune feature ne peut "
+                "en être calculée. Prononcer le verdict, ou corriger la release.",
+                file=sys.stderr,
+            )
+            return 1
         connection.execute("SET ROLE pipeline_rw")
         connection.execute("SET LOCAL statement_timeout = '1800s'")
         communes = (

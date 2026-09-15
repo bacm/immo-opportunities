@@ -1,8 +1,9 @@
 # A1 — Exécuter le workflow CI sur GitHub et attacher la preuve
 
-**Version :** v0.1 · **Taille :** S · **État :** En cours
+**Version :** v0.1 · **Taille :** S · **État :** Terminé
 **Dépend de :** — · **Bloque :** clôture de v0.1 uniquement (hors chemin critique données)
 **Touche :** .github/workflows/, docs/data/ci-proof.md, docs/versions/, pipelines/src/immo_pipelines/spatial/importer.py
+**DoD :** test sans objet — le contrôle est le workflow lui-même, exécuté et attaché
 
 ## Contexte à charger
 
@@ -58,16 +59,29 @@ git ni d'une base — les tests passent sur un clone neuf.
 `uv sync --locked` sur le runner. Si l'une casse, corriger le workflow — sans retirer `--locked` ni
 désactiver un contrôle.
 
-## Ce qui reste, et qui n'est pas mécanisable
+## Résultat — 15 septembre 2026
 
-- **Le push.** 83 commits vers le dépôt distant : la décision appartient au propriétaire du dépôt.
-- **La lecture du run.** `gh` n'est pas authentifié ; `gh auth login` demande une session
-  interactive.
+85 commits poussés sur `main`. Le workflow s'est déclenché et **a réussi** :
+run [`34928242516`](https://github.com/bacm/immo-opportunities/actions/runs/34928242516), 48 s,
+toutes étapes vertes, `Check diff invariants` comprise.
+
+Preuve complète, correspondance cible par cible avec `make check` et limites du run dans
+[`docs/data/ci-proof.md`](../data/ci-proof.md). v0.1 est passée à `Terminée`.
+
+**Le diagnostic d'origine était faux deux fois.** Le dépôt n'avait pas « un seul commit » : le
+remote était à jour jusqu'au 8 septembre, et le workflow comptait déjà **trois runs verts** — 4 et
+8 septembre, puis celui-ci. Ce qui manquait n'était pas l'exécution mais son **rattachement aux
+preuves de v0.1**, ce que le titre du ticket disait et que son contexte avait perdu de vue. Le run
+du 15 septembre est retenu parce qu'il est le premier à couvrir l'intégralité de `make check`.
+
+Reste ouvert, hors périmètre : `deploy-vps.yml` échoue à chaque push faute de variables `VPS_*`
+([G6](./G6-exploitation-restauration.md)). Un workflow rouge en permanence masquera le jour où il
+rougit pour une vraie raison.
 
 ## Travail à réaliser
 
-1. Vérifier que le dépôt distant existe et que GitHub Actions y est activé.
-2. Déclencher le workflow sur `main` ou sur une pull request.
+1. ~~Vérifier que le dépôt distant existe et que GitHub Actions y est activé.~~ fait
+2. ~~Déclencher le workflow sur `main` ou sur une pull request.~~ fait
 3. Vérifier que les jobs couvrent bien : lint, typecheck, tests backend, tests pipelines, build
    frontend, et validation du contrat OpenAPI.
 4. Si un job échoue pour une raison d'environnement CI et non de code, corriger le workflow — sans

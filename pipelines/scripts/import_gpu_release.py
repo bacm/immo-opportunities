@@ -24,9 +24,18 @@ Quatre défauts de même famille s'y sont succédé, tous silencieux. Ce script 
 La clé et l'identifiant de run portent la version de transformation. Sans elle, un correctif de
 code n'atteindrait jamais les données — constaté sur BUG-09, où la règle du rang était écrite,
 testée, et les 1 240 355 relations fautives restaient en base.
+
+Cette clé vit dans `meta.import_run`, et c'était **le défaut de la première version de ce
+script** : il n'en écrivait aucun. `set_acceptance` appelle `_require_successful_import`, qui
+refusait donc tout verdict sur `DS-08@2026-09-14` — la garde est correcte, une release sans
+import traçable ne doit pas être publiable. Voir BUG-14.
+
+La clé porte l'empreinte du **manifeste**, et non celle d'un actif : une release GPU est faite de
+184 documents et d'autant d'empreintes de couches ; c'est le manifeste qui les fixe toutes.
 """
 
 import argparse
+import hashlib
 import json
 import sys
 import zipfile
@@ -334,6 +343,51 @@ def main() -> int:
                 json.dumps({"department": arguments.department}),
             ),
         )
+        idempotency_key = (
+            f"{release_id}:{arguments.department}:documents:"
+            f"{hashlib.sha256(manifest_path.read_bytes()).hexdigest()}:"
+            f"{GPU_TRANSFORMATION_VERSION}"
+        )
+        import_run_id = (
+            f"gpu:{manifest['release_key']}:{arguments.department}:{GPU_TRANSFORMATION_VERSION}"
+        )
+        existing = connection.execute(
+            "SELECT id, status FROM meta.import_run WHERE idempotency_key = %s",
+            (idempotency_key,),
+        ).fetchone()
+        if existing is not None and existing[1] == "succeeded" and not arguments.only:
+            print(f"déjà importé par {existing[0]}, rien à faire")
+            return 0
+        # Un run neuf repart de zero ; un run `running` reprend la ou il s'est arrete.
+        #
+        # La distinction compte : la reprise existe parce qu'un import departemental demande plus
+        # d'une heure et a ete interrompu deux fois. Mais reprendre **sans run** ferait attester
+        # « 184 documents » par un run qui n'en a lu aucun — un run doit dire ce qu'il a fait,
+        # pas ce qu'il a trouve.
+        resuming = existing is not None and existing[1] == "running"
+        if existing is not None and not resuming:
+            connection.execute("DELETE FROM meta.import_run WHERE id = %s", (existing[0],))
+        if not resuming:
+            connection.execute(
+                "DELETE FROM observation.urban_document WHERE release_id = %s", (release_id,)
+            )
+        connection.execute(
+            """
+            INSERT INTO meta.import_run (
+                id, release_id, territory_type, territory_code, idempotency_key,
+                status, runner_metadata
+            ) VALUES (%s, %s, 'department', %s, %s, 'running',
+                      jsonb_build_object('layer', 'documents', 'documents', %s::int))
+            ON CONFLICT (id) DO NOTHING
+            """,
+            (
+                import_run_id,
+                release_id,
+                arguments.department,
+                idempotency_key,
+                len(manifest["assets"]),
+            ),
+        )
         connection.commit()
 
         # Reprise : ne pas relire une archive dont le document est deja en base. Un import
@@ -407,6 +461,33 @@ def main() -> int:
                 f"{counters['constraints']:5d} contraintes",
                 flush=True,
             )
+
+        # Le run n'est « reussi » que si rien ne reste a reprendre. Un lot interrompu garde le
+        # statut `running` : c'est ce qui empeche `set_acceptance` de prononcer un verdict sur
+        # une release importee a moitie.
+        connection.execute(
+            """
+            UPDATE meta.import_run SET
+                status = CASE WHEN %(transient)s::int > 0 THEN 'running' ELSE 'succeeded' END,
+                completed_at = CASE WHEN %(transient)s::int > 0 THEN NULL ELSE now() END,
+                source_row_count = %(documents)s,
+                normalized_row_count = %(zones)s,
+                quarantined_row_count = %(invalid)s,
+                error_message = %(error)s,
+                runner_metadata = runner_metadata || %(detail)s::jsonb
+             WHERE id = %(id)s
+            """,
+            {
+                "id": import_run_id,
+                "transient": transient,
+                "documents": totals["documents"],
+                "zones": totals["zones"],
+                "invalid": totals["invalid_geometry"],
+                "error": (f"{len(failures)} document(s) illisible(s)" if failures else None),
+                "detail": json.dumps({**totals, "failures": failures}, sort_keys=True),
+            },
+        )
+        connection.commit()
 
     print(json.dumps({**totals, "failures": failures}, ensure_ascii=False, sort_keys=True))
     if transient:

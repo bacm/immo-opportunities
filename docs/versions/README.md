@@ -29,7 +29,7 @@ règle-là qui empêche d'avancer à vide, pas le décompte des versions ouverte
 
 | Version | État | Dépend de | Résultat principal |
 |---|---|---|---|
-| [v0.1 — Foundation](./v0.1-foundation.md) | Bloquée (CI GitHub) | — | Socle backend et data exécutable |
+| [v0.1 — Foundation](./v0.1-foundation.md) | Terminée | — | Socle backend et data exécutable |
 | [v0.2 — Cadastre 35](./v0.2-cadastre-35.md) | Terminée | v0.1 | Première release réelle importée et auditée |
 | [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | Terminée | v0.2 | Parcelles, bâtiments et adresses résolus |
 | [v0.4 — Carte réelle](./v0.4-real-map.md) | Terminée | v0.3 | Explorer connecté à PostGIS et Martin |

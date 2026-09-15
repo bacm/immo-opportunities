@@ -1,6 +1,6 @@
 # BUG-14 — Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict
 
-**Version :** v0.5 · **Taille :** M · **État :** À faire
+**Version :** v0.5 · **Taille :** M · **État :** En cours
 **Dépend de :** — · **Bloque :** E1
 **Touche :** pipelines/scripts/import_gpu_release.py, pipelines/scripts/import_dvf_release.py, pipelines/scripts/compute_urban_features.py
 **Découvert par :** [D5](./D5-rapports-qualite-metier.md), 15 septembre 2026

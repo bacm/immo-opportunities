@@ -45,7 +45,7 @@ est partiellement couvert par les organisations et RLS; FR-016 reste expliciteme
 | Tâches longues hors processus web | Dagster pour imports | validé pour imports; Celery non requis au parcours livré |
 | Backup, réplication, restauration vierge | scripts/timers/runbook | test réel absent |
 | Traces, métriques, logs corrélés | request ID, Prometheus, Loki, dashboard | partiel |
-| Parcours critiques en CI | workflow CI et tests | nouveaux tests locaux; exécution GitHub absente |
+| Parcours critiques en CI | workflow CI et tests, [preuve du run](./ci-proof.md) | validé pour les contrôles de `make check`; intégration PostGIS et e2e absentes de la CI |
 | Staging et rollback automatisés | workflow multi-environnement, fonctions rollback | exécution externe absente |
 | Backup et clé de reprise hors cible | réplication configurable | cible/clé externes absentes |
 | Aucun ML/Kubernetes requis | stack Compose | validé |

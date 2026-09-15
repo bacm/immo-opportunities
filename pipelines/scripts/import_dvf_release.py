@@ -35,6 +35,7 @@ correctif de code n'atteindrait jamais les données — constaté sur BUG-09.
 import argparse
 import csv
 import gzip
+import hashlib
 import json
 import sys
 import tempfile
@@ -326,6 +327,43 @@ def main() -> int:
             source_srid=4326,
         )
         connection.execute("SET ROLE pipeline_rw")
+        # L'empreinte porte sur les **cinq millesimes** epingles, et non sur un seul : c'est
+        # l'ensemble qui fait la release.
+        assets_digest = hashlib.sha256(
+            "".join(sorted(asset.sha256 or "" for asset in manifest.assets)).encode()
+        ).hexdigest()
+        idempotency_key = (
+            f"{manifest.release_id}:{manifest.department}:mutations:"
+            f"{assets_digest}:{DVF_TRANSFORMATION_VERSION}"
+        )
+        import_run_id = (
+            f"dvf:{manifest.release_key}:{manifest.department}:{DVF_TRANSFORMATION_VERSION}"
+        )
+        existing = connection.execute(
+            "SELECT id, status FROM meta.import_run WHERE idempotency_key = %s",
+            (idempotency_key,),
+        ).fetchone()
+        if existing is not None and existing[1] == "succeeded" and not arguments.year:
+            print(f"déjà importé par {existing[0]}, rien à faire")
+            return 0
+        if existing is not None:
+            connection.execute("DELETE FROM meta.import_run WHERE id = %s", (existing[0],))
+        connection.execute(
+            """
+            INSERT INTO meta.import_run (
+                id, release_id, territory_type, territory_code, idempotency_key,
+                status, runner_metadata
+            ) VALUES (%s, %s, 'department', %s, %s, 'running',
+                      jsonb_build_object('layer', 'mutations', 'years', %s::int))
+            """,
+            (
+                import_run_id,
+                manifest.release_id,
+                manifest.department,
+                idempotency_key,
+                len(manifest.assets),
+            ),
+        )
         # Purger les versions de transformation precedentes de cette release.
         #
         # Les avoir laissees coexister etait une erreur : la comparaison entre deux versions se
@@ -382,6 +420,28 @@ def main() -> int:
                     f"{counters['properties']} biens",
                     flush=True,
                 )
+
+        connection.execute(
+            """
+            UPDATE meta.import_run SET
+                status = 'succeeded', completed_at = now(),
+                source_row_count = %(mutations)s, normalized_row_count = %(properties)s,
+                quarantined_row_count = %(complex)s,
+                runner_metadata = runner_metadata || %(detail)s::jsonb
+             WHERE id = %(id)s
+            """,
+            {
+                "id": import_run_id,
+                "mutations": totals["mutations"],
+                "properties": totals["properties"],
+                # Une mutation dont le prix n'est pas allouable n'est pas rejetee : elle est
+                # conservee avec son motif. Le compte est celui des prix inutilisables, pas des
+                # transactions perdues.
+                "complex": totals["mutations"] - totals.get("reason_allocatable", 0),
+                "detail": json.dumps(dict(totals), sort_keys=True),
+            },
+        )
+        connection.commit()
 
     print(json.dumps(dict(sorted(totals.items())), ensure_ascii=False, sort_keys=True))
     return 0
