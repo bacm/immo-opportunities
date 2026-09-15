@@ -42,7 +42,11 @@ def unit(identifier: str, **overrides: Any) -> dict[str, Any]:
         "constraints": [],
         "constraints_missing": None,
         "uses": "Résidentiel",
+        "natures": "Indifférenciée",
         "max_dwellings": 1,
+        "free_radius_m": 12.0,
+        "free_radius_m_missing": None,
+        "road_distance_m": 4.0,
     }
     row.update(overrides)
     return row
@@ -280,3 +284,86 @@ def test_le_rapport_dit_que_l_usage_vient_d_une_release_display_only() -> None:
     rendu = module.render(data, "2026-09-15")
     assert "display_only" in rendu
     assert "identifiants_rnb" in rendu
+
+
+def test_une_nature_non_residentielle_ecarte_malgre_un_usage_residentiel() -> None:
+    """`35051000AT0066`, un parking d'entreprise, est déclaré « Résidentiel » par `usage_1`."""
+    module = load()
+    kept, funnel = module.eligible(
+        [unit("A"), unit("parking", natures="Industriel, agricole ou commercial")],
+        module.Parameters(),
+    )
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+    assert funnel["nature résidentielle"] == 1
+
+
+def test_une_nature_indifferenciee_n_ecarte_pas() -> None:
+    module = load()
+    kept, _ = module.eligible([unit("A", natures="Indifférenciée")], module.Parameters())
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+
+
+def test_le_bati_colle_a_une_limite_est_mieux_classe_que_le_bati_centre() -> None:
+    """Le défaut que E8c corrige : `LAND-007` était ordonnée en décroissant."""
+    module = load()
+    colle = unit("colle", boundary_distance_m=0.5)
+    centre = unit("centre", boundary_distance_m=12.0)
+    _, ranked = module.orderings([centre, colle], 2)
+    assert [row["cadastral_id"] for row in ranked] == ["colle", "centre"]
+
+
+def test_le_classement_porte_sur_la_forme_du_terrain_libre() -> None:
+    """La surface libre ne séparait rien : 75 % à 91 % pour rejetées et retenues confondues."""
+    module = load()
+    signals = dict(module.RANK_SIGNALS)
+    assert "free_radius_m" in signals
+    assert "unbuilt_area_m2" not in signals
+    assert signals["boundary_distance_m"] is False
+
+
+def test_un_rayon_inscriptible_absent_reste_absent() -> None:
+    """Une géométrie manquante ne vaut pas un rayon nul, qui serait un refus déguisé."""
+    module = load()
+    funnel: dict[str, int] = {}
+    rows = [unit("A"), unit("sans", free_radius_m=None, free_radius_m_missing="invalid_geometry")]
+    kept = module.divisible(rows, module.Parameters(), funnel)
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+    assert funnel["forme mesurée"] == 1
+    assert module.cell(rows[1], "free_radius_m", 1) == "absent — invalid_geometry"
+
+
+def test_un_lot_non_inscriptible_est_ecarte() -> None:
+    module = load()
+    funnel: dict[str, int] = {}
+    kept = module.divisible(
+        [unit("A"), unit("etroit", free_radius_m=3.0)], module.Parameters(), funnel
+    )
+    assert [row["cadastral_id"] for row in kept] == ["A"]
+    assert funnel["lot inscriptible"] == 1
+
+
+def test_la_mesure_geometrique_ne_porte_que_sur_le_vivier_eligible() -> None:
+    """`ST_MaximumInscribedCircle` par composante est trop cher pour une commune entière."""
+    source = GENERATOR.read_text(encoding="utf-8")
+    geometrie = source.split("def divisibility")[1].split("def divisible")[0]
+    assert "cadastral_id = ANY(%(parcels)s::text[])" in geometrie
+    assert "ST_MaximumInscribedCircle" in geometrie
+
+
+def test_le_rapport_nomme_les_motifs_sans_source_et_le_cas_manque() -> None:
+    module = load()
+    data = _render_data(module)
+    data["use_populations"] = {"usage résidentiel connu": 2}
+    rendu = module.render(data, "2026-09-15")
+    assert "OCS GE" in rendu
+    assert "piscine" in rendu
+    assert "35051000ZS0176" in rendu
+
+
+def test_les_ex_aequo_partagent_leur_rang_quel_que_soit_l_ordre_d_arrivee() -> None:
+    """L'ordre des lignes SQL n'est pas défini : il ne doit pas départager deux unités égales."""
+    module = load()
+    rows = [unit("A"), unit("B")]
+    inverse = [unit("B"), unit("A")]
+    assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(rows)["property-unit:B"]
+    assert module.mean_rank(rows)["property-unit:A"] == module.mean_rank(inverse)["property-unit:A"]

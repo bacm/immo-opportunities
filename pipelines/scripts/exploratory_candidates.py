@@ -52,21 +52,42 @@ class Parameters:
     min_building_count: int = 1
     zone_type: str = "U"
     max_dwellings_per_building: int = 2
+    setback_m: float = 3.0
+    min_free_radius_m: float = 6.0
 
 
 # Les signaux du classement, et le sens qui les ordonne. Tous morphologiques : sur une commune
 # unique, les signaux de marché sont constants et ne séparent rien.
+# `boundary_distance_m` est la distance **minimale** du bâti à la limite parcellaire : un bâti
+# collé à une limite laisse un côté libre, un bâti loin de toute limite est centré. L'ordonner en
+# décroissant remontait donc les maisons les moins divisibles — défaut corrigé par E8c.
 RANK_SIGNALS: tuple[tuple[str, bool], ...] = (
-    ("unbuilt_area_m2", True),
+    ("free_radius_m", True),
     ("footprint_ratio", False),
     ("width_m", True),
-    ("boundary_distance_m", True),
+    ("boundary_distance_m", False),
 )
 
 # Valeur publiée par BD TOPO. La liste des usages non résidentiels n'est pas énumérée :
 # c'est « résidentiel » qui est exigé, et tout le reste — y compris l'inconnu — en est distinct.
 RESIDENTIAL_USE = "Résidentiel"
 UNKNOWN_USE = "Indifférencié"
+# `usage_1` se contredit avec `nature` : un parking d'entreprise peut être déclaré
+# « Résidentiel » et « Industriel, agricole ou commercial » à la fois. On lit les deux.
+NON_RESIDENTIAL_NATURES = frozenset(
+    {
+        "Industriel, agricole ou commercial",
+        "Serre",
+        "Silo",
+        "Eglise",
+        "Chapelle",
+        "Tour, donjon",
+        "Tribune",
+        "Fort, blockhaus, casemate",
+        "Moulin à vent",
+        "Monument",
+    }
+)
 
 FEATURES = {
     "parcel_area_m2": ("LAND-001", "numeric"),
@@ -112,6 +133,7 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
         WITH bdtopo AS (
             SELECT unnest(string_to_array(properties->>'identifiants_rnb', '/')) AS rnb_id,
                    properties->>'usage_1' AS use,
+                   properties->>'nature' AS nature,
                    nullif(properties->>'nombre_de_logements', '')::int AS dwellings
               FROM meta.entity_source_observation
              WHERE source_entity_type = 'bdtopo_building'
@@ -129,6 +151,7 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
         use AS (
             SELECT link.parcel_id,
                    string_agg(DISTINCT bdtopo.use, ' · ') AS uses,
+                   string_agg(DISTINCT bdtopo.nature, ' · ') AS natures,
                    max(bdtopo.dwellings) AS max_dwellings
               FROM unit
               JOIN reference.building_parcel AS link
@@ -138,7 +161,8 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
              GROUP BY link.parcel_id
         )
         SELECT unit.id AS property_unit_id, parcel.cadastral_id,
-               min(use.uses) AS uses, min(use.max_dwellings) AS max_dwellings,
+               min(use.uses) AS uses, min(use.natures) AS natures,
+               min(use.max_dwellings) AS max_dwellings,
                {_pivot()}
           FROM unit
           JOIN reference.parcel AS parcel ON parcel.id = unit.parcel_id
@@ -167,6 +191,12 @@ def is_residential(row: dict[str, Any]) -> bool:
     un échantillon à contester, pas un inventaire, et ce qu'elle perd est publié.
     """
     return RESIDENTIAL_USE in uses(row)
+
+
+def has_non_residential_nature(row: dict[str, Any]) -> bool:
+    """`nature` contredit parfois `usage_1`, et c'est elle qui a raison sur les cas vus."""
+    natures = {nature for nature in (row.get("natures") or "").split(" · ") if nature}
+    return bool(natures & NON_RESIDENTIAL_NATURES)
 
 
 def use_populations(rows: list[dict[str, Any]]) -> dict[str, int]:
@@ -199,6 +229,7 @@ def eligible(
         ("zone connue", lambda r: r["zone"] is not None),
         ("zone constructible", lambda r: zone_type(r["zone"]) == parameters.zone_type),
         ("usage résidentiel connu", is_residential),
+        ("nature résidentielle", lambda r: not has_non_residential_nature(r)),
         (
             "habitat individuel",
             lambda r: (
@@ -220,8 +251,18 @@ def mean_rank(rows: list[dict[str, Any]]) -> dict[str, tuple[float, int]]:
     for signal, descending in RANK_SIGNALS:
         present = [row for row in rows if row[signal] is not None]
         present.sort(key=lambda row: row[signal], reverse=descending)
-        for position, row in enumerate(present, start=1):
-            totals[row["property_unit_id"]].append(position / len(present))
+        # Les ex æquo partagent leur rang. Sans ça, l'ordre d'arrivée des lignes SQL — qui
+        # n'est pas ordonné — départagerait deux unités identiques, et le classement ne serait
+        # pas reproductible.
+        start = 0
+        while start < len(present):
+            end = start
+            while end + 1 < len(present) and present[end + 1][signal] == present[start][signal]:
+                end += 1
+            shared = ((start + end) / 2 + 1) / len(present)
+            for row in present[start : end + 1]:
+                totals[row["property_unit_id"]].append(shared)
+            start = end + 1
     return {
         unit: (sum(ranks) / len(ranks) if ranks else 1.0, len(ranks))
         for unit, ranks in totals.items()
@@ -269,6 +310,83 @@ def blind(
             }
         )
     return blind_rows, key_rows
+
+
+def divisibility(
+    connection: psycopg.Connection[Any], rows: list[dict[str, Any]], parameters: Parameters
+) -> None:
+    """Rayon du plus grand cercle inscriptible dans la partie libre, et accès à la voirie.
+
+    La **surface** libre ne dit rien de la divisibilité : une maison centrée laisse un anneau
+    connexe de grande aire et inutilisable — 75 % à 91 % de la parcelle sur l'échantillon relu,
+    rejetées et retenues confondues. C'est une mesure de forme qu'il faut.
+
+    Calculé sur le seul vivier éligible : `ST_MaximumInscribedCircle` par composante est trop cher
+    pour une commune entière, et sans objet sur les unités déjà écartées.
+    """
+    measures = {
+        record["cadastral_id"]: record
+        for record in fetch(
+            connection,
+            """
+            WITH built AS (
+                SELECT link.parcel_id, ST_Union(building.geom) AS geom
+                  FROM reference.building_parcel AS link
+                  JOIN reference.building AS building ON building.id = link.building_id
+                 WHERE link.relation_status = 'certain'
+                   AND link.parcel_id IN (
+                       SELECT id FROM reference.parcel
+                        WHERE cadastral_id = ANY(%(parcels)s::text[]))
+                 GROUP BY link.parcel_id
+            ),
+            free AS (
+                SELECT parcel.cadastral_id,
+                       (ST_Dump(ST_Difference(parcel.geom,
+                                              ST_Buffer(built.geom, %(setback)s)))).geom AS geom
+                  FROM reference.parcel_geometry AS parcel
+                  JOIN built ON built.parcel_id = parcel.id
+                 WHERE parcel.cadastral_id = ANY(%(parcels)s::text[])
+            ),
+            ranked AS (
+                SELECT cadastral_id, geom,
+                       (ST_MaximumInscribedCircle(geom)).radius AS radius,
+                       row_number() OVER (
+                           PARTITION BY cadastral_id
+                               ORDER BY (ST_MaximumInscribedCircle(geom)).radius DESC) AS rank
+                  FROM free
+            )
+            SELECT ranked.cadastral_id, ranked.radius AS free_radius_m,
+                   min(ST_Distance(ranked.geom, road.geom)) AS road_distance_m
+              FROM ranked
+              LEFT JOIN observation.road_segment AS road
+                ON ST_DWithin(ranked.geom, road.geom, 50)
+             WHERE ranked.rank = 1
+             GROUP BY ranked.cadastral_id, ranked.radius
+            """,
+            parcels=[row["cadastral_id"] for row in rows],
+            setback=parameters.setback_m,
+        )
+    }
+    for row in rows:
+        measure = measures.get(row["cadastral_id"])
+        row["free_radius_m"] = measure["free_radius_m"] if measure else None
+        # Une géométrie absente reste absente : elle ne vaut pas un rayon nul.
+        row["free_radius_m_missing"] = None if measure else "invalid_geometry"
+        row["road_distance_m"] = measure["road_distance_m"] if measure else None
+
+
+def divisible(
+    rows: list[dict[str, Any]], parameters: Parameters, funnel: dict[str, int]
+) -> list[dict[str, Any]]:
+    """Second étage du filtre, après la mesure géométrique."""
+    funnel["forme mesurée"] = sum(1 for row in rows if row["free_radius_m"] is not None)
+    kept = [
+        row
+        for row in rows
+        if row["free_radius_m"] is not None and row["free_radius_m"] >= parameters.min_free_radius_m
+    ]
+    funnel["lot inscriptible"] = len(kept)
+    return kept
 
 
 def enrich(connection: psycopg.Connection[Any], rows: list[dict[str, Any]]) -> None:
@@ -393,6 +511,41 @@ def render(data: dict[str, Any], today: str) -> str:
         "est rédhibitoire fait partie de ce que la revue doit établir."
     )
     add("")
+    add("## Ce que la forme du terrain libre mesure, et ce qu'aucune source ne mesure")
+    add("")
+    add(
+        "Seconde relecture, motif devenu unique : « la maison est trop centrée pour "
+        "déparcelliser ». La **surface** libre n'en dit rien — une maison centrée laisse un anneau "
+        "connexe couvrant 75 % à 91 % de la parcelle, rejetées et retenues confondues. Le "
+        "classement porte donc désormais sur le rayon du plus grand cercle inscriptible dans la "
+        "partie libre, bâti tamponné de "
+        f"{parameters.setback_m:.0f} m, et `LAND-007` a repris son sens : un bâti **proche** d'une "
+        "limite laisse un côté libre, et c'est lui qu'on remonte."
+    )
+    add("")
+    add(
+        "Deux motifs de rejet relevés n'ont **aucune source dans le dépôt**, "
+        "et rien ici ne les voit :"
+    )
+    add("")
+    add("| Motif | Source qui le porterait | État |")
+    add("|---|---|---|")
+    add(
+        "| « c'est déjà goudronné » | couverture du sol, OCS GE | "
+        "cité `SPEC.md` §27, non importé, sans contrat DS-* |"
+    )
+    add(
+        "| « il y a une piscine » | constructions surfaciques BD TOPO | "
+        "seule la couche bâtiment est importée |"
+    )
+    add("")
+    add(
+        "**Cas manqué consigné :** `35051000ZS0176` — rayon inscriptible 11,5 m, usage et nature "
+        "résidentiels, un logement — a été rejetée à la relecture pour une maison « trop grande et "
+        "en plein milieu ». Aucune source disponible ne porte ce jugement. Elle est "
+        "consignée telle quelle plutôt qu'écartée par un seuil taillé sur elle."
+    )
+    add("")
     add("## L'usage du bâti, et la source d'où il vient")
     add("")
     add(
@@ -512,16 +665,17 @@ def render(data: dict[str, Any], today: str) -> str:
     )
     add("")
     add(
-        "| Réf. | Parcelle | Surface m² | Emprise | Libre m² | Largeur m | Recul m | Bât. | "
-        "Usage | Log. | Zone | Contraintes | Dernière mutation | DPE | Risques fins |"
+        "| Réf. | Parcelle | Surface m² | Emprise | Rayon libre m | Voirie m | Largeur m | "
+        "Recul m | Bât. | Usage | Log. | Zone | Contraintes | Mutation | DPE | Risques fins |"
     )
-    add("|---|---|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
+    add("|---|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|")
     for row in rows:
         dpe = row["dpe_label"] or (row["dpe_note"] or "aucun")
         mutation = row["last_mutation"].isoformat() if row["last_mutation"] else "aucune"
         add(
             f"| {row['reference']} | `{row['cadastral_id']}` | {cell(row, 'parcel_area_m2')} | "
-            f"{cell(row, 'footprint_ratio', 3)} | {cell(row, 'unbuilt_area_m2')} | "
+            f"{cell(row, 'footprint_ratio', 3)} | {cell(row, 'free_radius_m', 1)} | "
+            f"{cell(row, 'road_distance_m', 1)} | "
             f"{cell(row, 'width_m', 1)} | {cell(row, 'boundary_distance_m', 1)} | "
             f"{cell(row, 'building_count')} | {row['uses'] or 'inconnu'} | "
             f"{row['max_dwellings'] if row['max_dwellings'] is not None else 'inconnu'} | "
@@ -572,6 +726,11 @@ def main() -> int:
         rows, funnel = eligible(units, parameters)
         if not rows:
             print(f"Aucune unité éligible sur {arguments.commune} — entonnoir : {funnel}")
+            return 1
+        divisibility(connection, rows, parameters)
+        rows = divisible(rows, parameters, funnel)
+        if not rows:
+            print(f"Aucun lot inscriptible sur {arguments.commune} — entonnoir : {funnel}")
             return 1
         baseline, ranked = orderings(rows, arguments.size)
         blind_rows, key_rows = blind(baseline, ranked, arguments.seed)
