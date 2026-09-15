@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Plafond de lignes des documents de référence.
+
+`ARCHITECTURE.md` décrit **ce qui est vrai maintenant**. Le raisonnement qui a conduit à
+cet état vit dans `docs/decisions/`, qu'on ne lit jamais en entier. Sans plafond, la
+distinction s'efface un paragraphe à la fois : chaque ajout se défend isolément, et le
+document cesse d'être consultable sans qu'aucune étape ait été fautive.
+
+Le plafond n'interdit pas d'écrire, il oblige à choisir où. Atteint, la question est
+« qu'est-ce qui, ici, décrit l'historique plutôt que l'état courant » — pas « de combien
+le relever ». Le relever reste possible : c'est une ligne modifiée dans ce fichier, donc
+un geste visible dans le diff, ce qu'un dépassement silencieux n'est pas.
+
+Usage :
+    scripts/check-doc-budget
+"""
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+# Marge volontairement étroite : de quoi absorber une section nouvelle, pas une note de
+# décision — celles-ci font une cinquantaine de lignes et vont dans `docs/decisions/`.
+BUDGETS = {"ARCHITECTURE.md": 1300}
+
+
+def sizes(root: Path, budgets: dict[str, int]) -> dict[str, int]:
+    return {path: len((root / path).read_text("utf-8").splitlines()) for path in budgets}
+
+
+def check(budgets: dict[str, int], measured: dict[str, int]) -> list[str]:
+    """Les documents au-delà de leur plafond, avec de quoi décider quoi déplacer."""
+    return [
+        f"{path} : {measured[path]} lignes, plafond {budget} — {measured[path] - budget} de trop"
+        for path, budget in budgets.items()
+        if measured[path] > budget
+    ]
+
+
+def main() -> int:
+    measured = sizes(ROOT, BUDGETS)
+    breaches = check(BUDGETS, measured)
+    for breach in breaches:
+        print(breach, file=sys.stderr)
+    if breaches:
+        print(
+            "\nCe qui déborde décrit-il l'état courant, ou l'historique ? "
+            "Le second va dans docs/decisions/.",
+            file=sys.stderr,
+        )
+        return 1
+    for path, budget in BUDGETS.items():
+        print(f"{path} : {measured[path]} lignes sur {budget}.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

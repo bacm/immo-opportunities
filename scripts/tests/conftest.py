@@ -32,3 +32,8 @@ def diff_invariants() -> ModuleType:
 @pytest.fixture(scope="session")
 def ticket_dod() -> ModuleType:
     return load("check-ticket-dod")
+
+
+@pytest.fixture(scope="session")
+def doc_budget() -> ModuleType:
+    return load("check-doc-budget")

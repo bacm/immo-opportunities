@@ -64,7 +64,8 @@ transactions, pas de comparables, pas de valorisation, et le classement n'a rien
 | Savoir quoi faire ensuite | [`docs/backlog/README.md`](docs/backlog/README.md), colonne « Disponibilité » |
 | Vérifier ce qui est prouvé | [`docs/data/mvp-dod-traceability.md`](docs/data/mvp-dod-traceability.md) |
 | Périmètre produit, FR-*, DS-* | `SPEC.md` — **la section concernée seulement** |
-| Choix technique, ADR, interdits | `ARCHITECTURE.md` — **la section concernée seulement** |
+| Choix technique, interdits, état courant | `ARCHITECTURE.md` — **la section concernée seulement** |
+| Pourquoi une décision a été prise, et contre quoi | [`docs/decisions/`](docs/decisions/) — le fichier de l'ADR concerné, jamais le dossier entier |
 
 Sources de vérité, dans cet ordre : `SPEC.md` → `ARCHITECTURE.md` → `docs/versions/` →
 `contracts/` → `docs/data/mvp-dod-traceability.md`.
@@ -179,6 +180,7 @@ make openapi              # régénère le contrat et le client TypeScript
 make migrate              # migrations Alembic
 make backlog              # régénère le tableau de suivi depuis les en-têtes de tickets
 make invariants           # interdits vérifiés sur les lignes ajoutées du diff — BASE=<ref>
+make doc-budget           # plafond de lignes des documents de référence
 make dod ID=<ticket>      # ce qui est mécanisable des sept points de la DoD
 make ban-import           # import BAN   (voir aussi rnb-import, cadastre-fixture)
 make physical-buildings   # regroupe les enregistrements en bâtiments physiques

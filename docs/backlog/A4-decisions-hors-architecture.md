@@ -1,6 +1,6 @@
 # A4 — Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence
 
-**Version :** transverse · **Taille :** S · **État :** À faire
+**Version :** transverse · **Taille :** S · **État :** Terminé
 **Nature :** implémentation
 **Touche :** ARCHITECTURE.md, docs/decisions/, scripts/check-doc-budget, scripts/tests/, Makefile, CLAUDE.md
 **Dépend de :** — · **Bloque :** —
@@ -49,7 +49,7 @@ ajouteraient **750 lignes, +59 %**, et le document cesserait d'être consultable
 ## Périmètre
 
 1. Créer `docs/decisions/` et y déplacer la note `ADR-015` — `ADR-015-boucle-autonome.md`, telle
-   quelle, sans réécriture. `ARCHITECTURE.md` repasse à **1 228 lignes**, §23 à 22.
+   quelle, sans réécriture. `ARCHITECTURE.md` repasse à **1 234 lignes**, §23 à 28.
 2. Ajouter une colonne `Note` au tableau §23 : le lien vers le fichier quand il existe, `—` sinon.
    Coût constant, aucune ligne ajoutée.
 3. Écrire la règle dans §23, sous le tableau : le motif d'une décision tient dans une cellule ;
@@ -64,7 +64,7 @@ ajouteraient **750 lignes, +59 %**, et le document cesserait d'être consultable
 
 ## Le plafond
 
-Proposition : **1 300 lignes**, soit 72 de marge sur les 1 228 attendues après le point 1.
+Retenu : **1 300 lignes**, soit 66 de marge sur les 1 234 constatées après le point 1.
 
 Ce n'est pas un seuil observé, c'est un budget déclaré — la marge doit suffire à une section
 nouvelle sans être assez large pour absorber une note ADR. Si le plafond est atteint, la question
@@ -90,3 +90,18 @@ non « de combien le relever ».
   le plafond devient contraignant.
 - L'obligation d'ouvrir un ticket pour toute demande touchant code, schéma, infra ou comportement.
   Manque réel, constaté dans la même conversation, mais indépendant de celui-ci.
+
+## Résultat
+
+| Constat | Mesure |
+|---|---|
+| `ARCHITECTURE.md` | 1 278 → **1 234 lignes**, plafond 1 300 |
+| §22 Choix écartés | 21 lignes, inchangée |
+| §23 Décisions ADR | 72 → **28 lignes** : le tableau, sa colonne `Note`, la règle |
+| `docs/decisions/ADR-015-boucle-autonome.md` | 47 lignes, contenu identique à l'original |
+
+Le déplacement est vérifiable : `git show HEAD~1:ARCHITECTURE.md | sed -n '1189,1235p'` et le
+fichier extrait ne diffèrent que par le niveau du titre.
+
+Le coût marginal d'une décision devient une ligne de tableau dans `ARCHITECTURE.md`, quelle que
+soit la longueur de son raisonnement. C'est ce qui rend le plafond tenable sans interdire d'écrire.

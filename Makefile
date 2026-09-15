@@ -24,7 +24,7 @@ OPS_RUN = docker run --rm \
 .PHONY: help config validate dev-secrets dev up rebuild down logs ops-build \
 	inventory ansible-syntax bootstrap deploy smoke check python-check web-check \
 	openapi openapi-check migrate database-permissions cadastre-fixture rnb-import ban-import ban-census mvt-benchmark e2e backlog backlog-check \
-	invariants dod
+	invariants doc-budget dod
 
 help:
 	@echo "make dev-secrets                  Generate disposable local secrets"
@@ -34,6 +34,7 @@ help:
 	@echo "make validate                     Validate Compose and Ansible syntax"
 	@echo "make check                        Run application quality checks"
 	@echo "make invariants [BASE=<ref>]      Check CLAUDE.md invariants on added diff lines"
+	@echo "make doc-budget                   Check reference documents stay within their line budget"
 	@echo "make dod ID=<ticket>              Check what is mechanical in a ticket Definition of Done"
 	@echo "make openapi                      Regenerate the OpenAPI contract"
 	@echo "make migrate                      Apply database migrations"
@@ -316,9 +317,14 @@ backlog-check:
 invariants:
 	./scripts/check-diff-invariants $(if $(BASE),--base $(BASE),)
 
+# Un document de reference qui deborde ne se relit plus. Le raisonnement va dans
+# docs/decisions/, jamais charge en entier.
+doc-budget:
+	./scripts/check-doc-budget
+
 # `check` et `backlog-check` d'abord : le script en depend pour les points 4 et 6.
 dod: check backlog-check
 	test -n "$(ID)"
 	./scripts/check-ticket-dod $(ID) --check-ran
 
-check: python-check web-check openapi-check config invariants
+check: python-check web-check openapi-check config invariants doc-budget
