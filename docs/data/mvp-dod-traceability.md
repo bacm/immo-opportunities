@@ -1,3 +1,5 @@
+> **Instantané historique.** Cette traçabilité porte sur la Definition of Done de la version 0.2 de `SPEC.md`, remplacée le 15 septembre 2026 par [ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) et `SPEC.md` §26. Elle n'est plus mise à jour. La date d'en-tête (10 août) précède le premier commit du dépôt ; le contenu reflète l'état au 15 septembre.
+
 # Traçabilité de la Definition of Done MVP
 
 **Date :** 10 août 2026  

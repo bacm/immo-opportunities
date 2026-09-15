@@ -1,108 +1,66 @@
-# Immo Opportunities — contrat de déploiement VPS
+# Immo Opportunities — déploiement VPS
 
-**Statut :** infrastructure initiale du MVP Bretagne  
-**Cible :** VPS Ubuntu 24.04 x86_64 générique  
-**Orchestrateur de déploiement :** GitHub Actions + Ansible + Docker Compose
+**Statut :** gelé avec la plateforme ([ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)). **Jamais exécuté.**
+**Cible décrite :** VPS Ubuntu 24.04 x86_64 générique, GitHub Actions + Ansible + Docker Compose.
 
-## 1. Périmètre
+Le produit actif (baromètre V5) n'a besoin d'aucun déploiement : il tourne sur la base locale et
+produit des documents. Ce contrat ne redevient pertinent que si le radar (V2) exige un envoi
+automatisé, ou si la plateforme est dégelée. Il est conservé tel quel, avec ses bloqueurs.
 
-Le fournisseur livre uniquement un VPS Ubuntu accessible en SSH et le DNS public. Le dépôt ne dépend d'aucune API cloud et ne provisionne ni compte fournisseur, ni VM, ni facturation.
+## 1. Ce qui est écrit
 
-À partir du serveur vierge, le dépôt automatise :
+Les rôles Ansible `base`, `storage`, `secrets` et `immo_stack` (`infra/ansible/`) automatisent
+SSH, UFW, fail2ban, mises à jour, Docker, répertoires persistants, installation des secrets SOPS
+déchiffrés en mémoire, déploiement Compose et unité systemd. Le workflow
+`.github/workflows/deploy-vps.yml` les pilote depuis un conteneur opérateur (`docker/ops`).
 
-- la configuration SSH, UFW, fail2ban et les mises à jour de sécurité ;
-- l'installation de Docker Engine et Compose v2 ;
-- la création des répertoires persistants ;
-- le déchiffrement en mémoire des secrets SOPS côté runner ;
-- l'installation des secrets sur le VPS en fichiers `0400` ;
-- le déploiement Compose et l'attente des healthchecks ;
-- le démarrage de la stack au reboot via systemd.
+Topologie visée : Caddy 80/443 devant web, API, Martin et Keycloak ; PostgreSQL, Redis, MinIO,
+Dagster et l'observabilité sur réseaux internes ; persistance sous `/srv/immo`, secrets sous
+`/etc/immo/secrets`, manifestes sous `/opt/immo`.
 
-## 2. Topologie
+## 2. Pourquoi ça ne déploie pas
 
-```text
-GitHub Actions
-  └─ conteneur ops (Ansible + SOPS + age)
-       └─ SSH avec vérification known_hosts
-            └─ VPS Ubuntu 24.04
-                 ├─ Caddy : 80/443
-                 ├─ PostgreSQL/PostGIS
-                 ├─ Redis
-                 ├─ MinIO + init
-                 ├─ Keycloak
-                 ├─ FastAPI + migration Alembic
-                 ├─ Martin
-                 ├─ Dagster webserver, daemon et code location
-                 └─ Prometheus, Loki, Grafana, Alloy
-```
+Reproduit le 15 septembre 2026 (audit §10.3) :
 
-Un conteneur héberge un seul service long. PostgreSQL, Redis, MinIO et chaque composant d'observabilité ont chacun leur conteneur et leur stockage propre.
+1. **Aucune image applicative n'est construite ni poussée.** `compose.prod.yaml` exige
+   `API_IMAGE`, `PIPELINES_IMAGE` et `WEB_IMAGE` ; le gabarit `immo.env.j2` ne les définit pas ;
+   aucun workflow ne fait `docker push`. Le rendu Compose de production échoue sur
+   `required variable API_IMAGE is missing`.
+2. **Aucune tâche ne charge les données.** Le runbook de reconstitution est local ; 29 Go ne
+   s'importent pas en une session SSH.
+3. **Les secrets seront illisibles.** Installés `0400 root:root`, bind-montés dans des conteneurs
+   UID 10001 ; VirtioFS masque le défaut sur macOS, pas Ubuntu.
+4. **`ENV=production` est codé en dur** dans les quatre appels `make` du workflow : choisir
+   `staging` déploie en production, et tout merge sur `main` déclenche un déploiement production
+   sans approbation.
+5. `secrets/production.sops.yaml` n'existe pas ; le workflow est rouge à chaque push depuis le 4
+   septembre.
+6. `ACME_EMAIL` n'est pas transmis au conteneur Caddy : certificat sans contact.
 
-Seuls 80/443 sont publics dans Compose. Les services de données communiquent par réseaux internes. SSH est géré par l'hôte et le pare-feu du fournisseur.
+## 3. Ce qui manque avant un premier déploiement réel
 
-## 3. Persistance
+- une chaîne de build et de publication d'images (GHCR), et la variable de version dans le `.env`
+  déployé ;
+- un chemin de chargement des données : restauration d'un dump et de `raw-sources`, ou imports
+  planifiés ;
+- les corrections de sécurité de `ARCHITECTURE.md` §7.3 et §9.3, sans quoi 41 routes et les
+  tuiles sont publiques ;
+- une sauvegarde hors site et une restauration chronométrée (`docs/operations/backup-restore.md`
+  : RPO et RTO non mesurés ; `keycloak` et `dagster` non sauvegardés ; dumps sur la machine
+  sauvegardée, sans rétention) ;
+- une décision sur la pile à déployer (`ARCHITECTURE.md` §22.2) : dix conteneurs sur seize n'ont
+  aucun usage démontré.
 
-Par défaut :
+## 4. Configuration GitHub, si le chemin est repris
 
-| Donnée | Chemin VPS |
-|---|---|
-| PostgreSQL | `/srv/immo/postgres` |
-| Objets MinIO | `/srv/immo/objects` |
-| Redis et Caddy | `/srv/immo/runtime` |
-| Secrets | `/etc/immo/secrets` |
-| Manifests déployés | `/opt/immo` |
+Variables : `VPS_HOST`, `VPS_USER`, `VPS_SSH_PORT`, `APP_DOMAIN`, `ACME_EMAIL`,
+`ADMIN_CIDRS_JSON`. Secrets : `VPS_SSH_PRIVATE_KEY`, `VPS_SSH_HOST_KEY`, `SOPS_AGE_KEY`. Le
+fichier `secrets/production.sops.yaml` chiffré doit être commité ; la clé privée `age` jamais.
+Activer l'approbation obligatoire sur l'environnement `production`. Ne pas copier l'exemple
+d'inventaire tel quel : il ouvre SSH à `0.0.0.0/0`.
 
-Les répertoires sont des bind mounts du disque du VPS. Des disques additionnels peuvent être montés par UUID avec le rôle `storage`, uniquement lorsqu'ils sont explicitement déclarés. Un disque existant n'est jamais reformaté implicitement.
+## 5. Dimensionnement estimé
 
-## 4. Flux GitHub Actions
-
-Le workflow [deploy-vps.yml](./.github/workflows/deploy-vps.yml) possède trois modes :
-
-- lancement manuel `staging` ou `production` avec `bootstrap=true` pour un Ubuntu vierge ;
-- lancement manuel sans bootstrap vers l'un des deux environnements ;
-- push sur `main` vers `production`, pour un déploiement idempotent.
-
-Le job cible l'environnement GitHub sélectionné, utilise uniquement `contents: read`, refuse les
-paramètres manquants, conserve la vérification stricte de la clé d'hôte et sérialise les
-déploiements par environnement avec `concurrency`.
-
-Les credentials sont matérialisés uniquement dans le répertoire temporaire du runner, montés en lecture seule dans le conteneur opérateur, puis supprimés avec `if: always()`.
-
-## 5. Configuration GitHub
-
-Variables : `VPS_HOST`, `VPS_USER`, `VPS_SSH_PORT`, `APP_DOMAIN`, `ACME_EMAIL`, `ADMIN_CIDRS_JSON`.
-
-Secrets : `VPS_SSH_PRIVATE_KEY`, `VPS_SSH_HOST_KEY`, `SOPS_AGE_KEY`.
-
-Le fichier `secrets/production.sops.yaml` chiffré doit être commité. Les valeurs déchiffrées et la clé privée `age` ne doivent jamais entrer dans Git.
-
-Il est recommandé d'activer une approbation obligatoire sur l'environnement `production`.
-
-## 6. Réseau SSH
-
-Un runner GitHub hébergé doit pouvoir joindre le port SSH du VPS. Deux stratégies sont supportées :
-
-1. SSH accessible publiquement, authentification par clé uniquement, root et mots de passe désactivés, fail2ban actif ;
-2. runner auto-hébergé ou réseau privé disposant d'un CIDR fixe, renseigné dans `ADMIN_CIDRS_JSON`.
-
-La deuxième stratégie offre une meilleure réduction de surface réseau. La première reste le chemin de démarrage le plus simple pour un VPS générique.
-
-## 7. Sauvegarde et restauration
-
-Une restauration complète exigera :
-
-1. créer un Ubuntu 24.04 vierge et y installer la clé SSH de déploiement ;
-2. faire pointer le DNS vers sa nouvelle IP ;
-3. vérifier et remplacer `VPS_SSH_HOST_KEY` ;
-4. lancer le workflow avec `bootstrap=true` ;
-5. restaurer PostgreSQL et MinIO depuis la cible hors site ;
-6. exécuter les smoke tests et contrôler l'observabilité.
-
-Le déploiement installe les timers `immo-backup.timer` et `immo-pilot-metrics.timer`. PostgreSQL et
-les objets MinIO sont sauvegardés ensemble dans `/srv/immo/backups`; la réplication MinIO hors site
-reste configurée avec des identifiants dédiés. La procédure, le test en conteneurs jetables et les
-conditions de preuve sont détaillés dans
-[`docs/operations/backup-restore.md`](./docs/operations/backup-restore.md).
-
-Le code du mécanisme ne vaut pas preuve de restauration. La production reste interdite tant qu'un
-rapport de drill sur une sauvegarde réelle et un redéploiement VPS vierge n'ont pas mesuré RPO/RTO.
+Audit §10.6, grilles non revérifiées, ± 25 % : 25 à 45 €/mois pour le 35 avec une pile
+dégraissée sur 4 vCPU / 8 Go ; 49 à 113 € avec la pile actuelle sur 8 vCPU / 16 Go ; 300 à
+400 Go de disque à quatre départements. PostgreSQL 15 atteint sa fin de support en novembre 2027.

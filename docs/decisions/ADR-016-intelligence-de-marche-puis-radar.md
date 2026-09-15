@@ -64,8 +64,9 @@ sans modèle ni seuil inventé.
 
 - Une série de tickets `H` porte V5 et V2 ; les outils du backlog, limités aux lettres A à G,
   sont étendus par A7.
-- `SPEC.md` est réécrit, pas amendé, après le premier retour de professionnels (H6) : l'écrire
-  avant reviendrait à spécifier une seconde fois sans client.
+- `SPEC.md` est réécrit, pas amendé — et toute la documentation de référence avec lui (H6),
+  dès maintenant, par décision du 15 septembre : une référence fausse coûte plus qu'une
+  référence provisoire. Ce qui dépend du verdict de H3 y est marqué provisoire, et H3 la relit.
 - `CLAUDE.md` et `docs/backlog/README.md` désignent le baromètre comme chemin critique. « Le plus
   important maintenant » devient H1.
 - Les listes E8 et E8f restent disponibles pour E9, dont le protocole doit être corrigé avant

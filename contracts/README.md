@@ -1,10 +1,14 @@
 # Contrats versionnés
 
-Ce dossier contient les interfaces stables entre les sources, les pipelines, le backend et le frontend.
+Interfaces stables entre les sources, les pipelines, le backend et le frontend.
 
-- `datasets/` : schémas et règles d’acceptation par dataset et release ;
-- `features/` : définitions déclaratives, provenance et politiques de valeurs manquantes ;
-- `scoring/` : registres actifs, définitions de score, transformations et règles d'éligibilité ;
-- `openapi/` : contrat HTTP généré depuis FastAPI.
+- `datasets/` : contrat par dataset (`DS-*/v1.json`) et manifeste par release (`DS-*/releases/`) ;
+  c'est la partie réellement exécutée — `cadastre/manifest.py` refuse un manifeste sans SHA-256 ;
+- `features/` : définitions déclaratives ; **aucun code ne les lit** (audit §8.4), la logique est
+  réimplémentée dans `pipelines/src/immo_pipelines/market_data/features.py` ; gelées ;
+- `scoring/` : deux définitions `draft`, lues par le moteur, jamais publiées ; gelées ;
+- `openapi/` : contrat HTTP généré depuis FastAPI, vérifié en CI.
 
-Les contrats de datasets et de features sont ajoutés dans les versions qui les introduisent. Une modification incompatible crée une nouvelle version ; elle ne remplace pas silencieusement la précédente.
+Une modification incompatible crée une nouvelle version ; elle ne remplace jamais la précédente.
+Les mesures du baromètre (`BAR-*`, `SPEC.md` §13.4) n'ont pas de contrat JSON : leurs paramètres
+sont déclarés dans le script et écrits dans la sortie.

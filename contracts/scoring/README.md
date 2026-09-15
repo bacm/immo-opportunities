@@ -1,13 +1,12 @@
-# Contrats de scoring
+# Contrats de scoring — gelés
 
-Les définitions sont immuables après création. Leur activation utilise un pointeur de publication
-séparé ; elle ne modifie ni les poids ni les snapshots historiques.
+[`division-extension-v1`](./division-extension-v1.json) et
+[`renovation-resale-v1`](./renovation-resale-v1.json) sont lues par `scoring/engine.py`
+(poids, éligibilités, préfixes interdits validés au chargement). Elles restent `draft` et
+`publication_eligible: false` ; le moteur n'a aucun appelant en production et aucune définition
+n'a jamais été insérée en base. [`feature-registry-v1`](./feature-registry-v1.json) n'est lu par
+aucun code.
 
-- [`feature-registry-v1`](./feature-registry-v1.json) fige les features financières et les
-  politiques de nécessité ;
-- [`division-extension-v1`](./division-extension-v1.json) reprend les poids initiaux de la spec ;
-- [`renovation-resale-v1`](./renovation-resale-v1.json) reprend les poids initiaux de la spec.
-
-Les deux définitions restent `draft` et `publication_eligible: false` jusqu'au profiling stratifié
-des distributions bretonnes. Les percentiles et scores discrets sont des entrées versionnées du
-moteur : aucun seuil territorial arbitraire n'est inscrit dans ces contrats.
+Aucun seuil territorial n'est inscrit dans ces contrats. Les bornes de classe de score (40, 60,
+80) et de confiance (0,6, 0,8) sont **en dur dans le moteur** (`engine.py:458-465`, audit §8.5) :
+elles devront en sortir avant tout dégel.

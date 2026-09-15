@@ -1,16 +1,19 @@
-# Reconstituer le référentiel local du département 35
+# Reconstituer la base locale du département 35
 
-**Date :** 4 septembre 2026
-**Portée :** environnement Docker local uniquement. Aucun de ces gestes ne concerne un
-environnement partagé.
+**Révisé le :** 15 septembre 2026 (H6). **Portée :** environnement Docker local uniquement.
 
 Le dépôt versionne le code, les contrats et les preuves ; il ne versionne pas l'état de la base.
-Une copie fraîche du dépôt part donc d'une base vide, et l'API comme l'Explorer n'y montrent rien.
-Ce document donne la séquence exacte qui rétablit l'état sur lequel les rapports de
-[`docs/data/`](../data/) ont été mesurés.
+Une copie fraîche part d'une base vide. Ce document donne la séquence qui rétablit l'état sur
+lequel les rapports de [`docs/data/`](../data/) ont été mesurés — les neuf datasets, les calculs
+dérivés et les listes — et dit ce qu'elle ne peut pas rétablir sans l'archive MinIO.
 
-Les volumes attendus sont indiqués à chaque étape. S'ils diffèrent, s'arrêter et comprendre
-l'écart : ils sont l'objet de l'acceptation, pas un effet de bord.
+Les volumes attendus sont indiqués. S'ils diffèrent, s'arrêter et comprendre l'écart : ils sont
+l'objet de l'acceptation, pas un effet de bord. Les étapes marquées **à confirmer** n'ont pas été
+rejouées de bout en bout depuis une base vide ; le premier rejeu complet doit les corriger ici.
+
+Toutes les commandes `docker compose` ci-dessous s'entendent avec
+`--env-file .env.example -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml`, ce que
+les cibles `make` font déjà.
 
 ## 0. Infrastructure et schéma
 
@@ -19,136 +22,152 @@ make dev
 make migrate
 ```
 
-## 1. DS-01 Cadastre — import
+Prévoir 16 Go de RAM et 100 Go de disque : la base finale pèse 29 Go, MinIO 6 Go, les images et
+temporaires le reste. PostGIS tourne en émulation x86 sur un Mac arm64 (`POSTGRES_PLATFORM`).
 
-L'import est un asset Dagster partitionné `département × release`. Il lit le manifeste
-`contracts/datasets/DS-01/releases/2026-06-01-35.json`, archive les trois couches dans MinIO,
-normalise, puis calcule les métriques par commune.
+## 1. DS-01 Cadastre — import, acceptation, publication
+
+Seul asset Dagster réel, partitionné `département × release`, manifeste
+`contracts/datasets/DS-01/releases/2026-06-01-35.json` (checksums épinglés depuis le 7 septembre).
 
 ```bash
-docker compose --env-file .env.example \
-  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm dagster-code \
+docker compose … run --rm dagster-code \
   dagster asset materialize --module-name immo_pipelines.definitions \
   --select cadastre_department_release --partition "35|2026-06-01"
-```
-
-Attendu : 1 333 327 parcelles, 332 communes, 996 métriques par commune.
-
-> **Épinglée depuis le 7 septembre 2026.** Les trois couches portaient `"sha256": null` : un
-> réimport téléchargeait une archive qu'aucun checksum ne contraignait. Les checksums consignés
-> dans [`DS-01-acceptance.md`](../data/DS-01-acceptance.md) ont été re-vérifiés contre le
-> répertoire daté d'Etalab et inscrits au manifeste. Le répertoire est bien immuable : les trois
-> valeurs sont identiques à celles du jour de l'acceptation. Un manifeste sans checksum est
-> désormais refusé avant téléchargement — voir [BUG-05](../backlog/BUG-05-ds02-rnb-non-reproductible.md).
-
-## 2. DS-01 — acceptation puis publication
-
-Deux gestes distincts, et c'est voulu : l'acceptation est un jugement sur la qualité, la
-publication est un déplacement de pointeur. Aucun des deux n'est automatique.
-
-```bash
-docker compose --env-file .env.example \
-  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm dagster-code \
+docker compose … run --rm dagster-code \
   python pipelines/scripts/cadastre_release.py accept DS-01@2026-06-01 --mode accepted
-
-docker compose --env-file .env.example \
-  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm dagster-code \
+docker compose … run --rm dagster-code \
   python pipelines/scripts/cadastre_release.py publish DS-01@2026-06-01 \
     --department 35 --actor "<vous>" --reason "Reconstitution locale"
 ```
 
-La publication propage le référentiel canonique **et les tables de rendu Martin** dans sa propre
-transaction, et imprime les volumes obtenus :
+Attendu : 1 333 327 parcelles, 332 communes ; à la publication,
+`render_parcel_count: 1333327`, `render_building_count: 865335`, 2 min 11 s. Un
+`render_parcel_count` nul signifie une carte vide (BUG-07).
 
-```json
-"spatial_reference": {"area_count": 332, "parcel_count": 1333327,
-                      "property_unit_count": 1333327,
-                      "render_parcel_count": 1333327, "render_building_count": 865335}
-```
+## 2. DS-02 RNB et DS-05 BAN
 
-Un `render_parcel_count` nul signifie une carte vide dans l'Explorer : Martin répondra `204` sur
-chaque tuile, sans erreur. C'était le cas jusqu'au 8 septembre 2026 — voir
-[BUG-07](../backlog/BUG-07-tuiles-vides-et-recherche-adresse.md).
-
-Elle traverse 1,33 M parcelles : 2 min 11 s mesurées sur le 35, ce n'est pas un blocage. Il n'y a
-**aucun appel manuel** à `reference.refresh_cadastre_spatial_reference` à faire — c'était le cas
-avant [BUG-04](../backlog/BUG-04-propagation-referentiel-spatial.md).
-
-## 3. DS-02 RNB et DS-05 BAN
-
-Les deux imports exigent un cadastre publié : ils apparient contre la géométrie de la release
-DS-01 active.
+Exigent un cadastre publié.
 
 ```bash
-make rnb-import DEPARTMENT=35   # release DS-02@2026-09-05
-make ban-import DEPARTMENT=35   # 437 441 adresses, 325 934 relations adresse–parcelle
+make rnb-import DEPARTMENT=35   # DS-02@2026-09-05, copie archivée nommée au manifeste
+make ban-import DEPARTMENT=35   # 437 441 adresses, 325 934 relations adresse ↔ parcelle
 ```
 
-> **DS-02 a changé de release.** `DS-02@2026-08-01` épinglait un alias mouvant et ses octets sont
-> irrécupérables : le producteur écrase `files/RNB_35.csv.zip` sur place, ne conserve qu'une
-> version S3 et n'expose aucun objet daté. Le manifeste du 1er août est conservé comme trace de
-> ce qui avait été accepté, marqué `withdrawn`, et refusé à l'import. La release courante est
-> `DS-02@2026-09-05`, dont le manifeste **nomme la copie archivée** : c'est elle, et non l'URL,
-> qui porte la reproductibilité. Détail et décision dans
-> [BUG-05](../backlog/BUG-05-ds02-rnb-non-reproductible.md).
->
-> Les volumétries RNB de [l'ancien rapport](../data/spatial-reference-35-report.md) — 741 376
-> bâtiments, 1 240 351 relations — portaient sur les octets du 1er août. Elles sont à re-mesurer
-> sur la nouvelle release : c'est le travail de [B3](../backlog/B3-rapport-appariements.md).
-
-Chaque import imprime désormais `asset_origin` : `upstream` quand les octets viennent du
-producteur, `manifest_archive` quand ils viennent de la copie archivée nommée au manifeste,
-`database_archive` quand l'archive était déjà enregistrée en base. Sur une plateforme
-reconstituée sans restauration de MinIO, seul `upstream` est disponible — et pour DS-02 il
-échouera dès que le producteur aura écrasé le fichier.
-
-## 3 bis. DS-04 BD TOPO
-
-L'import exige un cadastre publié et le RNB importé : il apparie contre l'identité bâtiment
-canonique.
+**DS-02 n'est réimportable que depuis l'archive MinIO** : le producteur écrase
+`files/RNB_35.csv.zip` sur place. Sans restauration de `raw-sources`, `asset_origin` vaut
+`upstream` et l'import échoue dès que les octets amont ont changé (BUG-05). Puis :
 
 ```bash
-make bdtopo-import DEPARTMENT=35   # 974 172 bâtiments, 391 217 tronçons, 0 quarantaine
+docker compose … run --rm dagster-code python pipelines/scripts/cadastre_release.py accept DS-02@2026-09-05 --mode accepted
+docker compose … run --rm dagster-code python pipelines/scripts/cadastre_release.py accept DS-05@2026-06-17 --mode display_only
+# puis publish pour chacune, mêmes options qu'à l'étape 1
 ```
 
-Attendu : `asset_origin` à `upstream` au premier import — 529 Mo téléchargés puis archivés — et
-`database_archive` ensuite. L'archive `7z` est extraite dans un répertoire temporaire du
-conteneur : prévoir 3,7 Go de disque libre, l'archive étant supprimée dès le GeoPackage extrait.
+Attendu RNB, après BUG-09 (version de transformation 2) : ~741 k enregistrements, relations
+bâtiment ↔ parcelle avec confiance mesurée, dont ~400 k à recouvrement < 10 % non plus déclarées
+certaines. Les volumétries exactes sont dans `docs/data/spatial-sources-audit.md`.
 
-Puis acceptation et publication, dans la portée que l'audit reconnaît — `display_only`, les seuils
-d'appariement géométrique n'étant pas calibrés :
+## 3. DS-03 BDNB et DS-04 BD TOPO
 
 ```bash
-docker compose --env-file .env.example \
-  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm dagster-code \
-  python pipelines/scripts/cadastre_release.py accept DS-04@2026-06-15 --mode display_only
-# puis publish, mêmes options qu'à l'étape 2, avec DS-04@2026-06-15 --department 35
+make bdnb-import DEPARTMENT=35     # DS-03@2026-02-a ; 805 Mo d'archive → 2,7 Go de GeoPackage
+make bdtopo-import DEPARTMENT=35   # DS-04@2026-06-15 ; 974 172 bâtiments, 391 217 tronçons ; 3,7 Go libres
 ```
 
-Publier ensuite BAN dans la portée que son audit lui reconnaît — `display_only`, et non
-`accepted` : les paliers de confiance de ses relations parcellaires ne sont pas calibrés, voir
-[l'audit spatial](../data/spatial-sources-audit.md).
+Acceptation `display_only` pour les deux, puis publication, comme à l'étape 2. L'identité
+BD TOPO ↔ RNB par `identifiants_rnb` est acceptée (60 cas sur 60) ; BDNB n'a aucun rattachement
+RNB (BUG-13).
+
+## 4. Bâtiments physiques, appariements, features morphologiques
 
 ```bash
-docker compose --env-file .env.example \
-  -f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm dagster-code \
-  python pipelines/scripts/cadastre_release.py accept DS-05@2026-06-17 --mode display_only
-# puis publish, mêmes options qu'à l'étape 2, avec DS-05@2026-06-17
+make physical-buildings SOURCE=rnb DEPARTMENT=35        # 514 859 bâtiments physiques
+make physical-buildings SOURCE=cadastre DEPARTMENT=35   # 517 615
+make matching-refresh                                   # relations et métriques d'appariement
+make morphology-features DEPARTMENT=35                  # LAND-001..007, LAND-009 sur 1 333 327 unités
+```
+
+Attendu : ~20 M de valeurs dans `feature.feature_value` ; `LAND-008`, `LAND-010`, `BLD-001..003`
+absentes avec motif. Rapports : `make matching-report`.
+
+## 5. DS-06 DVF — douze millésimes
+
+```bash
+make dvf-import DEPARTMENT=35           # DS-06@2026-09-13 : geo-dvf Etalab 2021 à 2025
+make dvf-archive-import DEPARTMENT=35   # DS-06@2019-04-archive : DGFiP 2014 à 2020 (D8)
+```
+
+Attendu : 284 699 mutations, 668 315 lots, 65,5 % sans prix allouable (`dvf-quality-35.md`).
+Verdict `display_only` — **à confirmer** : la commande `accept` de `cadastre_release.py` avec
+`DS-06@2026-09-13 --mode display_only`, ou le verdict porté par le rapport de qualité.
+
+## 6. DS-07 DPE — extrait épinglé
+
+L'ADEME ne publie aucun fichier daté : l'extrait est constitué par pagination d'API, puis épinglé.
+**L'extrait du 14 septembre n'est reproductible à l'identique que depuis l'archive MinIO.** Sans
+elle, `make dpe-pin RELEASE=<date> DEPARTMENT=35` constitue un nouvel extrait, donc une nouvelle
+release, avec des volumes différents.
+
+```bash
+make dpe-import DEPARTMENT=35   # DS-07@2026-09-14-extract : 231 416 lignes, 208 086 diagnostics
+make dpe-report DEPARTMENT=35   # docs/data/dpe-matching-35.md : 59,04 % rattachés au bâtiment
+```
+
+## 7. DS-08 GPU
+
+```bash
+make gpu-import DEPARTMENT=35   # DS-08@2026-09-14 : 184 documents, lot arrêté à 152
+make urban-features DEPARTMENT=35   # URB-001..005 ; 16 min ; URB-005 vaut zéro partout
+```
+
+**DS-08 n'a ni checksum ni archive** : le manifeste porte 184 assets à `sha256: null`, et le
+script streame les ZIP distants. Un rejeu peut donner un état différent sans que rien ne le
+signale. Le débit s'effondre en fin de lot (deux documents par vingt minutes) ; le lot reprend
+depuis l'état en base. Attendu : 21 136 zones, 424 022 contraintes, 300 communes.
+
+## 8. DS-09 Géorisques — dix familles
+
+Une release par famille, `<famille>--2026-09-14`. Les familles servies par fichier national
+(argiles) ou par le GPU (servitudes) sont épinglées séparément :
+
+```bash
+make georisques-pin-clay RELEASE=2026-09-14 DEPARTMENT=35 ARCHIVE=<AleaRG_Fxx_L93.zip>   # 823 Mo décompressés
+make georisques-pin-sup  RELEASE=2026-09-14 DEPARTMENT=35
+for f in cavity clay flood-atlas gaspar-risks industrial-installation landslide natural-disaster radon soil-pollution sup; do
+  make georisques-import RELEASE="$f--2026-09-14" DEPARTMENT=35
+done
+make georisques-report DEPARTMENT=35
+```
+
+**À confirmer** : l'ordre pin puis import par famille, et le nom exact de la release attendu par
+`georisques-import`. Attendu : 10 824 observations, 339 communes ; aucune zone inondable typée ;
+quatre servitudes en `403` persistant.
+
+## 9. Rapports métier
+
+```bash
+make market-data-quality DEPARTMENT=35   # docs/data/market-data-quality-35.md
+```
+
+## 10. Listes exploratoires et kit terrain
+
+```bash
+make exploratory-candidates COMMUNE=35051   # 692 éligibles, 33 remis
+make biens-en-vente COMMUNE=35051           # 18 signal, 163 baseline ; extrait DPE du 2026-09-07
+make field-test-kit COMMUNE=35051
 ```
 
 ## Ce que la séquence ne rétablit pas
 
-- **Aucun `OpportunitySnapshot`.** Les deux définitions de score restent en
-  `publication_eligible: false` ; l'Explorer n'affichera aucun candidat. C'est l'état réel du
-  produit, pas une panne locale.
-- **DS-03, DS-06 à DS-09** n'ont aucune release réelle : les features qui les exigent restent
-  manquantes avec un motif. DS-04 est importé depuis le 7 septembre 2026, mais en `display_only` :
-  ses 90 841 rattachements ambigus ne peuvent fonder aucune feature entrant dans un score.
-- **Un rebuild d'image est nécessaire** après toute modification du code des pipelines **ou des
-  contrats** : les images `dagster-code` et `migrate` embarquent `pipelines/` et `contracts/`,
-  elles ne les montent pas. Un manifeste corrigé sur l'hôte reste invisible du conteneur tant que
-  l'image n'est pas reconstruite.
-- **L'archive MinIO n'est pas dans le dépôt.** Pour DS-02 elle est le seul chemin durable vers les
-  octets acceptés : sans restauration de `raw-sources`, la release n'est réimportable que tant que
-  le producteur sert encore les mêmes octets. `scripts/backup-platform` la sauvegarde en entier ;
-  [G6](../backlog/G6-exploitation-restauration.md) en chronomètre la restauration.
+- **Les octets de DS-02 et l'extrait DS-07** sans restauration de `raw-sources`. MinIO est le seul
+  chemin durable ; `scripts/backup-platform` le sauvegarde en entier, sur la machine sauvegardée.
+  Une copie de `raw-sources` hors de ce poste est le minimum, non fait.
+- **L'état exact de DS-08** : sans checksum, un rejeu n'est pas comparable.
+- **Aucun `OpportunitySnapshot`** : le moteur de score n'a pas d'appelant et la plateforme est
+  gelée (ADR-016). C'est l'état réel du produit.
+- **Le baromètre** (H1) n'existe pas encore ; quand il existera, `make market-barometer` sera
+  l'étape 11.
+- **Un rebuild d'image** (`make rebuild`) est nécessaire après toute modification de
+  `pipelines/` ou de `contracts/` : les images les embarquent. Vérifier qu'aucun lot ne tourne :
+  le rebuild recrée PostgreSQL.

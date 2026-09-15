@@ -1,1166 +1,649 @@
 # Immo Opportunities — Architecture technique
 
-**Version :** 0.1  
-**Statut :** Architecture de référence du MVP Bretagne  
-**Date :** 3 août 2026  
-**Document produit associé :** [SPEC.md](./SPEC.md)  
+**Version :** 1.0 — réécrite le 15 septembre 2026 sur décision [ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)
+**Statut :** description de ce qui existe et de ce qui est décidé. Ce qui est souhaité et non décidé est marqué comme tel.
+**Remplace :** la version 0.1 du 3 août 2026 (`git show a32d439:ARCHITECTURE.md`)
+**Document produit associé :** [SPEC.md](./SPEC.md)
 
 ---
 
 ## 1. Décision synthétique
 
-Immo Opportunities utilise une architecture de **monolithe modulaire enrichi de services spécialisés**.
+Deux architectures cohabitent dans ce dépôt, et ce document les distingue à chaque section.
 
-Le domaine, l'API et le scoring restent dans une base de code Python cohérente. Les fonctions qui ont des contraintes techniques propres sont déployées séparément : frontend, API, serveur de tuiles, workers applicatifs et orchestrateur de données.
+**L'architecture active** porte le produit décidé par ADR-016 : une base PostgreSQL/PostGIS qui
+contient le référentiel spatial du 35 et quatre sources métier, des scripts Python reproductibles
+qui importent, mesurent et produisent des documents, et un outillage de preuve (contrats,
+manifestes, rapports, recompte). Elle n'a ni utilisateur connecté, ni API publique, ni
+déploiement.
 
-Cette architecture est dimensionnée pour la Bretagne entière sans introduire prématurément Kubernetes, des microservices, un data warehouse ou une plateforme ML.
+**L'architecture gelée** est la plateforme applicative écrite entre le 4 et le 15 septembre 2026 :
+SPA React/MapLibre, API FastAPI, moteur de score, multi-tenant OIDC/RLS, tuiles Martin, Dagster,
+observabilité, déploiement Ansible. Elle existe, elle tourne en local, elle est décrite ici avec
+ses défauts connus, et rien n'y est ajouté tant que le gel n'est pas levé par une ADR.
 
-### Stack retenue
+### Stack réelle
 
-| Couche | Choix |
-|---|---|
-| Frontend | React, TypeScript strict, Vite, MUI |
-| Cartographie | MapLibre GL JS via `react-map-gl/maplibre` |
-| État serveur | TanStack Query |
-| État local | URL pour les filtres, Zustand pour l'état éphémère complexe |
-| Formulaires | React Hook Form + Zod |
-| API | FastAPI, Pydantic, OpenAPI |
-| Domaine/persistance | Python 3.13, SQLAlchemy 2, GeoAlchemy2, psycopg 3 |
-| Base | PostgreSQL 15 + PostGIS 3.x |
-| Recherche | PostgreSQL `pg_trgm`, `unaccent` et index spatiaux |
-| Tuiles | Martin, vues/fonctions PostGIS, MVT |
-| Pipelines data | Dagster |
-| Traitement | Polars, PyArrow, DuckDB Spatial, Shapely, pyogrio, Rasterio/GDAL |
-| Tâches applicatives | Celery + Redis |
-| Stockage brut | MinIO compatible S3, en conteneur |
-| Authentification | Keycloak, OpenID Connect, Authorization Code + PKCE |
-| Reverse proxy/TLS | Caddy |
-| Observabilité | OpenTelemetry, Prometheus, Loki, Grafana |
-| Packaging | Docker, Docker Compose v2 |
-| Infrastructure | VPS Ubuntu 24.04 LTS générique, Ansible, GitHub Actions |
-| Sauvegarde | WAL-G PostgreSQL + réplication MinIO vers stockage S3 hors site |
-| CI/CD | GitHub Actions + registre de conteneurs |
-| Python tooling | uv, Ruff, Pyright, pytest |
-| Frontend tooling | pnpm, Biome, `tsc`, Vitest, Testing Library, Playwright |
+Ce tableau décrit ce qui est dans `uv.lock`, `pnpm-lock.yaml` et `compose.yaml`, pas une cible.
+
+| Couche | Réel | Statut |
+|---|---|---|
+| Base | PostgreSQL 15 + PostGIS 3.5 (`postgis/postgis:15-3.5`) | active |
+| Accès base | SQL brut via `sqlalchemy.text()`, psycopg 3, aucun modèle ORM ; Alembic, 24 révisions | active |
+| Scripts d'import et de mesure | Python 3.13, `httpx`, `tenacity`, `shapely`, `pyproj`, `pyshp`, `py7zr`, `ijson`, `minio` | active |
+| Orchestrateur | Dagster 1.10, **un asset réel** (DS-01) ; les 25 autres cibles utilisent son image comme interpréteur | gelé de fait |
+| Stockage brut | MinIO en conteneur, 6 Go d'archives épinglées | actif, remplacement envisagé (§13) |
+| API | FastAPI 0.141, Pydantic 2, 45 routes dont 4 authentifiées | gelée |
+| Frontend | React 19, Vite 6, TypeScript strict, MapLibre 6 via `react-map-gl` 8, `oidc-client-ts`, CSS custom, client généré par `openapi-typescript` | gelé |
+| Tuiles | Martin 1.13, trois fonctions PostGIS | gelé |
+| Identité | Keycloak 26.7, OIDC Authorization Code + PKCE | gelé |
+| Reverse proxy | Caddy 2.11 | gelé |
+| Observabilité | Prometheus, Loki, Grafana, Alloy, node-exporter | gelé, sans usage démontré |
+| Cache et file | Redis 8 — **référencé par aucun code** | à retirer |
+| Packaging | Docker Compose v2, 20 services, 16 conteneurs permanents | actif en local |
+| Infrastructure | Ansible + SOPS/age, GitHub Actions ; **jamais exécuté** | gelé |
+| Outillage | uv 0.10, Ruff, Pyright strict, pytest ; pnpm 10, `tsc`, Playwright | actif |
+
+Ce qui était déclaré dans la version 0.1 et **n'existe pas** : MUI, TanStack Query, Zustand,
+React Router, React Hook Form, Zod, Orval, Biome, Vitest, Testing Library, Celery, WAL-G, Polars,
+PyArrow, DuckDB, pyogrio, Rasterio, OpenTelemetry, Renovate, registre de conteneurs, tests
+d'intégration PostGIS.
 
 ### Versions de runtime
 
-- Python 3.13 ;
-- Node.js 24 LTS ;
-- PostgreSQL 15 et PostGIS 3.x dans une image Docker versionnée ;
-- navigateurs modernes définis par la cible de build Vite.
-
-Les versions exactes des bibliothèques sont figées dans `uv.lock` et `pnpm-lock.yaml`, pas dans ce document. Les montées de version sont réalisées explicitement et testées.
+Python 3.13, Node.js 24, PostgreSQL 15 (fin de support novembre 2027 — une migration majeure est
+à prévoir si la plateforme est dégelée). Les versions exactes sont dans les lockfiles.
 
 ---
 
 ## 2. Principes architecturaux
 
-### 2.1 Pré-calculer plutôt que recalculer à la lecture
+### 2.1 Reproductible avant rapide
 
-Les features et scores régionaux sont calculés lors d'une release de données. Déplacer la carte ne déclenche pas un recalcul du score.
-
-La lecture utilise des snapshots immuables et des vues optimisées. Seuls les scénarios financiers personnalisés et les actions utilisateur sont calculés à la demande.
+Toute mesure publiée se régénère depuis la base par une commande `make`, avec graine et filtres
+écrits dans la sortie. Toute source s'importe depuis un manifeste checksumé, sous une version de
+transformation. C'est le principe qui a survécu à la redéfinition du produit.
 
 ### 2.2 Conserver la provenance
 
-Chaque valeur calculée doit pouvoir être reliée à :
+Chaque valeur en base relie une release de dataset, un run d'import, une version de
+transformation. Chaque chiffre dans `docs/data/` nomme son filtre, sa cohorte et sa date.
 
-- une release de dataset ;
-- une ou plusieurs lignes sources ;
-- une transformation versionnée ;
-- une définition de feature ;
-- une définition de score ;
-- un instant de calcul.
+### 2.3 Pré-calculer plutôt que recalculer à la lecture
 
-### 2.3 Séparer données communes et données client
-
-Les parcelles, bâtiments, observations publiques et scores publiés sont communs à tous les clients autorisés.
-
-Les statuts, notes, recherches, scénarios et exports appartiennent à une organisation. Cette séparation évite de dupliquer le référentiel géographique tout en protégeant les données métier des clients.
+Principe de la plateforme gelée. Pour le produit actif, il n'y a pas de lecture interactive :
+une génération de document par millésime.
 
 ### 2.4 Une seule source de vérité transactionnelle
 
-PostgreSQL/PostGIS est la source de vérité des données normalisées, scores publiés et données applicatives.
+PostgreSQL/PostGIS. MinIO est la source de vérité des octets bruts. Redis n'est source de rien.
 
-MinIO est la source de vérité des fichiers bruts et artefacts volumineux. Redis n'est jamais une source de vérité.
+### 2.5 Commencer simple
 
-### 2.5 Commencer simple, garder des sorties d'évolution
-
-- pas de microservices métier au MVP ;
-- pas de Kubernetes au MVP ;
-- pas d'Elasticsearch tant que PostgreSQL suffit ;
-- pas de data warehouse séparé ;
-- pas de feature store ML ;
-- interfaces et données versionnées pour permettre ces évolutions plus tard.
+Pas de microservices, pas de Kubernetes, pas de data warehouse, pas de feature store, pas de
+ML. Ce principe de la version 0.1 n'a pas été appliqué à la plateforme (16 conteneurs pour zéro
+utilisateur) ; il s'applique au produit actif.
 
 ### 2.6 Un service par conteneur
 
-Chaque service ou processus long possède son propre conteneur et son propre cycle de vie. PostgreSQL/PostGIS, Redis, MinIO, Keycloak, Caddy, Martin, FastAPI et le frontend ne sont jamais regroupés dans une image omnibus.
-
-Dagster webserver, Dagster daemon, Dagster code location, Celery worker et Celery beat s'exécutent également dans des conteneurs distincts, même lorsque plusieurs d'entre eux réutilisent la même image. Prometheus, Loki, Grafana et Alloy restent quatre services séparés.
+Règle de la plateforme gelée, tenue. Sa conséquence — 19 chaînes d'approvisionnement à patcher
+pour un produit sans utilisateur — est un des motifs du gel.
 
 ---
 
 ## 3. Vue d'ensemble
 
-```text
-                            Internet
-                               │
-                               ▼
-                        ┌─────────────┐
-                        │    Caddy    │ TLS, routage, auth des tuiles
-                        └──────┬──────┘
-                 ┌─────────────┼─────────────────┐
-                 ▼             ▼                 ▼
-          ┌────────────┐ ┌────────────┐   ┌────────────┐
-          │ React SPA  │ │  FastAPI   │   │   Martin   │
-          │ MapLibre   │ │ API métier │   │ tuiles MVT │
-          └────────────┘ └─────┬──────┘   └─────┬──────┘
-                               │                │ lecture seule
-                               ▼                ▼
-                        ┌────────────────────────────┐
-                        │ PostgreSQL 15 + PostGIS    │
-                        │ référentiel, scores, app   │
-                        └──────────────┬─────────────┘
-                                       │
-                  ┌────────────────────┼────────────────────┐
-                  ▼                    ▼                    ▼
-           ┌────────────┐       ┌────────────┐       ┌────────────┐
-           │  Dagster   │       │  Celery    │       │   Redis    │
-           │ pipelines  │       │ jobs app   │       │ queue/cache│
-           └─────┬──────┘       └────────────┘       └────────────┘
-                 │
-                 ▼
-          ┌──────────────┐
-          │    MinIO     │ fichiers bruts, exports, images
-          │ S3 compatible│
-          └──────────────┘
+### 3.1 Architecture active
 
-     Keycloak fournit l'identité OIDC ; l'API gère organisations et rôles.
+```text
+Sources publiques (DVF, DPE, cadastre, RNB, BAN, BD TOPO, BDNB, GPU, Géorisques)
+        │  manifeste épinglé, SHA-256, copie archivée MinIO
+        ▼
+pipelines/scripts/import_*.py  ── version de transformation, run idempotent
+        │
+        ▼
+PostgreSQL 15 + PostGIS  (29 Go pour le 35)
+   reference · observation · meta · feature
+        │
+        ▼
+pipelines/scripts/*_report.py, market_barometer.py (H1), market_listing_candidates.py
+        │
+        ▼
+docs/data/*.md, CSV, HTML autonome  ── recompte-preuve avant publication
+```
+
+### 3.2 Architecture gelée
+
+```text
+                    Caddy (TLS, routage)
+        ┌──────────────┼─────────────────┐
+   React SPA       FastAPI            Martin
+   MapLibre        45 routes          3 fonctions MVT
+        │              │                  │
+        └──────────────┴────────┬─────────┘
+                          PostgreSQL/PostGIS
+                     app · scoring · market · tiles  (vides)
+   Keycloak (OIDC) · Dagster ×3 · MinIO · Redis · Prometheus · Loki · Grafana · Alloy
 ```
 
 ---
 
 ## 4. Style d'architecture applicative
 
-### 4.1 Monolithe modulaire
+### 4.1 Ce qui existe
 
-Le backend suit quatre couches logiques :
+`backend/src/immo/` est un module Python plat : un fichier par domaine (`explorer.py`,
+`scoring.py`, `review.py`, `spatial.py`, `market_data.py`, `connected_mvp.py`,
+`brittany_pilot.py`, `accounts.py`, `cadastre.py`) contenant SQL et sérialisation, et
+`api/routes/*.py` qui les exposent. Il n'y a ni couche domaine, ni repositories, ni cas d'usage
+séparés : la version 0.1 décrivait quatre couches qui n'ont jamais été construites.
 
-```text
-API / adapters entrants
-        ↓
-Application / cas d'usage
-        ↓
-Domaine
-        ↓
-Infrastructure / SQL / services externes
-```
+`pipelines/src/immo_pipelines/` est une bibliothèque (`cadastre/`, `spatial/`, `market_data/`,
+`scoring/`, `progress.py`) appelée par `pipelines/scripts/*.py`. `spatial/importer.py` (2 969
+lignes) porte l'essentiel du SQL PostGIS du projet.
 
-Règles de dépendance :
+### 4.2 Règles tenues
 
-- le domaine ne dépend ni de FastAPI, ni de SQLAlchemy, ni de Dagster ;
-- l'application orchestre les cas d'usage et les transactions ;
-- l'infrastructure implémente les repositories et accès externes ;
-- FastAPI ne contient pas de logique métier ;
-- les pipelines réutilisent les définitions du domaine et des features, sans appeler l'API HTTP ;
-- le scoring ne lit jamais directement des fichiers bruts ;
-- l'API ne déclenche jamais un traitement régional dans le processus web.
-
-### 4.2 Modules métier
-
-```text
-identity
-organizations
-geography
-buildings
-transactions
-energy
-urbanism
-risks
-features
-scoring
-opportunities
-financial_scenarios
-reviews
-prospecting
-exports
-administration
-```
-
-Les modules communiquent par appels internes explicites. Un bus de messages métier n'est pas nécessaire au MVP.
+- les pipelines n'appellent jamais l'API HTTP ;
+- l'API ne déclenche aucun traitement régional ;
+- le moteur de score ne lit jamais de fichier brut ;
+- aucune injection SQL : toutes les valeurs passent par des paramètres liés (audit §7.4).
 
 ### 4.3 Transactions
 
-- un cas d'usage applicatif définit une transaction ;
-- les écritures utilisateur sont courtes ;
-- aucun téléchargement ou calcul géospatial lourd ne se déroule dans une transaction API ;
-- les snapshots sont publiés atomiquement ;
-- les tâches Celery utilisent des clés d'idempotence ;
-- les imports Dagster sont relançables sans produire de doublons.
+Un script d'import commite élément par élément et reprend depuis l'état en base (§10.6). Une
+publication de release déplace un pointeur dans une transaction courte. Les écritures
+utilisateur de la plateforme sont courtes et positionnent le contexte RLS par `set_config`.
 
 ---
 
 ## 5. Organisation du dépôt
 
-Un monorepo est retenu.
-
 ```text
 immo-opportunities/
-├── apps/
-│   └── web/                    # React/Vite
+├── apps/web/                 # SPA React (gelée) : src/App.tsx, RealMap.tsx, ReviewMap.tsx, api.ts, auth.ts
 ├── backend/
-│   ├── pyproject.toml
-│   ├── src/immo/
-│   │   ├── api/
-│   │   ├── application/
-│   │   ├── domain/
-│   │   ├── infrastructure/
-│   │   ├── scoring/
-│   │   └── workers/
-│   ├── migrations/            # Alembic
-│   └── tests/
+│   ├── src/immo/             # modules plats + api/routes/
+│   ├── migrations/versions/  # 24 révisions Alembic, 5 925 lignes de SQL
+│   ├── scripts/              # provision_member.py (mort, voir audit §7.4)
+│   └── tests/                # 29 fichiers, aucun ne touche PostgreSQL
 ├── pipelines/
-│   ├── pyproject.toml
-│   ├── src/immo_pipelines/
-│   │   ├── assets/
-│   │   ├── resources/
-│   │   ├── checks/
-│   │   └── schedules/
-│   └── tests/
-├── map/
-│   ├── styles/
-│   ├── sprites/
-│   ├── martin/
-│   └── sql/                    # fonctions MVT versionnées
+│   ├── src/immo_pipelines/   # cadastre/ spatial/ market_data/ scoring/ assets/ progress.py
+│   ├── scripts/              # 28 scripts : import_*, pin_*, compute_*, *_report, listes, kit terrain
+│   └── tests/                # 32 fichiers, fixtures et FakeConnection
 ├── contracts/
-│   ├── datasets/
-│   ├── features/
-│   └── openapi/
-├── docker/
-│   ├── api/
-│   ├── web/
-│   ├── postgres/              # PostGIS + WAL-G
-│   ├── dagster/
-│   └── ops/                   # Ansible, SOPS, age
-├── infra/
-│   ├── ansible/
-│   ├── secrets/
-│   └── monitoring/
+│   ├── datasets/DS-01..DS-09 # v1.json + releases/*.json (manifestes épinglés)
+│   ├── features/             # morphology-v1, market-data-v1 (déclaratifs, non lus)
+│   ├── scoring/              # feature-registry, deux définitions draft
+│   └── openapi/v1.json       # généré, vérifié en CI
+├── map/styles/real-map-v1.json   # seul artefact de map/ ; les fonctions MVT sont dans les migrations
+├── config/                   # caddy, keycloak, postgres, prometheus, loki, grafana, alloy
+├── docker/                   # api, pipelines, web, ops
+├── infra/ansible/            # rôles base, storage, secrets, immo_stack ; jamais exécuté
+├── scripts/                  # outillage : backlog-status, check-*, backup-platform, restore-drill…
 ├── docs/
-├── compose.yaml
-├── compose.dev.yaml
-├── compose.prod.yaml
-├── compose.observability.yaml
-├── Makefile
-├── pnpm-workspace.yaml
-├── pyproject.toml              # workspace uv
-├── uv.lock
-├── SPEC.md
-├── ARCHITECTURE.md
-└── DEPLOYMENT.md
+│   ├── backlog/              # tickets, README généré
+│   ├── data/                 # rapports datés, preuves
+│   ├── decisions/            # ADR-015, ADR-016
+│   ├── operations/           # runbooks
+│   ├── versions/             # versions d'implémentation v0.1 à v0.8
+│   ├── archive/              # explo d'août 2026
+│   └── audit-critique-2026-09-15.md
+├── compose.yaml, compose.dev.yaml, compose.prod.yaml, compose.observability.yaml
+├── Makefile, pyproject.toml, uv.lock, pnpm-workspace.yaml
+├── SPEC.md, ARCHITECTURE.md, CLAUDE.md, DEPLOYMENT.md, README.md
 ```
 
-`contracts/datasets` contient les mappings de schémas par release. `contracts/features` contient les définitions déclaratives des features et leurs règles de données manquantes.
+---
+
+## 6. Frontend — gelé
+
+### 6.1 Ce qui existe
+
+Une SPA de 2 176 lignes écrites à la main, dont 1 243 dans `App.tsx` : recherche d'adresse et de
+parcelle, fiches adresse, parcelle et bâtiment, mutations DVF et diagnostics DPE par parcelle,
+bannière de couverture, panneau d'administration, dépouillement de la revue B4. État local par
+`useState`, filtres et sélection dans l'URL, chargements par `fetch` et `AbortController`. Aucune
+bibliothèque d'état, aucun routeur, aucune bibliothèque de composants.
+
+### 6.2 Ce qui est vide
+
+Liste de candidats, fiche candidat, workflow de qualification, scénarios financiers, recherches
+sauvegardées : environ 700 lignes inatteignables faute de score publié
+(`docs/data/captures/01-explorer-initial.png`).
+
+### 6.3 Défauts connus, à corriger avant tout dégel
+
+Vue initiale à lon 0 / lat 0 (`Number(null) === 0`, `App.tsx:81-84`) ; carte vide au changement
+de département (zoom 9 sous `minzoom 13`) ; inconnu peint comme zéro sur la carte
+(`RealMap.tsx:125`) ; deux `fetch` bruts sans jeton qui affichent « aucune donnée » sur un 500 ;
+renouvellement OIDC silencieux bloqué par `X-Frame-Options: DENY` ; typographie à 8-9 px ; modales
+sans piège de focus. Détail : audit §9.
+
+### 6.4 Règle
+
+Aucune ligne dans `apps/web/` tant que H3 n'a pas rendu son verdict. Si le gel est levé : rester
+sur `App.tsx` + CSS custom + MapLibre, ou décider par ADR une convergence vers une bibliothèque.
+Pas les deux.
 
 ---
 
-## 6. Frontend
+## 7. API et backend — gelés
 
-### 6.1 Choix
+### 7.1 Ce qui existe
 
-Une SPA React/Vite est retenue. Le produit est une application authentifiée et cartographique ; le rendu serveur et le SEO de Next.js n'apportent pas de valeur suffisante au MVP.
-
-Bibliothèques :
-
-- React ;
-- TypeScript en mode strict ;
-- Vite ;
-- React Router ;
-- MUI ;
-- `react-map-gl/maplibre` et MapLibre GL JS ;
-- TanStack Query ;
-- TanStack Table pour les listes riches ;
-- Zustand pour l'état éphémère non serveur ;
-- React Hook Form et Zod ;
-- `oidc-client-ts` pour le flux OIDC.
-
-### 6.2 Répartition de l'état
-
-| État | Emplacement |
-|---|---|
-| filtres partageables | URL |
-| emprise, zoom et sélection | URL ou état de carte synchronisé |
-| données API | cache TanStack Query |
-| préférences persistantes | API et base |
-| ouverture de panneaux/interaction | Zustand |
-| formulaire non sauvegardé | React Hook Form |
-
-Les entités métier ne sont pas dupliquées dans un store global.
-
-### 6.3 Contrat API
-
-FastAPI publie OpenAPI. Un client TypeScript est généré avec Orval.
-
-Le code frontend n'écrit pas manuellement des types représentant les réponses API. Une modification incompatible échoue lors de la génération ou du typecheck.
-
-### 6.4 Cartographie
-
-- MapLibre affiche des sources raster externes autorisées et les tuiles MVT internes ;
-- les parcelles, bâtiments et candidats ne sont pas chargés comme un GeoJSON régional complet ;
-- les interactions utilisent l'identifiant de feature MVT ;
-- le détail complet est chargé par l'API après sélection ;
-- les statuts propres à l'organisation sont récupérés par API pour l'emprise courante ;
-- les couches et niveaux de zoom sont définis dans un style versionné ;
-- l'attribution des producteurs reste visible.
-
-### 6.5 Fond de carte
-
-Le MVP utilise les fonds et orthophotos IGN compatibles avec leurs conditions de diffusion. Les couches métier sont produites en interne.
-
-L'application ne dépend pas de Google Maps ou de Google Street View pour son fonctionnement principal.
-
----
-
-## 7. API et backend
-
-### 7.1 API
-
-FastAPI est retenu pour :
-
-- les contrats Pydantic ;
-- la génération OpenAPI ;
-- l'intégration avec l'écosystème Python du traitement de données ;
-- l'exécution ASGI ;
-- la possibilité de générer le client TypeScript.
-
-L'API est REST, versionnée sous `/api/v1`. GraphQL n'est pas retenu.
+FastAPI, REST sous `/api/v1`, 45 routes dans dix routeurs, OpenAPI généré et vérifié par
+`make openapi-check`. Validation Pydantic rigoureuse (`Literal`, bornes, validateurs croisés).
+Douze routes joignent des tables vides et ne peuvent retourner que du vide ; douze autres ne sont
+appelées par aucun code front.
 
 ### 7.2 Accès à PostgreSQL
 
-- SQLAlchemy 2 en mode synchrone ;
-- psycopg 3 ;
-- GeoAlchemy2 pour les types géographiques ;
-- Alembic pour les migrations ;
-- pool de connexions borné par processus ;
-- requêtes spatiales complexes écrites explicitement en SQL lorsque nécessaire.
+SQLAlchemy 2 synchrone, psycopg 3, `text()` partout, pool de 5 connexions, `pool_pre_ping`. Aucun
+`statement_timeout`. Le rôle de connexion est `immo`, propriétaire de la base et membre de
+`migration_owner`, `api_rw` et `pipeline_rw` ; l'API n'endosse jamais `api_rw` (§9.5).
 
-Le mode synchrone est volontaire : les tuiles ne transitent pas par FastAPI et le volume API du MVP ne justifie pas la complexité d'un ORM asynchrone. Plusieurs workers web fournissent la concurrence.
+### 7.3 Défauts bloquants avant tout déploiement public
 
-### 7.3 Processus web
-
-- serveur ASGI : Uvicorn ;
-- gestion des processus : plusieurs workers dans le conteneur ou plusieurs réplicas ;
-- validation des entrées Pydantic ;
-- sérialisation contrôlée ;
-- pagination par curseur ;
-- timeout explicite des requêtes ;
-- limite de taille des réponses et exports asynchrones.
+| Défaut | Preuve |
+|---|---|
+| 41 routes sur 45 sans authentification, dont `POST /api/v1/review/verdicts` | `backend/src/immo/main.py`, aucune dépendance globale |
+| Rôle base propriétaire, RLS désarmable par le processus API | `config/postgres/init/10-init-databases.sh:50` |
+| Aucun rate limiting, aucun `statement_timeout`, bbox de 1° × 1° acceptée | `routes/explorer.py:68-69` |
+| Un seul logger, erreurs SQL converties en 503 sans journal corrélé | `api/errors.py`, `api/middleware.py` |
 
 ### 7.4 Recherche
 
-La première version utilise PostgreSQL :
-
-- `pg_trgm` pour la recherche approchée ;
-- `unaccent` pour la normalisation ;
-- index B-tree pour codes et identifiants ;
-- index GiST pour les géométries ;
-- index plein texte si nécessaire.
-
-Elasticsearch/OpenSearch ne sera introduit que si des mesures montrent que PostgreSQL ne répond plus au besoin.
+PostgreSQL `pg_trgm` et `unaccent` sur 437 441 adresses BAN. Fonctionne. Aucun moteur externe
+n'est envisagé.
 
 ---
 
-## 8. Architecture cartographique
+## 8. Architecture cartographique — gelée
 
-### 8.1 Serveur de tuiles
+Martin sert trois fonctions PostGIS (`tiles.parcels`, `tiles.buildings`,
+`tiles.opportunities`) depuis des tables de rendu en EPSG:3857 (`tiles.*_render_v1`),
+reconstruites intégralement à chaque publication de release. Rôle `martin` membre de `tiles_ro`,
+sans `SELECT` direct sur les tables, auto-publication désactivée : le cloisonnement PostgreSQL est
+correct et testé.
 
-Martin est retenu car il sert des tuiles vectorielles depuis :
+En amont, Caddy proxifie `/tiles/v1/*` vers Martin **sans authentification** ; la fonction
+`tiles.opportunities` expose `score`, `confidence_level` et `property_unit_id`. Dès qu'un score
+serait publié, il serait extractible anonymement à partir du zoom 10. La version 0.1 prévoyait un
+`forward_auth` Caddy ; il n'a jamais été écrit.
 
-- tables et vues PostGIS ;
-- fonctions PostgreSQL ;
-- fichiers PMTiles/MBTiles si certaines couches deviennent statiques.
+Performances mesurées sur le 35 (`docs/data/real-map-performance.md`) : tuiles parcelles p95 6 ms
+froid, 3,7 ms chaud ; liste API 100 unités 1 839 ms au premier appel.
 
-Il n'est pas exposé directement à Internet. Caddy contrôle l'accès et route uniquement vers les sources déclarées.
-
-### 8.2 Types de couches
-
-| Type | Exemple | Source |
-|---|---|---|
-| statique/versionnée | limites, zonages stables | PMTiles ou vue release |
-| dynamique commune | candidats et scores publiés | fonction PostGIS via Martin |
-| privée organisation | statuts et annotations | API GeoJSON bornée à l'emprise |
-| raster externe | orthophoto IGN | service IGN autorisé |
-
-Les données privées d'une organisation ne sont pas placées dans une tuile partagée ou mise en cache publiquement.
-
-### 8.3 Tuiles d'opportunités
-
-La tuile commune contient uniquement les attributs nécessaires au rendu :
-
-```text
-opportunity_id
-property_unit_id
-strategy_code
-overall_score
-confidence_level
-score_class
-snapshot_version
-geometry simplifiée selon le zoom
-```
-
-Le détail, les preuves et les scénarios ne sont jamais embarqués dans les tuiles.
-
-Au MVP, les filtres simples sont appliqués côté MapLibre sur les attributs de la tuile. L'API calcule séparément la liste exacte correspondant aux mêmes filtres.
-
-Si le volume rend cette approche insuffisante, une fonction Martin accepte un `filter_hash` opaque résolu côté serveur. Aucun fragment SQL utilisateur n'est transmis à PostgreSQL.
-
-### 8.4 Cache
-
-- cache mémoire Martin pour les tuiles chaudes ;
-- `ETag` basé sur la version du snapshot ;
-- URL contenant la release pour permettre l'invalidation ;
-- cache privé au reverse proxy pour les données protégées communes ;
-- aucune mise en cache partagée des notes, statuts ou scénarios client.
-
-### 8.5 Systèmes de coordonnées
-
-- calculs géométriques de référence : Lambert-93, EPSG:2154 ;
-- échange API : WGS84, EPSG:4326 ;
-- rendu tuiles : Web Mercator, EPSG:3857 ;
-- SRID obligatoire et validé à l'import ;
-- géométries de tuiles pré-transformées ou matérialisées lorsque le coût le justifie.
+Systèmes de coordonnées : Lambert-93 (EPSG:2154) pour les calculs, WGS84 pour l'échange, Web
+Mercator pour le rendu. Tenu.
 
 ---
 
 ## 9. Base de données
 
-### 9.1 Schémas PostgreSQL
+### 9.1 Schémas
 
 ```text
-meta          releases, imports, transformations, qualité
-reference     zones, adresses, parcelles, bâtiments, unités
-observation   transactions, DPE, urbanisme, risques
-feature       définitions et valeurs calculées
-scoring       définitions, snapshots, composantes, preuves
-market        segments, comparables, métriques
-app           organisations, utilisateurs, statuts, notes, scénarios
-tiles         vues matérialisées et fonctions MVT
-audit         événements sensibles et exports
+meta          releases, imports, appariements, quarantaine par attribut, revue manuelle   ~11 Go
+reference     zones, adresses, parcelles, bâtiments, bâtiments physiques, unités           ~5,5 Go
+feature       définitions et 19,9 M de valeurs                                              ~8,5 Go
+observation   transactions, DPE, urbanisme, risques, routes                                 ~2,1 Go
+tiles         tables de rendu et fonctions MVT                                              ~1,7 Go
+scoring       17 tables, toutes vides                                                       gelé
+market        3 tables, vides                                                               gelé
+app           11 tables, vides                                                              gelé
+audit         1 table, vide                                                                 gelé
 ```
 
-Le schéma `raw` n'est pas utilisé comme stockage permanent de fichiers. Les fichiers bruts restent dans MinIO. Des tables de staging temporaires ou versionnées sont créées par les pipelines.
+85 tables, 30 vides. 29 Go pour le seul département 35, doublés en huit jours par l'ajout de
+DS-06 à DS-09. Aucun mécanisme ne purge une release remplacée (BUG-08).
 
 ### 9.2 Géométries
 
-- géométrie canonique en EPSG:2154 ;
-- géométrie valide ou quarantaine ;
-- index GiST ;
-- simplifications pré-calculées par niveau d'usage ;
-- géométrie de rendu séparée de la géométrie d'analyse ;
-- aucune simplification ne réécrit la source canonique.
+Canonique en EPSG:2154, géométrie invalide en quarantaine, 13 index GiST, géométrie de rendu
+séparée. Tenu.
 
-### 9.3 Indexation initiale
-
-- GiST sur toutes les géométries interrogées ;
-- B-tree sur identifiants sources, codes INSEE, département, EPCI et release ;
-- index composites sur stratégie/version/score ;
-- `pg_trgm` sur libellés d'adresse ;
-- index partiels sur snapshots publiés ;
-- analyse des requêtes avec `EXPLAIN (ANALYZE, BUFFERS)` avant ajout d'index spécialisés.
-
-### 9.4 Partitionnement
-
-Le partitionnement physique n'est pas imposé au démarrage. Les volumes Bretagne peuvent être gérés avec des tables correctement indexées.
-
-Le partitionnement est envisagé pour :
-
-- les grosses tables historiques par release ;
-- les valeurs de features par version ;
-- les événements d'audit par mois ;
-- l'extension nationale par département ou release.
-
-Une table n'est partitionnée qu'après mesure du coût d'écriture, de maintenance et des plans d'exécution.
-
-### 9.5 Rôles PostgreSQL
+### 9.3 Rôles
 
 ```text
-migration_owner   DDL uniquement
-api_rw            lecture métier + écritures app autorisées
-pipeline_rw       staging, référentiel, features et publication
-tiles_ro          lecture limitée au schéma tiles
-dagster_meta      métadonnées Dagster séparées
-keycloak_owner    base Keycloak séparée
-backup_ro         export contrôlé
+migration_owner   DDL
+api_rw            lecture métier, écritures app        — jamais endossé par l'API
+pipeline_rw       staging, référentiel, publication    — endossé 21 fois par les pipelines
+tiles_ro          lecture du schéma tiles              — endossé par Martin
+immo              propriétaire, membre des trois       — rôle de connexion de l'API
 ```
 
-Martin ne peut pas lire `app`, `audit` ou les tables sources non publiées.
+La matrice de privilèges de la migration 0001 est correcte et décorative tant que l'API se
+connecte en `immo`. Correction : un rôle de connexion dédié ou `SET LOCAL ROLE api_rw` en tête de
+chaque transaction, avant tout dégel.
 
-### 9.6 Multi-tenant
+### 9.4 Multi-tenant
 
-- les tables client portent `organization_id` ;
-- l'API applique systématiquement l'organisation courante ;
-- PostgreSQL Row-Level Security apporte une défense supplémentaire sur les tables sensibles ;
-- les rôles métier sont stockés dans l'application ;
-- un administrateur d'une organisation ne peut pas déléguer de rôle plateforme.
+`ENABLE` + `FORCE ROW LEVEL SECURITY` sur les tables `app.*`, contexte positionné par
+`set_config` depuis le `sub` du JWT. Correctement écrit, jamais testé contre une base en CI, et
+désarmable par le rôle propriétaire (§9.3).
+
+### 9.5 Partitionnement
+
+Aucun. Envisagé pour `feature.feature_value` et les tables de rendu si quatre départements
+étaient importés ; non décidé.
 
 ---
 
 ## 10. Pipelines de données
 
-### 10.1 Orchestrateur
+### 10.1 Orchestration réelle
 
-Dagster est retenu pour :
+Les imports sont des **scripts CLI** lancés par `make` dans le conteneur `dagster-code` utilisé
+comme interpréteur Python. Dagster n'orchestre que DS-01 (`assets/cadastre.py`) ; le daemon et le
+webserver tournent sans objet. BUG-02 propose de porter les imports vers Dagster ; il est gelé
+avec la plateforme, et la question de garder Dagster est ouverte (§22).
 
-- représenter les datasets et tables comme des assets ;
-- matérialiser par département et release ;
-- suivre la lignée ;
-- exécuter des contrôles de qualité ;
-- relancer une partition ;
-- planifier les mises à jour ;
-- réaliser des backfills contrôlés.
+Vingt-cinq cibles `make` couvrent les neuf datasets, les bâtiments physiques, les features
+morphologiques et urbaines, les rapports, les listes E8 et E8f, le kit terrain. La séquence
+complète de reconstitution du 35 est dans
+[`docs/operations/referentiel-local-35.md`](./docs/operations/referentiel-local-35.md).
 
-Les partitions initiales sont :
-
-```text
-dataset_id × dataset_release × département
-```
-
-Les agrégats régionaux dépendent explicitement des quatre partitions départementales.
-
-### 10.2 Étapes
+### 10.2 Étapes réelles
 
 ```text
-discover
+pin (constituer un artefact épinglable quand le producteur n'en publie pas)
   ↓
-download
+manifeste : URL datée ou copie archivée nommée, SHA-256   — refus avant téléchargement sinon
   ↓
-checksum + archive raw
+téléchargement, vérification, archive MinIO, raw_asset
   ↓
-schema validation
+staging, normalisation, quarantaine par attribut
   ↓
-normalize/stage
+appariement (identifiants déclarés d'abord, géométrie ensuite, confiance mesurée)
   ↓
-entity resolution
+acceptation (accepted / display_only / rejected) puis publication : deux gestes manuels distincts
   ↓
-quality checks
-  ↓
-feature computation
-  ↓
-scoring
-  ↓
-tile views/materialization
-  ↓
-atomic publication
+features, rapports, listes, documents
 ```
 
-### 10.3 Bibliothèques de traitement
+`cadastre/manifest.py` porte la garde de reproductibilité et sert sept imports sur huit ;
+`import_gpu_release.py` la contourne (DS-08 sans checksum ni archive, choix assumé pour 430 Go,
+conséquence non écrite jusqu'à l'audit).
 
-- `httpx` pour les téléchargements/API ;
-- `tenacity` pour les reprises bornées ;
-- Polars et PyArrow pour les données tabulaires ;
-- DuckDB et son extension spatiale pour inspecter et transformer les fichiers volumineux ;
-- pyogrio et Shapely pour les vecteurs ;
-- Rasterio/GDAL pour les rasters ;
-- psycopg `COPY` pour les chargements PostgreSQL ;
-- PostGIS pour les jointures et features spatiales canoniques.
+### 10.3 Bibliothèques
 
-Pandas/GeoPandas peuvent être utilisés ponctuellement lorsqu'une bibliothèque l'impose, mais ne constituent pas le moteur tabulaire principal.
+`httpx`, `tenacity`, `shapely`, `pyproj`, `pyshp`, `py7zr`, `ijson`, `minio`, psycopg 3 avec
+`COPY`. PostGIS fait les jointures spatiales. Rien d'autre : ni Polars, ni DuckDB, ni GDAL.
 
-### 10.4 Publication atomique
+### 10.4 Publication
 
-Un pipeline écrit d'abord une release non publiée. Les contrôles doivent réussir avant que le pointeur `active_release` soit déplacé dans une transaction courte.
-
-Une publication invalide le cache via un nouvel identifiant de release. Le rollback consiste à réactiver la release précédente, sans réimporter les données.
+Une release est importée non publiée ; l'acceptation est un jugement écrit dans
+`meta.dataset_release` ; la publication déplace un pointeur et reconstruit référentiel et tables
+de rendu dans une transaction (2 min 11 s pour DS-01 sur le 35). Le rollback réactive la release
+précédente sans réimport. Tenu.
 
 ### 10.5 Qualité
 
-Les Dagster Asset Checks couvrent :
-
-- schéma ;
-- nombre de lignes ;
-- couverture géographique ;
-- géométries invalides ;
-- doublons d'identifiants ;
-- taux d'appariement ;
-- distributions de features ;
-- valeurs aberrantes ;
-- fraîcheur ;
-- comparaison avec la release précédente.
+`meta.data_quality_check` (2 021 contrôles), `meta.attribute_quarantine` (40 892 lignes, BAN et
+DPE seulement — RNB, BDNB, BD TOPO, DVF, GPU, Géorisques n'écrivent aucune ligne de quarantaine
+par attribut), `meta.dataset_coverage_metric` par commune, rapports régénérables dans
+`docs/data/`. Pas de Dagster Asset Checks : les contrôles sont dans les scripts.
 
 ### 10.6 Résistance à la variété des sources
 
-**Règle applicable à tout pipeline nouveau ou modifié.**
+**Règle applicable à tout pipeline nouveau ou modifié.** Référencée par le Makefile,
+`progress.py`, `pin_dpe_release.py` et `pin_sup_release.py`.
 
 Une source publique n'est jamais uniforme. Sur le seul import DS-08, 184 documents d'un même
 producteur, au même format normalisé, ont présenté six variantes distinctes : un attribut
 obligatoire vide, un encodage non déclaré, des géométries invalides, une limitation de débit, une
-erreur au message illisible, et un type de document sans la couche attendue. Chacune, non prévue,
-a coûté un lot complet et une relance.
+erreur au message illisible, et un type de document sans la couche attendue. Ces cas sont
+inconnaissables d'avance ; ce qui est évitable, c'est de lancer un lot entier en supposant que
+tout ressemblera à l'échantillon testé.
 
-Ces cas sont **inconnaissables d'avance**. Ce qui est évitable, c'est de lancer un lot entier en
-supposant que tout ressemblera à l'échantillon testé.
+**Avant le premier lot** : inventorier la variété sur un échantillon dispersé, jamais sur les
+premiers éléments. Compter la présence de chaque couche ou colonne attendue, les encodages
+déclarés, les attributs obligatoires vides, les types de géométrie.
 
-#### Avant le premier lot
+**Pendant le lot** :
 
-**Inventorier la variété sur un échantillon dispersé**, jamais sur les premiers éléments — ils se
-ressemblent. Compter la présence de chaque couche ou colonne attendue, les encodages déclarés, les
-attributs obligatoires vides, les types de géométrie.
+1. Un élément échoue sans faire échouer le lot ; l'échec est consigné dans le manifeste ou le
+   rapport, pas seulement journalisé.
+2. Un échec passager (`429`, délai, connexion coupée) n'est pas un échec définitif : temporisation
+   croissante, puis code de sortie distinct pour qu'une relance soit une décision.
+3. Un service public se temporise, il ne s'insiste pas.
+4. Une valeur absente prend un repli documenté ou reste absente, jamais une valeur devinée ; la
+   provenance du repli est persistée.
+5. Un écrit progressif plutôt qu'un écrit final : un lot long reprend là où il s'est arrêté.
+6. Un message d'erreur nomme sa cause.
 
-#### Pendant le lot
-
-1. **Un élément échoue sans faire échouer le lot.** L'échec est consigné dans le manifeste ou le
-   rapport, pas seulement journalisé : taire un élément absent ferait passer une couverture
-   partielle pour une couverture complète.
-2. **Un échec passager n'est pas un échec définitif.** Un `429`, un délai dépassé, une connexion
-   coupée ne disent rien de l'élément — les consigner comme défectueux condamne des données
-   valides. Temporisation croissante, puis code de sortie distinct pour qu'une relance soit une
-   décision et non un oubli.
-3. **Un service public se temporise, il ne s'insiste pas.** Un `429` est une demande d'attendre.
-4. **Une valeur absente prend un repli documenté ou reste absente**, jamais une valeur devinée. La
-   provenance du repli est persistée, de sorte que le rapport distingue une donnée déclarée d'une
-   donnée reconstituée.
-5. **Un écrit progressif plutôt qu'un écrit final.** Un lot long doit reprendre là où il s'est
-   arrêté ; recommencer à zéro est tenable sur un département et rédhibitoire sur la France.
-6. **Un message d'erreur nomme sa cause.** Une bibliothèque peut lever une exception sans message
-   utile ; le type et le contexte sont joints avant de consigner.
-
-#### Un lot long annonce son avancement
-
-Un import départemental demande de trente minutes à deux heures. Sans repère, **un lot silencieux
-est indiscernable d'un lot bloqué** — et l'inverse noie autant : une ligne par élément sur 184
-documents empêche de voir où l'on en est.
-
-Tout lot de plus de quelques minutes émet une annonce par tranche de **10 %**, portant ce qu'il
-faut pour décider d'attendre ou d'intervenir :
+**Un lot long annonce son avancement** par tranche de 10 %, via `immo_pipelines.progress.Progress` :
 
 ```text
 [DS-08] 30 % · 55/184 · 0 échec · 12 min écoulées · ~28 min restantes
 ```
 
-`immo_pipelines.progress.Progress` le fournit. Deux points comptent :
+Le total est celui du travail restant, pas du catalogue ; l'estimation suppose un rythme constant,
+et l'écart avec le réel signale une temporisation.
 
-- **le total est celui du travail restant**, pas du catalogue. Sur une reprise, annoncer
-  « 145/184 » laisserait croire qu'il reste 39 éléments à lire alors qu'ils sont déjà sautés ;
-- **l'estimation suppose un rythme constant**, ce qui est faux quand un serveur limite le débit.
-  Un écart entre l'estimation et le réel est lui-même une information — c'est ainsi qu'on voit
-  qu'une temporisation s'est déclenchée.
+**Une reprise se fonde sur l'état écrit, pas sur un journal.** L'import DS-08 a été interrompu
+deux fois, dont une par un `make rebuild` lancé pour un autre ticket : une commande
+d'infrastructure est globale, aucun découpage de tickets ne protège d'elle. D'où le garde-fou
+`check-no-batch` du Makefile, et la règle : chaque élément est committé séparément, la reprise
+interroge la base.
 
-#### Un lot interactif n'est pas un lot de production
+**Un lot interactif n'est pas un lot de production.** L'import DS-08 a duré plusieurs heures,
+débit effondré de quarante documents à l'heure à deux en vingt minutes par limitation du
+producteur. Un lot partiel est un résultat exploitable dès lors que sa couverture est publiée ;
+présenter 152 documents sur 184 comme complets ne le serait pas.
 
-L'import DS-08 a demandé plusieurs heures pour 184 documents, et le débit s'est effondré en fin de
-lot : quarante documents à l'heure au début, deux en vingt minutes à la fin. La cause est connue —
-le producteur limite le débit et la temporisation s'accumule — mais le remède ne relève pas du
-script.
-
-**Ce fonctionnement est celui d'un import mené à la main, pas celui de la cible.** Trois choses le
-distinguent d'un pipeline de production, et elles sont toutes hors du périmètre d'un script :
-
-- **la parallélisation.** Un lot séquentiel attend chaque archive l'une après l'autre. Dagster
-  partitionne par `dataset × release × département` et peut traiter plusieurs partitions de front,
-  avec une concurrence bornée qui respecte le producteur au lieu de le subir.
-- **la planification.** Un import qui n'a pas à aboutir dans la session peut s'étaler, reprendre
-  la nuit, et céder le pas quand le producteur ralentit. Un lot lancé à la main ne le peut pas.
-- **l'absence d'interactivité.** Un lot surveillé impose d'attendre ; un asset planifié notifie.
-
-D'où [BUG-02](../docs/backlog/BUG-02-scripts-import-hors-dagster.md), qui porte les imports vers
-Dagster. Les scripts actuels sont une dette assumée : ils prouvent la donnée, ils ne sont pas le
-chemin cible.
-
-**En attendant, un lot partiel est un résultat exploitable** dès lors que sa couverture est
-publiée. 152 documents sur 184 suffisent à valider une chaîne de calcul ; ce qui ne serait pas
-acceptable, c'est de présenter cette couverture comme complète.
-
-#### Une reprise se fonde sur l'état écrit, pas sur un journal
-
-Un lot long est interrompu, et pas seulement par le réseau. L'import DS-08 l'a été deux fois : une
-coupure amont, puis un `make rebuild` lancé pour **un autre ticket**, qui recrée PostgreSQL et
-termine toutes les connexions en cours.
-
-Le second cas mérite d'être retenu : la contention entre travaux parallèles ne porte pas que sur
-les fichiers. Une commande d'infrastructure est globale, et aucun découpage de tickets ne protège
-d'elle.
-
-D'où la règle : **un import reprend en lisant ce qui est déjà en base**, pas en se fiant à un
-journal ou à un compteur en mémoire. Chaque élément est committé séparément, et la reprise
-interroge la base pour savoir ce qui reste. C'est ce qui a permis de ne rien perdre des 145
-documents déjà importés quand la connexion a été coupée.
-
-#### Ce que la règle interdit
-
-Réparer en silence. Une géométrie invalide est comptée et écartée, pas corrigée ; un encodage
-inconnu produit un repli qui ne peut pas échouer, pas une supposition ; un attribut manquant reste
-manquant avec son motif. **Un import qui masque la variété de sa source produit une couverture qui
-ment.**
+**Ce que la règle interdit** : réparer en silence. Une géométrie invalide est comptée et écartée,
+pas corrigée ; un attribut manquant reste manquant avec son motif. Un import qui masque la variété
+de sa source produit une couverture qui ment.
 
 ---
 
 ## 11. Tâches asynchrones applicatives
 
-Celery et Redis sont réservés aux tâches déclenchées par l'application :
-
-- génération d'exports ;
-- notifications et alertes ;
-- génération de documents ;
-- recalcul d'un scénario lourd ;
-- petits traitements bornés à une organisation.
-
-Dagster reste responsable des imports, features et recalculs régionaux.
-
-La code location chargée des imports est la seule composante data raccordée au réseau Docker
-`ingestion`, non interne, afin de télécharger les sources publiques. Elle conserve en parallèle
-ses accès aux réseaux internes `app` (PostgreSQL) et `data` (MinIO). L’API, Martin et les services
-web ne rejoignent pas ce réseau d’egress.
-
-Règles :
-
-- une tâche possède une clé d'idempotence ;
-- l'état durable est stocké dans PostgreSQL ;
-- Redis transporte les messages et caches temporaires ;
-- les retries sont bornés ;
-- les erreurs définitives sont visibles dans l'administration ;
-- aucune tâche régionale n'est lancée via Celery.
-
-Celery peut être omis du tout premier spike data. Il devient obligatoire avant les exports et alertes utilisateurs.
+Aucune. Celery n'a jamais été installé ; Redis tourne sans qu'aucun code s'y connecte. La règle
+« pas de Celery tant qu'il n'y a ni export ni alerte » reste ; le retrait de Redis du Compose est
+envisagé (§22) et non décidé.
 
 ---
 
-## 12. Authentification et autorisation
+## 12. Authentification et autorisation — gelées
 
-### 12.1 Identité
+Keycloak 26.7 fournit l'identité OIDC ; l'API valide les JWT RS256 (`PyJWKClient`, audience,
+issuer, claims requis) ; les rôles métier (`platform_admin`, `organization_admin`, `analyst`,
+`viewer`) viennent de `app.organization_membership`. Correctement écrit sur 4 routes. Les 41 autres
+ne déclarent aucune dépendance de principal. Côté client, `auth.ts` active le renouvellement
+silencieux sans `silent_redirect_uri` derrière un `X-Frame-Options: DENY` : la session expirera
+en boucle en production. Le realm contient zéro utilisateur ; deux comptes de dev sont provisionnés
+par script (`docs/operations/comptes-et-acces.md`).
 
-Keycloak est le fournisseur OIDC initial.
-
-- Authorization Code Flow avec PKCE ;
-- MFA activable ;
-- politiques de mot de passe gérées par le fournisseur ;
-- l'application ne stocke pas de mot de passe ;
-- accès token de courte durée ;
-- renouvellement selon les mécanismes OIDC sécurisés retenus.
-
-### 12.2 Autorisation
-
-Keycloak prouve l'identité. L'API décide des droits métier.
-
-Rôles initiaux :
-
-```text
-platform_admin
-organization_admin
-analyst
-viewer
-```
-
-Chaque accès à une ressource client vérifie l'appartenance à l'organisation et la permission demandée.
-
-### 12.3 Tuiles
-
-MapLibre ajoute le bearer token aux requêtes internes via `transformRequest`. Caddy vérifie la session auprès d'un endpoint léger avant de transmettre à Martin.
-
-Martin utilise une connexion PostgreSQL en lecture seule et ne reçoit jamais les claims utilisateur comme SQL libre.
+Ce que la version 0.1 prévoyait et qui n'existe pas : vérification de session par Caddy avant
+Martin, MFA, journal d'audit des accès sensibles (`audit.sensitive_access_event` est vide).
 
 ---
 
 ## 13. Stockage objet
 
-MinIO fournit le stockage compatible S3 à l'intérieur de la stack Docker. Il ne dépend d'aucun Object Storage managé pour le fonctionnement normal de l'application.
+MinIO en conteneur, bucket `raw-sources` avec 6 Go d'archives épinglées : c'est ce qui rend DS-02
+réimportable alors que le producteur écrase son fichier. Le backend ne référence pas MinIO ; seuls
+les pipelines l'utilisent.
 
-Buckets séparés :
-
-```text
-raw-sources        fichiers sources immuables
-derived-assets     PMTiles, extraits, artefacts calculés
-user-exports       exports temporaires par organisation
-documents          documents autorisés
-backups            exports chiffrés contrôlés
-```
-
-Règles :
-
-- versioning activé pour les sources ;
-- chiffrement au repos ;
-- URLs signées à durée courte pour les exports ;
-- cycle de vie et suppression par catégorie ;
-- aucun bucket public ;
-- checksum et métadonnées de provenance ;
-- séparation logique des exports par organisation.
-
-Les orthophotos complètes ne sont pas dupliquées sans besoin démontré. Le système conserve d'abord les métadonnées et utilise les services autorisés du producteur.
-
-Les buckets durables sont versionnés et répliqués vers une cible S3 hors site distincte. Cette cible sert à la reprise après sinistre ; elle n'est pas une dépendance du chemin de lecture nominal.
+**Envisagé, non décidé** : remplacer MinIO par un bucket S3 compatible chez l'hébergeur. L'audit
+§10.6 chiffre l'écart à un facteur 40 à 100 dès qu'on compte le second MinIO qu'exigerait la
+réplication hors site. Décision par ADR si la plateforme est dégelée ou si un déploiement devient
+nécessaire pour V2.
 
 ---
 
-## 14. Déploiement
+## 14. Déploiement — jamais exécuté
 
-Le contrat exécutable, l'arborescence IaC et les runbooks sont définis dans [DEPLOYMENT.md](./DEPLOYMENT.md).
+`DEPLOYMENT.md` décrit le contrat ; `infra/ansible/` et `.github/workflows/deploy-vps.yml`
+l'implémentent ; `docs/data/mvp-dod-traceability.md` constate « syntaxe validée, exécution externe
+absente ». Trois bloqueurs structurels, reproduits le 15 septembre :
+
+1. **Aucune image n'est construite ni poussée** ; `compose.prod.yaml` exige `API_IMAGE`,
+   `PIPELINES_IMAGE`, `WEB_IMAGE` que rien ne définit. Le rendu Compose de production échoue.
+2. **Aucune tâche ne fait arriver les données** : le runbook de reconstitution est local, et 29 Go
+   ne se réimportent pas en une session.
+3. **Les secrets sont installés `0400 root:root`** et bind-montés dans des conteneurs UID 10001 ;
+   macOS masque le défaut, Ubuntu ne le fera pas.
+
+S'y ajoutent : `ENV=production` codé en dur dans les quatre appels du workflow (choisir `staging`
+déploie en production), déploiement automatique sur tout merge de `main`, `ACME_EMAIL` jamais
+transmis à Caddy. Le workflow est rouge à chaque push depuis le 4 septembre.
+
+Le produit actif (V5) n'a besoin d'aucun déploiement. V2 en aura besoin s'il devient un envoi
+automatisé ; ce sera l'occasion de décider entre corriger ce chemin ou en choisir un plus court.
 
 ### 14.1 Local
 
-Docker Compose lance :
-
-- PostgreSQL/PostGIS ;
-- Redis ;
-- MinIO ;
-- Keycloak ;
-- API ;
-- Martin ;
-- Dagster webserver/daemon ;
-- worker Celery lorsqu'il est requis ;
-- Prometheus, Loki, Grafana et Alloy avec le profil d'observabilité ;
-- frontend Vite en développement.
-
-Les jeux de développement utilisent un extrait synthétique ou public réduit. Les données restreintes ne sont pas copiées localement.
-
-### 14.2 Production initiale
-
-Tous les services s'exécutent dans Docker Compose sur un VPS Ubuntu 24.04 LTS créé chez le fournisseur choisi, sans dépendance à une API cloud, une base, un Redis ou un Object Storage managés.
-
-```text
-Réseau fournisseur + pare-feu
-└── serveur Docker
-    ├── edge : Caddy, web, FastAPI, Martin, Keycloak
-    ├── data : PostgreSQL/PostGIS, Redis, MinIO
-    ├── jobs : Dagster, Celery worker/beat
-    ├── ops  : Prometheus, Loki, Grafana, Alloy
-    ├── stockage persistant PostgreSQL
-    └── stockage persistant MinIO
-```
-
-Seuls les ports 80 et 443 sont publics. L'administration SSH est filtrée. PostgreSQL, Redis, MinIO, Martin, Dagster et les workers ne publient aucun port sur l'interface publique.
-
-### 14.3 Environnements
-
-- `local` : données réduites ;
-- `test` : services éphémères en CI ;
-- `staging` : architecture proche de production, échantillon régional ;
-- `production` : données Bretagne complètes.
-
-Les serveurs, volumes, réseaux, bases, buckets MinIO, sauvegardes et secrets sont séparés entre staging et production.
-
-### 14.4 Infrastructure as Code
-
-- le VPS et le DNS sont créés chez le fournisseur choisi, hors de ce dépôt ;
-- Ansible prépare Ubuntu, installe Docker/Compose, prépare le stockage et déploie la stack ;
-- GitHub Actions orchestre le bootstrap initial et les déploiements idempotents par SSH ;
-- Ansible, SOPS et `age` sont figés dans une image opérateur Docker utilisée en local et en CI ;
-- Docker Compose décrit tous les workloads, y compris PostgreSQL, Redis, MinIO, Keycloak et l'observabilité ;
-- chaque workload ou processus long correspond à un service Compose et à un conteneur distinct ;
-- SOPS avec `age` chiffre les secrets versionnés ; la clé privée est conservée hors dépôt et hors serveur ;
-- aucune modification manuelle non documentée n'est considérée comme persistante ;
-- les images de production sont immuables et référencées par digest.
-
-### 14.5 Haute disponibilité
-
-Le serveur unique est acceptable pour le prototype et le pilote si cette limite est explicitement annoncée. Il est redéployable, mais il n'est pas hautement disponible.
-
-Avant le pilote :
-
-- archivage WAL PostgreSQL continu et sauvegarde complète quotidienne hors site ;
-- réplication versionnée des buckets MinIO hors site ;
-- restauration sur serveur vierge testée et chronométrée ;
-- supervision, alertes et procédure de rollback ;
-- volumes PostgreSQL et MinIO séparés du disque système.
-
-Avant une promesse contractuelle de disponibilité 99,5 % :
-
-- PostgreSQL répliqué avec bascule testée ;
-- stockage objet distribué ou répliqué sur un second site ;
-- au moins deux nœuds applicatifs derrière un load balancer ;
-- séparation et redondance de Keycloak ;
-- workers redondants ;
-- exercice de reprise documenté.
-
-Kubernetes n'est envisagé que si le nombre de services, l'équipe d'exploitation ou les besoins d'auto-scaling le justifient réellement.
+`make dev` démarre les 20 services. `compose.dev.yaml` ne monte aucun volume de code : toute
+modification backend ou pipeline impose `make rebuild`, qui recrée PostgreSQL. Un Mac 16 Go et
+100 Go de disque libre sont le plancher ; PostGIS tourne en émulation x86 sur arm64
+(`POSTGRES_PLATFORM=linux/amd64`), ce qui rend les mesures de performance locales non
+transposables.
 
 ---
 
 ## 15. Observabilité
 
-### 15.1 Standard
+Cinq conteneurs (Prometheus, Loki, Grafana, Alloy, node-exporter) pour : Prometheus qui scrute
+Caddy, Keycloak, node-exporter et lui-même — ni l'API, ni Martin, ni PostgreSQL, ni Dagster ;
+quatre règles d'alerte sans Alertmanager, donc routées nulle part ; un backend qui n'expose aucun
+`/metrics` et ne possède qu'un logger d'accès. Alloy monte le socket Docker en root.
 
-OpenTelemetry est le standard d'instrumentation pour :
-
-- traces distribuées ;
-- métriques ;
-- corrélation des logs ;
-- propagation d'un `request_id`.
-
-### 15.2 Outils
-
-- Prometheus : métriques ;
-- Loki : logs ;
-- Grafana : dashboards et alertes ;
-- instrumentation OTel FastAPI, psycopg, Celery et frontend lorsque pertinente ;
-- alertes de disponibilité externe.
-
-### 15.3 Métriques critiques
-
-API :
-
-- latence p50/p95/p99 ;
-- taux d'erreur ;
-- saturation du pool PostgreSQL ;
-- requêtes lentes ;
-- refus d'autorisation.
-
-Carte :
-
-- latence et taille des tuiles par zoom ;
-- taux de cache ;
-- erreurs de chargement MapLibre ;
-- temps avant première carte utile.
-
-Données :
-
-- durée des assets ;
-- partitions échouées ;
-- fraîcheur ;
-- couverture ;
-- taux d'appariement ;
-- évolution anormale des features ;
-- durée de publication.
-
-Métier :
-
-- nombre de candidats publiés ;
-- répartition des niveaux de confiance ;
-- utilisation par stratégie ;
-- taux de qualification.
-
-Les logs ne contiennent ni token, ni données personnelles inutiles, ni contenu de notes utilisateur par défaut.
+La version 0.1 annonçait OpenTelemetry ; rien n'est instrumenté. G7 (observabilité minimale) est
+gelé. `docker logs` suffit au produit actif.
 
 ---
 
 ## 16. Sécurité
 
-### 16.1 Réseau
+### 16.1 Tenu
 
-- seul Caddy publie les ports 80/443 et route les endpoints publics nécessaires, dont Keycloak ;
-- PostgreSQL, Redis, Martin, Dagster et workers restent privés ;
-- MinIO, Grafana et les consoles d'administration restent privés ou protégés par un accès administratif dédié ;
-- filtrage réseau par service ;
-- administration via bastion/VPN ou tunnel contrôlé ;
-- TLS obligatoire.
+Secrets par fichier et SOPS/age, aucun secret dans git, réseaux Compose `internal`,
+`no-new-privileges`, UID non-root, images épinglées par tag, aucune injection SQL, validation
+d'entrée rigoureuse, UFW et fail2ban dans les rôles Ansible.
 
-### 16.2 Secrets
+### 16.2 Défauts
 
-- SOPS avec `age` pour les secrets chiffrés et versionnés ;
-- clé privée `age` dans le secret CI et un coffre de reprise hors ligne, jamais dans Git ni sur le VPS ;
-- secrets matérialisés en fichiers `0400` par Ansible et montés via Compose sous `/run/secrets` ;
-- rotation documentée ;
-- credentials distincts par service ;
-- aucun secret dans les images, logs ou variables de CI affichées ;
-- comptes humains distincts des comptes de service.
+Voir §7.3 (API), §8 (tuiles), §9.3 (rôle base), §12 (OIDC client), §14 (secrets et workflow).
+Plus : API d'administration Caddy sur `0.0.0.0:2019` joignable depuis six conteneurs ; images de
+base en tags flottants (`python:3.13-slim`, `node:24-alpine`) donc builds non reproductibles ;
+aucun scan de vulnérabilité ; aucune CSP ; polices chargées depuis un CDN tiers ;
+`immo_admin_cidrs: 0.0.0.0/0` dans l'exemple de production.
 
-### 16.3 Application
-
-- contrôle d'objet systématique ;
-- limites de débit ;
-- taille maximale d'upload ;
-- validation MIME et contenu ;
-- protection CSRF selon le mécanisme de session ;
-- Content Security Policy compatible MapLibre ;
-- dépendances scannées ;
-- journal d'audit pour exports et données sensibles.
-
-### 16.4 Données
-
-- minimisation ;
-- rétention par catégorie ;
-- chiffrement ;
-- séparation par organisation ;
-- exports temporaires ;
-- suppression logique puis physique selon politique ;
-- aucune donnée propriétaire ou LOVAC dans les environnements non autorisés.
+Aucun de ces défauts ne touche le produit actif, qui n'expose rien. Tous bloquent un déploiement
+de la plateforme.
 
 ---
 
 ## 17. Tests et qualité
 
-### 17.1 Backend
+### 17.1 Ce qui tourne
 
-- Ruff pour formatage et lint ;
-- Pyright en mode strict ;
-- pytest ;
-- tests unitaires du domaine ;
-- tests d'intégration PostGIS ;
-- tests de migrations ;
-- tests de contrat OpenAPI ;
-- tests de sécurité des permissions ;
-- snapshots contrôlés des explications de score.
+`make check` en 9 secondes : Ruff lint et format, Pyright strict sur `backend/src` et
+`pipelines/src`, 119 tests backend, 334 tests pipelines, 71 tests scripts, `tsc -b`, `vite
+build`, vérification OpenAPI, rendu Compose, invariants de diff, budget documentaire.
 
-### 17.2 Données
+### 17.2 Ce qui ne tourne pas
 
-- Dagster Asset Checks ;
-- tests des adapters de schéma ;
-- fichiers golden réduits par source ;
-- tests de géométries et SRID ;
-- tests de reproductibilité ;
-- tests de non-régression des distributions ;
-- backtest sans fuite temporelle ;
-- test d'ablation des datasets/features.
+**Aucun test ne touche PostgreSQL.** Les 5 925 lignes de SQL des migrations, les politiques RLS,
+les fonctions PL/pgSQL, les ~150 requêtes `text()` de l'API et les 2 969 lignes de
+`spatial/importer.py` ne sont jamais exécutées par la CI. Douze fichiers de `backend/tests`
+vérifient par `grep` que le source contient des chaînes. BUG-09 (400 706 relations fausses) venait
+d'une ligne que 305 tests verts n'ont pas pu voir.
 
-### 17.3 Frontend
+Aucun test unitaire front ; 18 tests Playwright hors CI, contre un serveur Vite sans OIDC, dont 6
+dépendent d'identifiants réels en base. `pytest-cov` installé, jamais lancé.
 
-- Biome ;
-- `tsc --noEmit` ;
-- Vitest ;
-- React Testing Library ;
-- Playwright pour les parcours critiques ;
-- tests visuels ciblés de la carte ;
-- tests clavier et accessibilité.
+### 17.3 Ce qui est décidé
 
-### 17.4 Performance
-
-- test de charge API avec k6 ;
-- benchmark des fonctions MVT par zoom ;
-- contrôle de taille maximale de tuile ;
-- `EXPLAIN ANALYZE` versionné pour les requêtes critiques ;
-- test de déplacement rapide de carte sur un extrait régional complet.
+Pour V5 : tests sur fixture de chaque mesure du baromètre, dont « support insuffisant » et
+« cohorte non couverte » ; `recompte-preuve` avant publication. Pour tout dégel : un service
+PostGIS en CI et une dizaine de tests d'intégration sur migrations, RLS et requêtes spatiales,
+en remplacement des tests qui lisent le source.
 
 ---
 
 ## 18. CI/CD
 
-### 18.1 Pull request
-
-```text
-format/lint
-    ↓
-typecheck
-    ↓
-unit tests
-    ↓
-integration PostGIS/Redis
-    ↓
-frontend build
-    ↓
-OpenAPI compatibility
-    ↓
-container build + security scan
-```
-
-### 18.2 Déploiement
-
-- images immuables étiquetées par commit ;
-- manifeste de production épinglé par digest ;
-- déploiement automatique en staging ;
-- migrations compatibles avec la version précédente ;
-- validation manuelle pour production au MVP ;
-- health checks ;
-- rollback vers l'image précédente ;
-- changement de release data indépendant du déploiement applicatif.
-
-### 18.3 Dépendances
-
-- Renovate ouvre les mises à jour ;
-- les versions majeures ne sont pas fusionnées automatiquement ;
-- scan de vulnérabilités des images et lockfiles ;
-- SBOM générée pour les images de production.
+Un job GitHub Actions, 48 secondes : `make check`, puis `check-diff-invariants` et
+`check-commit-ticket` sur la plage poussée. Ne construit aucune image, ne démarre aucune pile, ne
+touche pas PostgreSQL, ne lance pas Playwright. `deploy-vps.yml` existe et échoue à chaque push
+(§14). Pas de Renovate, pas de SBOM, pas de scan.
 
 ---
 
 ## 19. Sauvegarde et reprise
 
-### Objectifs initiaux
+`scripts/backup-platform` fait un `pg_dump` de la base `immo` et copie les buckets MinIO dans
+`/srv/immo/backups` — sur la machine sauvegardée. Les bases `keycloak` et `dagster` ne sont pas
+sauvegardées. Aucune rétention, aucune copie hors site, aucun archivage WAL, restauration jamais
+exercée (`docs/operations/backup-restore.md` : RPO et RTO « non mesurés »). ADR-013 (sauvegardes
+hors du serveur cible) est acceptée et non appliquée.
 
-- RPO PostgreSQL cible : 15 minutes avec archivage WAL surveillé ;
-- RPO objets MinIO : 24 heures au maximum au prototype, puis mesure du retard de réplication ;
-- RTO prototype : une journée ouvrée, cible 4 heures après validation du runbook ;
-- les fichiers sources publics sont retéléchargeables mais leurs checksums et releases restent sauvegardés ;
-- les notes, statuts et scénarios utilisateur sont prioritaires.
-
-### Mécanismes
-
-- WAL-G intégré à l'image PostGIS : archivage continu des WAL et base backup quotidienne vers une cible S3 hors site ;
-- versioning et réplication hors site des buckets MinIO durables ;
-- métadonnées Keycloak et Dagster sauvegardées dans PostgreSQL ; realms, dashboards et politiques provisionnés depuis Git ;
-- sauvegardes extérieures au serveur décrit ;
-- infrastructure logicielle recréable par GitHub Actions, Ansible et Docker Compose ;
-- test de restauration trimestriel au minimum ;
-- runbook d'incident et de restauration détaillé dans [DEPLOYMENT.md](./DEPLOYMENT.md) ;
-- alerte si le dernier WAL archivé ou la réplication objet dépasse son objectif de fraîcheur.
+Pour le produit actif, la base locale du 35 est reconstituable depuis les sources et MinIO
+(`docs/operations/referentiel-local-35.md`) ; MinIO est le seul chemin durable vers les octets de
+DS-02. Une copie de `raw-sources` hors de ce poste est le minimum, non fait.
 
 ---
 
 ## 20. Performance et capacité
 
-### 20.1 Principe de dimensionnement
+Mesuré sur le 35 : base 29 Go, MinIO 6 Go, RSS des 16 conteneurs 4,4 Gio au repos, pic d'import
++3,7 Go, publication DS-01 2 min 11 s, `compute_urban_features` 16 min, import GPU effondré à deux
+documents par vingt minutes.
 
-La charge dominante n'est pas le nombre d'utilisateurs, mais :
-
-- les imports régionaux ;
-- les jointures spatiales ;
-- le calcul des features ;
-- la production de tuiles ;
-- le stockage des releases.
-
-L'API utilisateur reste relativement légère si les scores sont pré-calculés.
-
-### 20.2 Optimisations dans l'ordre
-
-1. index et requêtes PostGIS ;
-2. vues matérialisées et géométries simplifiées ;
-3. cache Martin ;
-4. PMTiles pour les couches immuables ;
-5. séparation lecture/écriture PostgreSQL ;
-6. réplique de lecture ;
-7. partitionnement physique ;
-8. mise à l'échelle horizontale des services ;
-9. plateforme orchestrée type Kubernetes seulement si nécessaire.
-
-### 20.3 Déclencheurs d'évolution
-
-| Symptôme mesuré | Évolution envisagée |
-|---|---|
-| tuiles p95 trop lentes malgré index | vue matérialisée ou PMTiles |
-| DB saturée par les tuiles | réplique de lecture dédiée à Martin |
-| import dépasse la fenêtre acceptable | workers Dagster séparés/plus puissants |
-| recherche textuelle insuffisante | OpenSearch ciblé |
-| API nécessite des déploiements indépendants fréquents | extraction d'un service justifié |
-| couverture nationale et historiques volumineux | partitionnement + stockage analytique ciblé |
-| plusieurs modèles ML en production | MLflow/registre de modèles et service d'inférence |
+Extrapolation à quatre départements (clé foncière ×4) : 120 Go de base, 150 à 200 Go avec
+millésimes et archives, 32 Go de RAM. Coûts d'hébergement estimés dans l'audit §10.6 : 25 à 45 €
+par mois pour le 35 avec une pile dégraissée, 49 à 113 € avec la pile actuelle. Rien de tout cela
+n'est nécessaire à V5.
 
 ---
 
-## 21. Machine learning et vision, hors MVP
+## 21. Machine learning et vision
 
-Aucune plateforme ML n'est installée au MVP.
-
-Lorsque le dataset interne est suffisant :
-
-- scikit-learn sert de baseline ;
-- LightGBM ou équivalent peut classer des features tabulaires ;
-- MLflow n'est ajouté que lorsqu'il existe plusieurs expériences/modèles à suivre ;
-- l'inférence du score tabulaire reste batch ;
-- PyTorch est réservé à la vision ;
-- les images et embeddings restent dans MinIO ;
-- chaque modèle possède une model card, un dataset versionné et un protocole hors échantillon.
-
-Le futur indice de vacance reste un modèle et un dataset séparés des stratégies d'investissement.
+Hors périmètre. Aucune plateforme ML, aucun modèle, aucune vision. La règle « pas de ML en
+production » reste. Le radar (V2) n'est pas un modèle : une fréquence observée sur une cohorte,
+sans combinaison de signaux.
 
 ---
 
-## 22. Choix écartés
+## 22. Choix écartés, et révisions envisagées
+
+### 22.1 Écartés, toujours valides
 
 | Choix écarté | Motif |
 |---|---|
-| Next.js | SSR/SEO peu utiles pour une application métier authentifiée et cartographique |
-| Google Maps comme socle | coût, personnalisation et dépendance fournisseur |
-| Leaflet | moins adapté au rendu vectoriel WebGL de nombreuses couches |
-| GeoServer au MVP | plus lourd que Martin pour le besoin MVT/PostGIS ciblé |
-| APIFlask | FastAPI offre un contrat OpenAPI/Pydantic plus direct pour ce projet |
-| SQLModel | séparation explicite entre modèles ORM et contrats API préférée |
-| MongoDB | modèle relationnel et spatial mieux servi par PostgreSQL/PostGIS |
-| Elasticsearch dès le départ | PostgreSQL couvre la recherche initiale |
-| Airflow | Dagster correspond mieux au modèle d'assets, partitions et qualité |
-| Celery pour les pipelines data | absence de lineage et de gestion d'assets |
-| Kubernetes au MVP | coût opérationnel disproportionné |
-| microservices métier | complexité de déploiement et transactions distribuées sans bénéfice initial |
-| scoring à chaque requête | latence, coût et faible reproductibilité |
-| stockage des rasters dans PostgreSQL | volumétrie et distribution mieux adaptées à MinIO |
+| Next.js | SSR et SEO sans valeur pour une application authentifiée |
+| Google Maps | coût, dépendance |
+| Leaflet | rendu vectoriel WebGL moins adapté |
+| GeoServer | plus lourd que Martin |
+| SQLModel | séparation ORM / contrats préférée — de fait, aucun ORM |
+| MongoDB | relationnel et spatial mieux servis par PostGIS |
+| Elasticsearch | `pg_trgm` suffit sur 437 k adresses, mesuré |
+| Airflow, Celery pour les pipelines | pas de lineage d'assets |
+| Kubernetes, microservices | disproportionnés |
+| Scoring à la requête | non reproductible |
+| Rasters en base | volumétrie |
+
+### 22.2 Envisagés par l'audit, non décidés
+
+Ces révisions demandent chacune une ADR. Elles sont listées pour qu'aucune ne soit faite en
+silence.
+
+| Révision | Motif | Condition |
+|---|---|---|
+| Retirer Redis | référencé par aucun code | immédiat, sans effet fonctionnel |
+| Retirer `dagster-webserver` et `dagster-daemon` | un asset, aucune route, aucun healthcheck | sans effet mesurable |
+| Retirer la stack d'observabilité | aucun scrutage utile, deux services root | `docker logs` suffit à V5 |
+| MinIO → S3 compatible | coût et réplication | si déploiement de V2 |
+| Keycloak → JWT signé par l'API | 539 Mio pour zéro utilisateur | si dégel sans multi-tenant |
+| Bind mounts en dev et service Vite | `make rebuild` recrée PostgreSQL | si dégel du front |
+| PostGIS natif arm64 en local | mesures non transposables | immédiat |
+| PostgreSQL 15 → 17 | fin de support 2027 | avant tout déploiement |
 
 ---
 
@@ -1168,68 +651,61 @@ Le futur indice de vacance reste un modèle et un dataset séparés des stratég
 
 | ID | Décision | Statut | Note |
 |---|---|---|---|
-| ADR-001 | Monolithe modulaire pour le métier | Acceptée | — |
-| ADR-002 | React/Vite plutôt que Next.js | Acceptée | — |
-| ADR-003 | FastAPI + SQLAlchemy plutôt qu'APIFlask/SQLModel | Acceptée | — |
+| ADR-001 | Monolithe modulaire pour le métier | Acceptée, gelée | — |
+| ADR-002 | React/Vite plutôt que Next.js | Acceptée, gelée | — |
+| ADR-003 | FastAPI + SQLAlchemy plutôt qu'APIFlask/SQLModel | Acceptée, gelée | — |
 | ADR-004 | PostgreSQL/PostGIS comme source de vérité | Acceptée | — |
-| ADR-005 | Martin pour les tuiles MVT | Acceptée | — |
-| ADR-006 | Dagster pour les pipelines régionaux | Acceptée | — |
-| ADR-007 | Celery limité aux tâches applicatives | Acceptée | — |
-| ADR-008 | Keycloak/OIDC pour l'identité | Acceptée | — |
-| ADR-009 | Tous les workloads dans Docker Compose sur VPS générique déployé par GitHub Actions et Ansible | Acceptée | — |
-| ADR-010 | Scoring régional pré-calculé et snapshots immuables | Acceptée | — |
+| ADR-005 | Martin pour les tuiles MVT | Acceptée, gelée | — |
+| ADR-006 | Dagster pour les pipelines régionaux | Acceptée, non appliquée (un asset) | — |
+| ADR-007 | Celery limité aux tâches applicatives | Acceptée, jamais installé | — |
+| ADR-008 | Keycloak/OIDC pour l'identité | Acceptée, gelée | — |
+| ADR-009 | Tous les workloads dans Docker Compose sur VPS générique déployé par GitHub Actions et Ansible | Acceptée, jamais exécutée | — |
+| ADR-010 | Scoring régional pré-calculé et snapshots immuables | Acceptée, gelée | — |
 | ADR-011 | Lambert-93 pour les calculs, WGS84 pour l'échange, Web Mercator pour les tuiles | Acceptée | — |
 | ADR-012 | Pas de ML ni de Kubernetes au MVP | Acceptée | — |
-| ADR-013 | Sauvegardes obligatoirement hors du serveur cible | Acceptée | — |
+| ADR-013 | Sauvegardes obligatoirement hors du serveur cible | Acceptée, non appliquée | — |
 | ADR-014 | SOPS + `age` pour les secrets versionnés | Acceptée | — |
 | ADR-015 | Boucle de développement : contrôle déterministe, recompte adversarial, verrou humain déclaré | Acceptée | [note](docs/decisions/ADR-015-boucle-autonome.md) |
 | ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
 
-Ce tableau est l'état courant : une ligne par décision. Le raisonnement n'y tient pas, il vit
-dans [`docs/decisions/`](docs/decisions/) — un fichier daté par décision, indiquant le contexte,
-les alternatives, la décision et les conséquences. Toute décision nouvelle, et toute modification
-d'une décision acceptée, s'y écrit ; la colonne `Note` porte le lien. Les motifs des alternatives
-écartées restent en §22, une cellule chacun.
+Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
+fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de
+raisonnement ; elles ne seront documentées que si elles sont révisées. Toute révision de §22.2
+s'écrit ici, avec son fichier.
 
 ---
 
 ## 24. Séquence d'implémentation
 
-1. Créer le monorepo, les toolchains et les fichiers Docker Compose commun/dev/prod.
-2. Créer le workflow GitHub Actions et les rôles Ansible, puis valider un bootstrap sur VPS vierge.
-3. Construire PostgreSQL/PostGIS avec WAL-G, migrations, schémas, rôles et sauvegarde hors site.
-4. Mettre en place MinIO, versioning, réplication hors site et métadonnées de releases.
-5. Créer les assets Dagster pour un dataset et un département.
-6. Étendre les partitions aux quatre départements bretons.
-7. Construire le référentiel parcelle/bâtiment/adresse.
-8. Exposer une première couche MVT via Martin.
-9. Créer la SPA MapLibre et afficher la Bretagne.
-10. Ajouter FastAPI, recherche et fiche entité.
-11. Implémenter features, scoring et publication atomique.
-12. Ajouter organisations, OIDC, notes et statuts.
-13. Ajouter scénarios, exports et Celery.
-14. Déployer staging puis production, restaurer sur un second serveur vierge et mesurer RPO/RTO.
-15. Mesurer avant toute optimisation ou extraction de service.
+Celle d'ADR-016 :
+
+1. H1 — mesures du baromètre, reproductibles, recomptées.
+2. H2 — document publiable par EPCI.
+3. H3 — cinq professionnels ; verrou humain.
+4. H4 — avis juridique ; verrou humain, en parallèle.
+5. H5 — radar hebdomadaire, colonnes fixées par H4.
+6. ADR de sortie de H3 : poursuivre, ouvrir V1 ou V3, dégeler, arrêter.
+
+Rien d'autre ne démarre. Les révisions de §22.2 se décident au moment où un déploiement ou un
+dégel les rend nécessaires, pas avant.
 
 ---
 
-## 25. Definition of Done architecture MVP
+## 25. Definition of Done architecture
 
-- environnement local reproductible avec une commande documentée ;
-- tous les services de runtime s'exécutent dans Docker, sans base ni cache managés ;
-- un VPS Ubuntu vierge est configuré par GitHub Actions et Ansible sans intervention dans les conteneurs ;
-- base PostgreSQL/PostGIS migrée automatiquement ;
-- rôles et isolation des organisations testés ;
-- une release de données peut être importée, validée, publiée et annulée ;
-- les pipelines sont partitionnés sur les quatre départements ;
-- le score publié est reproductible ;
-- Martin ne peut lire que les vues autorisées ;
-- la carte utilise des MVT et ne télécharge pas un GeoJSON régional complet ;
-- l'API OpenAPI génère le client TypeScript ;
-- les tâches longues ne bloquent pas les processus web ;
-- sauvegarde PostgreSQL, réplication MinIO et restauration sur serveur vierge sont testées ;
-- traces, métriques et logs sont corrélés ;
-- les parcours critiques passent en CI ;
-- le déploiement staging et le rollback sont automatisés ;
-- les sauvegardes et la clé de reprise sont conservées hors du serveur cible ;
-- aucun composant hors MVP, notamment ML ou Kubernetes, n'est requis pour lancer le produit.
+### 25.1 Produit actif
+
+- toute mesure publiée se régénère par une commande `make`, à l'identique ;
+- tout import porte manifeste, SHA-256, version de transformation, run idempotent ;
+- tout chiffre de `docs/data/` porte son filtre, son effectif, sa date, et a passé le recompte ;
+- aucune donnée nominative dans le baromètre ; colonnes du radar bornées par l'avis juridique ;
+- la séquence de reconstitution du 35 couvre les neuf datasets et les calculs dérivés.
+
+### 25.2 Conditions de dégel de la plateforme
+
+- authentification sur toutes les routes hors `/health` ; rôle base de moindre privilège ;
+  `statement_timeout` ; bbox bornée ;
+- un service PostGIS en CI et des tests d'intégration sur migrations, RLS et requêtes spatiales ;
+- une sauvegarde hors site, une restauration chronométrée ;
+- une chaîne de build et de publication d'images, un déploiement exécuté une fois ;
+- une décision écrite sur chaque ligne de §22.2.

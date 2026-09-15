@@ -1,12 +1,13 @@
-# Nice to have — après un score publié
+# Nice to have — après un abonné
 
-**État :** aucun de ces items ne démarre avant [E3](./E3-publier-snapshots.md), c'est-à-dire avant
-qu'un top-N réel soit publiable sur le 35.
+**État :** aucun de ces items ne démarre avant qu'un professionnel du 35 paie le baromètre ou le
+radar ([H3](./H3-entretiens-professionnels-barometre.md), [H5](./H5-radar-mise-en-vente.md)). Ils
+supposaient tous la plateforme, gelée par [ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) ;
+ils sont conservés pour ne pas être redécouverts, pas pour être planifiés.
 
-La raison n'est pas dogmatique : chacun de ces items suppose connu quelque chose qui ne l'est pas
-encore. Un export sert à exporter un classement qui n'existe pas ; une alerte prévient d'un
-changement de score qui n'est jamais calculé ; une collaboration organise le travail sur des
-candidats absents. Les construire avant reviendrait à figer des choix sur des hypothèses.
+La raison n'est pas dogmatique : chacun suppose connu quelque chose qui ne l'est pas. Un export
+sert à exporter un classement qui n'existe pas ; une alerte prévient d'un changement de score
+jamais calculé ; une collaboration organise le travail sur des candidats absents.
 
 ## Should — valeur pour le pilote, hors DoD stricte
 

@@ -1,73 +1,64 @@
 # Immo Opportunities
 
-Plateforme B2B de détection et de qualification de candidats immobiliers en Bretagne.
+Intelligence de marché immobilier à partir de données publiques, sur l'Ille-et-Vilaine. Le
+produit décidé le 15 septembre 2026 ([ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md))
+est un **baromètre du marché par EPCI**, puis un **radar hebdomadaire de mise en vente** fondé sur
+le dépôt des diagnostics énergétiques. La plateforme cartographique écrite avant cette décision
+existe dans le dépôt et est gelée.
 
-- [Spécification produit](./SPEC.md)
-- [Architecture](./ARCHITECTURE.md)
-- [Versions d’implémentation](./docs/versions/README.md)
+- [Spécification produit](./SPEC.md) — version 1.0, provisoire jusqu'aux premiers entretiens
+- [Architecture](./ARCHITECTURE.md) — ce qui existe, ce qui est gelé, ce qui est défectueux
+- [Audit du 15 septembre 2026](./docs/audit-critique-2026-09-15.md) — pourquoi
+- [Backlog et chemin critique](./docs/backlog/README.md)
 - [Rapports de données](./docs/data/README.md)
-- [Déploiement](./DEPLOYMENT.md)
+- [Reconstituer la base du 35](./docs/operations/referentiel-local-35.md)
+
+## État en une ligne
+
+Référentiel spatial du 35 accepté (1,33 M parcelles, 515 k bâtiments physiques), quatre sources
+métier importées en `display_only` (285 k mutations, 208 k DPE), aucun utilisateur, aucun score
+publié, aucun déploiement. Prochaine étape : [H1](./docs/backlog/H1-barometre-marche-35-mesures.md),
+le baromètre.
 
 ## Prérequis
 
-- Docker Engine avec Compose v2 ;
-- Python 3.13 géré par `uv 0.10.6` ;
-- Node.js 24 et pnpm 10.33.
+- Docker Engine avec Compose v2, 16 Go de RAM et 100 Go de disque libre pour la base du 35 ;
+- Python 3.13 géré par `uv` ;
+- Node.js 24 et pnpm 10 (plateforme gelée seulement).
 
 ## Développement local
-
-Préparer les dépendances et exécuter les contrôles sans démarrer la stack :
 
 ```bash
 uv sync --all-packages --all-groups
 pnpm install
-make check
+make check          # lint, typecheck, 524 tests, OpenAPI, Compose, invariants — 9 s, sans base
+make dev            # démarre les 20 services ; la base part vide
 ```
 
-Démarrer tous les services :
+La base ne se versionne pas : la séquence qui la reconstitue est dans
+[`docs/operations/referentiel-local-35.md`](./docs/operations/referentiel-local-35.md).
 
-```bash
-make dev
-```
-
-Points d’entrée locaux :
-
-| Service | Adresse |
-|---|---|
-| Application via Caddy | <http://localhost:8080> |
-| API directe | <http://localhost:18000/docs> |
-| Martin | <http://localhost:13000> |
-| Dagster | <http://localhost:13001> |
-| MinIO | <http://localhost:9001> |
-| Keycloak | <http://localhost:18081/auth/> |
-| Grafana | <http://localhost:3000> |
-
-Les secrets locaux sont générés dans `secrets/dev` et ne doivent jamais être utilisés hors développement.
+Points d'entrée locaux : application via Caddy sur <http://localhost:8080> (utiliser ce nom
+d'hôte, pas `127.0.0.1`), API sur <http://localhost:18000/docs>, Dagster sur
+<http://localhost:13001>, MinIO sur <http://localhost:9001>, Keycloak sur
+<http://localhost:18081/auth/>, Grafana sur <http://localhost:3000>.
 
 ## Commandes principales
 
 ```bash
-make check          # Python, frontend, OpenAPI et Compose
-make openapi        # régénérer contracts/openapi/v1.json
-make migrate        # rejouer les migrations dans un conteneur éphémère
-make cadastre-fixture # vérifier DS-01 sur PostGIS et MinIO, sans publication
-make mvt-benchmark  # mesurer les p95 MVT froids et chauds
-make e2e            # tester recherche, carte, liste, fiche et URL dans Chromium
-make smoke          # vérifier une stack démarrée
-make down           # arrêter la stack
+make check                # contrôles de qualité, sans base
+make backlog              # régénère docs/backlog/README.md
+make dod ID=<ticket>      # ce qui est mécanisable de la DoD d'un ticket
+make rebuild              # reconstruit les images ; recrée PostgreSQL, vérifier qu'aucun lot ne tourne
+make dvf-import           # exemples d'imports ; liste complète dans le Makefile et le runbook
+make exploratory-candidates COMMUNE=35051
+make biens-en-vente COMMUNE=35051
 ```
 
-## Cadastre DS-01
+Les cibles du baromètre (`market-barometer`, `market-barometer-kit`) arrivent avec H1 et H2.
 
-Le pipeline cadastral est partitionné dynamiquement dans Dagster par release et département. La
-release cible du 35 est `2026-06-01 | 35`. Son import reste invisible de l’API et des tuiles tant
-qu’elle n’a pas été explicitement acceptée puis publiée.
+## Règles
 
-Après publication, une parcelle et toute sa provenance sont consultables avec :
-
-```text
-GET /api/v1/cadastre/parcels/{identifiant_cadastral}
-```
-
-La procédure d’import, d’acceptation et de rollback est documentée dans
-[`v0.2-cadastre-35.md`](./docs/versions/v0.2-cadastre-35.md#exploitation-locale).
+Toute modification de code passe par un ticket de `docs/backlog/`. Les règles non négociables
+(valeur manquante jamais convertie en zéro, aucun seuil inventé, checksum avant import, recompte
+avant publication) sont dans [`CLAUDE.md`](./CLAUDE.md).

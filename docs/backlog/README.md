@@ -1,13 +1,12 @@
-# Backlog d'exécution — clôture du MVP
+# Backlog d'exécution
 
-**Date :** 4 septembre 2026
-**Périmètre :** ce qu'il reste à faire pour atteindre la Definition of Done du MVP
-([`SPEC.md` §26](../../SPEC.md#26-definition-of-done-du-mvp)) et la DoD architecture
-([`ARCHITECTURE.md` §25](../../ARCHITECTURE.md#25-definition-of-done-architecture-mvp)).
+**Périmètre :** ce qu'il reste à faire pour livrer le produit décidé par
+[ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) — le baromètre du 35, puis
+le radar de mise en vente — et ce qui est gelé avec la plateforme.
 
-Ce dossier est un **plan d'exécution**, pas une source de vérité produit. L'ordre des sources reste :
-`SPEC.md` → `ARCHITECTURE.md` → [`docs/versions/`](../versions/) → [`contracts/`](../../contracts/) →
-[`docs/data/mvp-dod-traceability.md`](../data/mvp-dod-traceability.md).
+Ce dossier est un **plan d'exécution**, pas une source de vérité produit. L'ordre des sources :
+`SPEC.md` → `ARCHITECTURE.md` → [`docs/decisions/`](../decisions/) → [`contracts/`](../../contracts/) →
+[`docs/data/`](../data/).
 
 ## Verdict d'état — 15 septembre 2026
 
@@ -180,9 +179,9 @@ dérivée du graphe de dépendances.
 | [H3](./H3-entretiens-professionnels-barometre.md) | Présenter le baromètre à cinq professionnels, et recueillir ce qu'ils paieraient | V5 | H2 | M | À faire | attend H2 |
 | [H4](./H4-avis-juridique-donnees.md) | Obtenir un avis juridique écrit sur l'usage des données, préalable au radar | V2 | A7 | S | À faire | **verrou humain** |
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
-| [H6](./H6-reecrire-spec.md) | Réécrire SPEC.md autour de l'intelligence de marché et du radar | transverse | H3 | M | À faire | attend H3 |
+| [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
 
-**44/78 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H1.
+**45/78 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H1.
 
 ### Verrous humains
 

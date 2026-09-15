@@ -1,56 +1,44 @@
-# Versions d’implémentation
+# Versions d'implémentation
 
-Ce dossier découpe le MVP défini dans [`SPEC.md`](../../SPEC.md) en incréments verticaux livrables.
+Ce dossier découpe en incréments verticaux ce qui a été livré avant le 15 septembre 2026. Depuis
+[ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md), le produit n'est plus la
+plateforme que ces versions construisaient : il est porté par la série de tickets `H` du
+[backlog](../backlog/README.md), sans numéro de version.
 
-Ces numéros désignent des **versions d’implémentation**, pas des versions de la spécification produit. `SPEC.md` reste la source de vérité pour le périmètre produit, les exigences `FR-*`, les datasets `DS-*`, les features et les règles de conformité. [`ARCHITECTURE.md`](../../ARCHITECTURE.md) reste la source de vérité pour les choix techniques et les ADR.
+`SPEC.md` reste la source de vérité produit, `ARCHITECTURE.md` la source de vérité technique.
 
 ## Règles de suivi
 
-- Une version ne commence que lorsque ses dépendances obligatoires sont terminées. **C'est la
-  seule contrainte d'ordre entre versions.**
-- Plusieurs versions peuvent être `En cours` simultanément si aucune ne dépend de l'autre.
-  L'ancienne règle « une seule version `En cours` » a été retirée le 14 septembre 2026 : elle
-  était plus restrictive que le graphe réel et bloquait des tickets sans dépendance — `G6`
-  exploitation et `G7` observabilité n'attendent rien de technique, seulement leur étiquette de
-  version.
-- Un item n’est terminé que si son test et son élément de preuve existent.
-- Une version terminée devient immuable. Toute correction ultérieure est documentée dans la version active.
-- Les décisions qui modifient une ADR nécessitent une nouvelle note ADR.
-- Les données simulées doivent rester explicitement identifiées et ne peuvent satisfaire un critère lié aux données réelles.
+- Une version terminée est immuable : ses fichiers sont de l'historique.
+- Une version gelée conserve son fichier tel quel ; son en-tête dit qu'elle est gelée et par quoi.
+- Un item n'est terminé que si son test et sa preuve existent.
+- Les données simulées ne satisfont jamais un critère lié aux données réelles.
 
-États possibles : `À faire`, `En cours`, `Bloquée`, `Terminée`, `Abandonnée`.
-
-Le code livré en avance sur une dépendance ne vaut pas avancement : une version dont les critères
-dépendent d'une donnée absente reste `Bloquée` avec son motif, jamais `En cours`. C'est cette
-règle-là qui empêche d'avancer à vide, pas le décompte des versions ouvertes. La seule version
-`En cours` au 14 septembre 2026 est **v0.5 — Données métier**, v0.3 et v0.4 ayant été clôturées.
+États : `À faire`, `En cours`, `Bloquée`, `Gelée`, `Terminée`, `Abandonnée`.
 
 ## Tableau de suivi
 
-| Version | État | Dépend de | Résultat principal |
-|---|---|---|---|
-| [v0.1 — Foundation](./v0.1-foundation.md) | Terminée | — | Socle backend et data exécutable |
-| [v0.2 — Cadastre 35](./v0.2-cadastre-35.md) | Terminée | v0.1 | Première release réelle importée et auditée |
-| [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | Terminée | v0.2 | Parcelles, bâtiments et adresses résolus |
-| [v0.4 — Carte réelle](./v0.4-real-map.md) | Terminée | v0.3 | Explorer connecté à PostGIS et Martin |
-| [v0.5 — Données métier](./v0.5-market-data.md) | En cours | v0.3 | Marché, énergie, urbanisme et risques disponibles |
-| [v0.6 — Scoring](./v0.6-scoring.md) | Bloquée (profiling v0.5) | v0.5 | Deux classements explicables et reproductibles |
-| [v0.7 — MVP connecté](./v0.7-connected-mvp.md) | Bloquée (publication v0.6) | v0.4, v0.6 | Workflow utilisateur complet et multi-tenant |
-| [v0.8 — Pilote Bretagne](./v0.8-brittany-pilot.md) | Bloquée (données 35 et terrain) | v0.7 | Couverture régionale et validation professionnelle |
+| Version | État | Résultat |
+|---|---|---|
+| [v0.1 — Foundation](./v0.1-foundation.md) | Terminée | socle backend, données, CI |
+| [v0.2 — Cadastre 35](./v0.2-cadastre-35.md) | Terminée | DS-01 importé, accepté, publié |
+| [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | Terminée | parcelles, bâtiments physiques, adresses ; revue B4 ; résultats négatifs établis |
+| [v0.4 — Carte réelle](./v0.4-real-map.md) | Terminée | Explorer connecté à PostGIS et Martin |
+| [v0.5 — Données métier](./v0.5-market-data.md) | Gelée — DS-06 à DS-09 importés en `display_only` ; D6 et D7 suspendus | DVF, DPE, GPU, Géorisques sur le 35 |
+| [v0.6 — Scoring](./v0.6-scoring.md) | Gelée par ADR-016 | moteur écrit, jamais appelé ; listes E8 et E8f produites |
+| [v0.7 — MVP connecté](./v0.7-connected-mvp.md) | Gelée par ADR-016 | workflow et multi-tenant écrits, sans candidat |
+| [v0.8 — Pilote Bretagne](./v0.8-brittany-pilot.md) | Gelée par ADR-016 | socle régional écrit, jamais déployé |
+| Série H — baromètre et radar | En cours | [H1 à H6](../backlog/README.md#h--intelligence-de-marché-puis-radar-adr-016) |
 
-## Passage d’une version à la suivante
+## Clôture d'une version
 
-Pour clôturer une version :
+1. Exécuter les contrôles de sa section « Tests obligatoires ».
+2. Lier rapports, captures et sorties dans « Preuves de livraison ».
+3. Cocher la Definition of Done.
+4. Passer la version à `Terminée` ici.
 
-1. Exécuter tous les contrôles indiqués dans sa section « Tests obligatoires ».
-2. Ajouter les liens vers les rapports, captures, métriques ou sorties dans « Preuves de livraison ».
-3. Vérifier la démonstration attendue sur un environnement propre.
-4. Cocher toute la Definition of Done.
-5. Passer la version à `Terminée` ici et la suivante à `En cours`.
+## Références
 
-## Références transversales
-
-- [Roadmap produit](../../SPEC.md#21-plan-de-validation-et-roadmap)
-- [Definition of Done du MVP](../../SPEC.md#26-definition-of-done-du-mvp)
-- [Séquence d’implémentation](../../ARCHITECTURE.md#24-séquence-dimplémentation)
-- [Definition of Done architecture](../../ARCHITECTURE.md#25-definition-of-done-architecture-mvp)
+- [Roadmap](../../SPEC.md#21-plan-et-roadmap)
+- [Definition of Done](../../SPEC.md#26-definition-of-done)
+- [Séquence d'implémentation](../../ARCHITECTURE.md#24-séquence-dimplémentation)
