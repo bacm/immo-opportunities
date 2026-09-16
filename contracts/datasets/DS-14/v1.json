@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-14",
+  "contract_version": 1,
+  "name": "Recensement de la population : populations de référence et logements",
+  "producer": "INSEE",
+  "homepage": "https://www.insee.fr/fr/metadonnees/source/serie/s1321",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false,
+    "attribution": "Insee, recensement de la population"
+  },
+  "release": {
+    "key_format": "rp-YYYY",
+    "discovery_url": "https://api.insee.fr/melodi/catalog/all",
+    "preferred_format": "Melodi CSV distribution (zip), archived before import",
+    "partition_dimensions": [
+      "release",
+      "department"
+    ],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true,
+    "access_note": "Fichier national de l'INSEE ; l'URL n'est pas datée ou peut être republiée : la copie archivée nommée au manifeste fait foi, contrainte par son SHA-256 (SPEC §13.9)."
+  },
+  "coverage": {
+    "country": "FR",
+    "initial_departments": [
+      "35"
+    ],
+    "granularity": "commune",
+    "geography_vintage": 2025
+  },
+  "layers": {
+    "population": {
+      "target": "observation.territorial_indicator",
+      "melodi_dataset": "DS_POPULATIONS_REFERENCE",
+      "required_columns": [
+        "GEO",
+        "GEO_OBJECT",
+        "POPREF_MEASURE",
+        "TIME_PERIOD",
+        "OBS_VALUE"
+      ],
+      "indicators": {
+        "population_municipale": "PMUN",
+        "population_comptee_a_part": "PCAP",
+        "population_totale": "PTOT"
+      },
+      "unit": "habitants"
+    },
+    "housing": {
+      "target": "observation.territorial_indicator",
+      "melodi_dataset": "DS_RP_LOGEMENT_PRINC",
+      "required_columns": [
+        "GEO",
+        "GEO_OBJECT",
+        "OCS",
+        "TDW",
+        "RP_MEASURE",
+        "L_STAY",
+        "CARS",
+        "CARPARK",
+        "NOR",
+        "TSH",
+        "BUILD_END",
+        "NRG_SRC",
+        "TIME_PERIOD",
+        "OBS_VALUE"
+      ],
+      "indicators": {
+        "logements_total": "OCS=_T, TDW=_T",
+        "residences_principales": "OCS=DW_MAIN",
+        "residences_secondaires_occasionnelles": "OCS=DW_SEC_DW_OCC",
+        "logements_maisons": "TDW=1",
+        "logements_appartements": "TDW=2"
+      },
+      "unit": "logements",
+      "excluded": {
+        "DW_VAC": "logements vacants : vacance retirée du produit, SPEC §12"
+      },
+      "value_note": "estimations pondérées du recensement, conservées non arrondies"
+    }
+  },
+  "decision": "docs/decisions/ADR-023-sources-territoriales.md",
+  "field_policy": {
+    "missing_value": "commune absente de la source : source_value_missing, jamais zéro",
+    "parcel_join": "administrative only; a commune value is never a parcel measurement"
+  },
+  "quality_checks": [
+    {
+      "code": "checksum",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "schema",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "commune_coverage",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": false
+    }
+  ],
+  "publication": {
+    "atomic_pointer_scope": "release_department",
+    "acceptance_report_required": true,
+    "product_role": "plateforme, segmentation (E6) ; hors baromètre et radar"
+  },
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "observations": "append-only by release"
+  }
+}

@@ -465,6 +465,7 @@ Le rôle de chaque source dans le produit est en `SPEC.md` §13.1 ; ici, son ét
 | DS-09 | Géorisques | `display_only` |
 | DS-10 à DS-12 | Sitadel, MAJIC PM, BODACC/Sirene | réservés, aucun contrat |
 | DS-13 | DPE neufs | `display_only`, 39 072 diagnostics, 18 671 conservés, rattachés au bâtiment à 24 % ; même table que DS-07, filtré hors des mesures (ADR-021) |
+| DS-14 à DS-16 | Recensement, BPE, aires d'attraction | `display_only`, 332 communes sur 332, `observation.territorial_indicator` (ADR-023) ; [rapport](docs/data/territorial-variables-35.md) |
 
 ---
 
@@ -699,6 +700,7 @@ silence.
 | ADR-020 | L'unité analysée reste la parcelle, sans regroupement, en attendant E1 | Acceptée | [note](docs/decisions/ADR-020-unite-analysee-parcelle.md) |
 | ADR-021 | Les DPE de logements neufs entrent comme source distincte DS-13, hors de toute mesure | Acceptée | [note](docs/decisions/ADR-021-dpe-logements-neufs.md) |
 | ADR-022 | Une release remplacée se retire sur décision explicite, tracée ; la purge couvre toutes ses tables | Acceptée | [note](docs/decisions/ADR-022-retrait-des-releases-remplacees.md) |
+| ADR-023 | Trois sources communales de l'INSEE (DS-14 à DS-16) pour segmenter les marchés, table d'observations dédiée ; pôle = commune-centre de l'aire | Acceptée | [note](docs/decisions/ADR-023-sources-territoriales.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de

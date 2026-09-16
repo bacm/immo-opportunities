@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "DS-16",
+  "contract_version": 1,
+  "name": "Zonage en aires d'attraction des villes 2020",
+  "producer": "INSEE",
+  "homepage": "https://www.insee.fr/fr/information/4803954",
+  "licence": {
+    "name": "Licence Ouverte 2.0",
+    "spdx_like_id": "etalab-2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "commercial_reuse": true,
+    "derivatives_allowed": true,
+    "personal_data": false,
+    "attribution": "Insee, zonage en aires d'attraction des villes 2020"
+  },
+  "release": {
+    "key_format": "aav2020-geoYYYY",
+    "discovery_url": "https://www.insee.fr/fr/information/4803954",
+    "preferred_format": "XLSX composition file, archived before import",
+    "partition_dimensions": [
+      "release",
+      "department"
+    ],
+    "checksum_algorithm": "sha256",
+    "latest_alias_forbidden_for_reproducible_imports": true,
+    "access_note": "Fichier national de l'INSEE ; l'URL n'est pas datée ou peut être republiée : la copie archivée nommée au manifeste fait foi, contrainte par son SHA-256 (SPEC §13.9)."
+  },
+  "coverage": {
+    "country": "FR",
+    "initial_departments": [
+      "35"
+    ],
+    "granularity": "commune",
+    "geography_vintage": 2025
+  },
+  "layers": {
+    "areas": {
+      "target": "observation.territorial_indicator",
+      "sheets": {
+        "AAV2020": [
+          "AAV2020",
+          "LIBAAV2020",
+          "TAAV2017",
+          "TDAAV2017",
+          "NB_COM"
+        ],
+        "Composition_communale": [
+          "CODGEO",
+          "LIBGEO",
+          "AAV2020",
+          "LIBAAV2020",
+          "CATEAAV2020",
+          "DEP",
+          "REG"
+        ]
+      },
+      "indicators": {
+        "aav_code": "AAV2020",
+        "aav_categorie": "CATEAAV2020",
+        "aav_tranche_taille": "TAAV2017",
+        "aav_commune_centre": "CODGEO where CATEAAV2020=11 in the same area",
+        "aav_distance_centre_m": "distance between Lambert-93 centroids of the commune and its centre commune, DS-01 reference.area"
+      }
+    }
+  },
+  "decision": "docs/decisions/ADR-023-sources-territoriales.md",
+  "field_policy": {
+    "missing_value": "commune absente de la source : source_value_missing, jamais zéro",
+    "parcel_join": "administrative only; a commune value is never a parcel measurement"
+  },
+  "pole_policy": "Le pôle d'une commune est la commune-centre (CATEAAV2020 = 11) de son aire ; hors attraction : not_applicable ; commune-centre hors du référentiel importé ou hors de France : source_value_missing. Aucun seuil (ADR-023).",
+  "quality_checks": [
+    {
+      "code": "checksum",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "schema",
+      "version": "1",
+      "scope": "asset",
+      "blocks_publication": true
+    },
+    {
+      "code": "commune_coverage",
+      "version": "1",
+      "scope": "commune",
+      "blocks_publication": false
+    }
+  ],
+  "publication": {
+    "atomic_pointer_scope": "release_department",
+    "acceptance_report_required": true,
+    "product_role": "plateforme, segmentation (E6) ; hors baromètre et radar"
+  },
+  "retention": {
+    "raw_assets": "permanent and immutable",
+    "observations": "append-only by release"
+  }
+}

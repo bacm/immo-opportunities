@@ -24,6 +24,7 @@ IMPORTERS = (
     "import_gpu_release.py",
     "import_dpe_release.py",
     "import_georisques_release.py",
+    "import_territorial_release.py",
 )
 
 

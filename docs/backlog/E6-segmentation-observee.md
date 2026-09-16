@@ -28,6 +28,15 @@ fausse précision.
    **152 communes seulement** atteignent 30 ventes de maison exploitables sur cinq ans, et un
    segment bien tracé doit en faire bénéficier les 180 autres.
 
+### Ce que D7 a livré, et ce qui manque — 16 septembre 2026
+
+Population, logements (2023), équipements (BPE 2025), aire d'attraction et distance à sa
+commune-centre sont en base, dans `observation.territorial_indicator`, avec leurs distributions
+dans [`territorial-variables-35.md`](../data/territorial-variables-35.md). La **classification
+littorale** n'y est pas : elle n'existe que comme liste de 24 codes INSEE écrite en dur dans
+`pipelines/scripts/draw_review_sample.py`, sans la requête qui l'a produite. La reconstituer
+depuis la limite terre-mer de la BD TOPO fait partie de ce ticket.
+
 ## Ce que ce ticket ne doit pas faire
 
 - **Prédire.** Segmenter regroupe des communes comparables pour y calculer des médianes

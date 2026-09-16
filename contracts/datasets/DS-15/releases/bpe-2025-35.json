@@ -1,0 +1,30 @@
+{
+  "release_id": "DS-15@bpe-2025",
+  "release_key": "bpe-2025",
+  "source_published_on": "2026-07-08",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "Millésime de la BPE (situation 2025) ; `source_published_on` est la modification déclarée par le catalogue Melodi.",
+  "discovery": {
+    "catalog_entry": "https://api.insee.fr/melodi/catalog/all",
+    "geography_vintage": 2025,
+    "url_is_not_a_path_back": "L'URL Melodi n'est pas datée : seule l'archive nommée ci-dessous, contrainte par le SHA-256, fait foi."
+  },
+  "assets": [
+    {
+      "layer": "equipments",
+      "url": "https://api.insee.fr/melodi/file/DS_BPE/DS_BPE_2025_CSV_FR",
+      "sha256": "ec1f2ba0f857d56e3ab03f0e8039c90362ad6c0ce88c1838c04044733ae8b1d6",
+      "byte_size": 14401658,
+      "media_type": "application/zip",
+      "archive": {
+        "object_key": "ds-15/bpe-2025/national/equipments.csv.zip"
+      },
+      "member_path": "DS_BPE_2025_data.csv",
+      "extract": {
+        "period": "2025",
+        "uncompressed_byte_size": 149893831
+      }
+    }
+  ]
+}

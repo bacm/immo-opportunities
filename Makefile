@@ -176,6 +176,21 @@ georisques-import:
 		dagster-code python pipelines/scripts/import_georisques_release.py $(RELEASE) \
 		--department $(DEPARTMENT)
 
+territorial-import:
+	@test -n "$(SOURCE)" -a -n "$(RELEASE)" || \
+		{ echo "Usage : make territorial-import SOURCE=DS-14|DS-15|DS-16 RELEASE=<clé>"; exit 2; }
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/import_territorial_release.py $(SOURCE) \
+		$(RELEASE) --department $(DEPARTMENT)
+
+territorial-report:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/territorial_variables_report.py \
+		--department $(DEPARTMENT)
+
 georisques-report:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \

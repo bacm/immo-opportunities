@@ -1,0 +1,47 @@
+{
+  "release_id": "DS-14@rp-2023",
+  "release_key": "rp-2023",
+  "source_published_on": "2026-06-28",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "Millésime du recensement (2023), commun aux deux fichiers. `source_published_on` est la dernière modification déclarée par le catalogue Melodi : populations 2026-02-17 (parution 2025-12-17), logements 2026-06-28.",
+  "discovery": {
+    "catalog_entry": "https://api.insee.fr/melodi/catalog/all",
+    "geography_vintage": 2025,
+    "url_is_not_a_path_back": "L'API de fichiers Melodi peut republier un fichier sous la même URL : seule l'archive nommée ci-dessous, contrainte par le SHA-256, fait foi.",
+    "transport_note": "Le fichier logements (98 Mo) cale à ~34 Mo en téléchargement continu le 16 septembre 2026 ; il a été reconstitué par plages HTTP de 8 Mo, puis vérifié par son empreinte et sa liste de membres."
+  },
+  "assets": [
+    {
+      "layer": "population",
+      "url": "https://api.insee.fr/melodi/file/DS_POPULATIONS_REFERENCE/DS_POPULATIONS_REFERENCE_2023_CSV_FR",
+      "sha256": "f862ddd2a9135f80034fb3408ec8939626da044710406cabef887c2393a3984f",
+      "byte_size": 985016,
+      "media_type": "application/zip",
+      "archive": {
+        "object_key": "ds-14/rp-2023/national/population.csv.zip"
+      },
+      "member_path": "DS_POPULATIONS_REFERENCE_2023_data.csv",
+      "extract": {
+        "period": "2023",
+        "melodi_modified": "2026-02-17"
+      }
+    },
+    {
+      "layer": "housing",
+      "url": "https://api.insee.fr/melodi/file/DS_RP_LOGEMENT_PRINC/DS_RP_LOGEMENT_PRINC_2023_CSV_FR",
+      "sha256": "c93ccc1db5706511ae303fdc9543b5e7012a07925e09f618c5d4e8fbeb081530",
+      "byte_size": 97954253,
+      "media_type": "application/zip",
+      "archive": {
+        "object_key": "ds-14/rp-2023/national/housing.csv.zip"
+      },
+      "member_path": "DS_RP_LOGEMENT_PRINC_2023_data.csv",
+      "extract": {
+        "period": "2023",
+        "melodi_modified": "2026-06-28",
+        "uncompressed_byte_size": 1219169053
+      }
+    }
+  ]
+}

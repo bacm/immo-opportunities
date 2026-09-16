@@ -42,6 +42,7 @@ imposent au produit ; le chiffre à citer est celui du rapport, jamais celui de 
 - [Appariement DPE](./dpe-matching-35.md) et [vérification](./dpe-verification-35.md)
 - [Appariement des DPE de logements neufs](./dpe-neuf-matching-35.md) — DS-13, affichés, hors mesures, recompté le 2026-09-16
 - [Qualité, couverture et fraîcheur métier par commune](./market-data-quality-35.md)
+- [Variables communales : population, logements, équipements, aires](./territorial-variables-35.md) — DS-14 à DS-16, segmentation, hors mesures, recompté le 2026-09-16
 - [Sonde : un signal d'abandon dans l'open data ?](./sonde-abandon-35.md) — non, sondage non recompté
 
 ## Référentiel spatial

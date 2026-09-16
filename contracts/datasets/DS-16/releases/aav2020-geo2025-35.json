@@ -1,0 +1,33 @@
+{
+  "release_id": "DS-16@aav2020-geo2025",
+  "release_key": "aav2020-geo2025",
+  "source_published_on": "2025-03-21",
+  "department": "35",
+  "contract_version": 1,
+  "key_derivation": "Zonage 2020 exprimé en géographie au 1er janvier 2025, celle de DS-14 et DS-15. Mise en ligne le 21/03/2025 selon le cartouche du fichier.",
+  "discovery": {
+    "catalog_entry": "https://www.insee.fr/fr/information/4803954",
+    "geography_vintage": 2025,
+    "url_is_not_a_path_back": "Le nom de fichier porte la géographie, pas l'édition : l'archive nommée ci-dessous fait foi."
+  },
+  "assets": [
+    {
+      "layer": "areas",
+      "url": "https://www.insee.fr/fr/statistiques/fichier/4803954/AAV2020_au_01-01-2025.zip",
+      "sha256": "738f81b12832fe294bd24ddbfe3a31830c20d850143fc8b4393f18d4b8ee8181",
+      "byte_size": 1104231,
+      "media_type": "application/zip",
+      "archive": {
+        "object_key": "ds-16/aav2020-geo2025/national/areas.xlsx.zip"
+      },
+      "member_path": "AAV2020_au_01-01-2025.xlsx",
+      "extract": {
+        "period": "AAV2020",
+        "sheets": [
+          "AAV2020",
+          "Composition_communale"
+        ]
+      }
+    }
+  ]
+}

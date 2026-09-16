@@ -151,7 +151,7 @@ dérivée du graphe de dépendances.
 | [D6](./D6-revue-manuelle-metier.md) | Revue manuelle stratifiée comparables / GPU / DPE / risques | v0.5 | D5 | M | À faire | **verrou humain** |
 | [D6a](./D6a-verification-mutations-parcelle.md) | Voir les mutations d'une parcelle, pour vérifier que DVF tient | v0.5 | D1 | S | Terminé | — |
 | [D6b](./D6b-verification-diagnostics-parcelle.md) | Voir les diagnostics d'une parcelle, pour vérifier que l'appariement DPE tient | v0.5 | D4 | S | Terminé | — |
-| [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
+| [D7](./D7-sources-territoriales.md) | Population, logements, équipements et aires d'attraction : les variables qui séparent les marchés | v0.5 | D1 | L | Terminé | — |
 | [D8](./D8-historique-dvf-2014.md) | Remonter l'historique DVF à 2014, depuis les publications DGFiP archivées | v0.5 | D1 | L | Terminé | — |
 | [D9](./D9-dpe-logements-neufs.md) | Importer les DPE de logements neufs (DS-13), hors baromètre | v0.5 | D4 | M | Terminé | — |
 
@@ -164,7 +164,7 @@ dérivée du graphe de dépendances.
 | [E3](./E3-publier-snapshots.md) | Publier des `OpportunitySnapshot` immuables | v0.6 | E2 | M | À faire | attend E2 |
 | [E4](./E4-backtest-baseline.md) | Backtest régional contre baseline cadastrale | v0.6 | E3 | L | À faire | attend E3 |
 | [E5](./E5-resultats-par-segment.md) | Résultats par segment urbain / périurbain / littoral / rural | v0.6 | E4 | M | À faire | attend E4 |
-| [E6](./E6-segmentation-observee.md) | Segmenter les marchés sur distribution observée, et mesurer ce que ça change | v0.6 | D7, E1 | M | À faire | attend D7, E1 |
+| [E6](./E6-segmentation-observee.md) | Segmenter les marchés sur distribution observée, et mesurer ce que ça change | v0.6 | D7, E1 | M | À faire | attend E1 |
 | [E7](./E7-decision-valorisation.md) | Décider si le produit estime la valeur des biens non vendus | v0.6 | E6 | M | À faire | attend E6 |
 | [E8](./E8-liste-exploratoire-terrain.md) | Produire une liste exploratoire de candidats, confrontable à un professionnel | v0.6 | — | M | Terminé | — |
 | [E8b](./E8b-usage-du-bati.md) | Distinguer l'usage du bâti, faute de quoi la liste sélectionne des routes et des espaces verts | v0.6 | E8 | M | Terminé | — |
@@ -212,7 +212,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**61/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, D7, G6, G7.
+**62/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, G6, G7.
 
 ### Verrous humains
 
@@ -228,7 +228,7 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-13, D7, G6
+1. A6, BUG-02, BUG-13, G6
 2. G7
 
 <!-- END:tickets -->

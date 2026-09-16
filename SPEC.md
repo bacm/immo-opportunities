@@ -339,6 +339,9 @@ L'état d'import de chaque source (acceptée, `display_only`, effectifs) est ten
 | DS-11 | MAJIC personnes morales | DGFiP | réservé, aucun contrat | propriétaire personne morale, V3 |
 | DS-12 | BODACC et Sirene | DILA / INSEE | réservé, aucun contrat | procédures collectives, V3 |
 | DS-13 | DPE logements neufs, extrait API | ADEME | en contrat | vérification seulement ; jamais dans une mesure ([ADR-021](./docs/decisions/ADR-021-dpe-logements-neufs.md)) |
+| DS-14 | Recensement : populations de référence et logements | INSEE | en contrat | segmentation des marchés ; plateforme ([ADR-023](./docs/decisions/ADR-023-sources-territoriales.md)) |
+| DS-15 | Base permanente des équipements | INSEE | en contrat | segmentation des marchés ; plateforme (ADR-023) |
+| DS-16 | Zonage en aires d'attraction des villes 2020 | INSEE | en contrat | pôle de chaque commune, segmentation ; plateforme (ADR-023) |
 
 ### 13.2 Ce qui n'a pas de source
 
@@ -356,6 +359,8 @@ photo aérienne ou la visite lève.
 - **Affichées, non classifiantes** : DS-03, DS-04, DS-09, dans la plateforme.
 - **Affichée, exclue de toute mesure** : DS-13. Un DPE neuf accompagne une livraison, il
   n'annonce pas une vente ; le baromètre, le radar et les features ne lisent que DS-07.
+- **Communales, non classifiantes** : DS-14 à DS-16, variables de segmentation (E6), hors de
+  toute mesure du baromètre et du radar ; logements vacants exclus (§12).
 - **Réservées** : DS-10 à DS-12, sans contrat ni import tant qu'une ADR n'ouvre pas V1 ou V3.
 
 ### 13.4 Registre des mesures du baromètre
