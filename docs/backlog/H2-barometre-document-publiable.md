@@ -125,3 +125,11 @@ dix-neuf documents imprimés tiennent sur deux pages exactement.
   n'apparaît dans la sortie ;
 - relecture visuelle du PDF sur une page A4, chiffres lisibles à taille d'impression ;
 - `make check` vert.
+
+## Correction consignée — 17 septembre 2026
+
+« Dix-sept EPCI sur dix-huit n'ont pas de marge publiable » ne valait que pour la marge
+**complète**, les quatre tranches de prix d'entrée. Au CSV de ce ticket, 1 EPCI les publiait
+toutes, 6 au moins une, 12 aucune. Depuis [H7](./H7-mutations-multi-parcelles.md) : 2, 13 et 5.
+La règle qui suit la phrase — jamais la valeur du département à la place — n'en dépend pas.
+
