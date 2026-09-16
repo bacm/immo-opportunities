@@ -115,7 +115,7 @@ d'urbanisme interprété, France entière, marketplace, API commerciale publique
 
 ```text
 H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ─┬─► H5 radar (après H4 avis juridique)
-                                                              └─► ADR de sortie : poursuivre, ouvrir V1/V3, dégeler, arrêter
+                                                              └─► ADR de sortie : poursuivre, bifurquer V9 (vision), ouvrir V1/V3, dégeler, arrêter
 ```
 
 Ne pas sauter une étape. Les séries D, E, F, G et la dette transverse sont gelées ; E9 reste

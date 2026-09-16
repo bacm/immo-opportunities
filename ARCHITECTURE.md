@@ -684,7 +684,8 @@ Celle d'ADR-016 :
 3. H3 — cinq professionnels ; verrou humain.
 4. H4 — avis juridique ; verrou humain, en parallèle.
 5. H5 — radar hebdomadaire, colonnes fixées par H4.
-6. ADR de sortie de H3 : poursuivre, ouvrir V1 ou V3, dégeler, arrêter.
+6. ADR de sortie de H3 : poursuivre, bifurquer vers V9 (vision, abandon), ouvrir V1 ou V3,
+   dégeler, arrêter.
 
 Rien d'autre ne démarre. Les révisions de §22.2 se décident au moment où un déploiement ou un
 dégel les rend nécessaires, pas avant.

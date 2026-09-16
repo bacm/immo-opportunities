@@ -126,6 +126,8 @@ elle est décrite en §11, et rien n'y est ajouté tant que H3 n'a pas rendu son
 - **V3** — off-market personnes morales par MAJIC PM × BODACC × Sirene.
 - **V4** — prestation pour un EPCI ayant droit des Fichiers fonciers et de LOVAC.
 - **V6** — vente de la couche morphologie et qualité aux outils nationaux.
+- **V9** — détection visuelle de l'abandon par imagerie, mise de côté le 15 septembre 2026,
+  à rouvrir après V5 ; première étape une sonde d'une journée sur l'ortho IGN (ADR-016).
 
 Chacune s'ouvre par une ADR, pas par un ticket.
 
@@ -557,7 +559,8 @@ H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ─┬─► H
                                                               └─► H6 documentation (ce ticket)
 ```
 
-Après H3, une ADR tranche : poursuivre V5 et V2, ouvrir V1 ou V3, dégeler la plateforme, ou
+Après H3, une ADR tranche : poursuivre V5 et V2, bifurquer vers V9 (vision, abandon), ouvrir
+V1 ou V3, dégeler la plateforme, ou
 arrêter. Aucune extension géographique avant un abonné du 35.
 
 ---
