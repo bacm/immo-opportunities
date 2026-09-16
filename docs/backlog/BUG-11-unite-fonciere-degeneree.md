@@ -1,6 +1,6 @@
 # BUG-11 — L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer
 
-**Version :** v0.6 · **Taille :** L · **État :** À faire
+**Version :** v0.6 · **Taille :** L · **État :** En cours
 **Dépend de :** D1 · **Bloque :** E2, E3
 **Touche :** docs/data/property-unit-35.md, backend/migrations/versions/
 **Découvert par :** revue manuelle B4, cas 90, 10 septembre 2026
@@ -124,12 +124,61 @@ Donc :
 | Signal | Ce qu'il apporte | Ce qu'il coûte |
 |---|---|---|
 | **Mutations DVF+** — parcelles vendues dans la même disposition | preuve d'une propriété commune à une date, la plus proche du sens juridique | ne couvre que les parcelles mutées ; dépend de [D1](./D1-import-dvf-ds06.md) |
-| **Bâtiment partagé** — parcelles reliées par un même bâtiment | capte exactement le motif du cas 90 | la mitoyenneté produit des faux positifs ; dépend de [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) et de [BUG-12](./BUG-12-deduplication-batiments-physiques.md), un bâtiment n'étant pas encore défini |
+| **Bâtiment partagé** — parcelles reliées par un même bâtiment | supposé capter le motif du cas 90 — faux, mesuré le 16 septembre | la mitoyenneté produit des faux positifs ; dépend de [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) et de [BUG-12](./BUG-12-deduplication-batiments-physiques.md), un bâtiment n'étant pas encore défini |
 | **Adresse commune** — parcelles portant la même adresse BAN | déjà mesuré, déjà exposé dans la revue | une adresse couvre parfois trois parcelles sans propriétaire commun |
 | **Aucun regroupement** — assumer `single_parcel` | honnête, déjà en place | laisse le bruit décrit ci-dessus dans le score |
 
 La dernière ligne est une option réelle, pas un aveu d'échec : publier des parcelles en le disant
 vaut mieux que publier des unités inventées.
+
+## Choix retenus — 16 septembre 2026
+
+Repris après le dégel d'[ADR-019](../decisions/ADR-019-lever-le-gel-de-la-plateforme.md). Ce
+ticket **mesure et documente** ; le choix du signal est une décision, qui revient au porteur.
+
+- **Contexte** : `SPEC.md` §14.1 n'existe plus depuis la réécriture du 15 septembre ; le modèle est
+  décrit dans `ARCHITECTURE.md` §9, et la définition de `PropertyUnit` citée plus haut reste celle
+  de la version 0.2.
+- **Mesure reproductible** : `pipelines/scripts/property_unit_signals_report.py`, cible
+  `make property-unit-report`, sortie `docs/data/property-unit-35.md`, recomptée.
+- **Signaux mesurés** : DVF même acte, brut et chaîné ; DVF même acte restreint aux parcelles
+  contiguës ; adresse BAN commune (appariements `certain`) ; bâti partagé.
+- **Contiguïté** : 1 cm, la tolérance de la mesure déjà publiée plus haut.
+- **Bâti partagé** : BUG-09 renvoie le seuil de la relation secondaire à E1. Le rapport ne le
+  choisit pas : il balaie quatre valeurs déclarées (5, 10, 25, 40 % de l'emprise).
+- **Corroboration** : pour chaque signal, parmi les paires dont les deux parcelles ont été
+  vendues, la part vendue dans un même acte ; ligne de base sur les paires contiguës quelconques
+  des trois communes de la mesure ci-dessus. C'est un indice d'appartenance commune, pas une
+  preuve.
+- **Cas de référence** : cas 90 (`DA0321`, `DA0322`) et cas 55 (`ZS0089`, `ZS0091`).
+- **Aucune migration** tant que la décision n'est pas écrite.
+
+## Mesure du 16 septembre 2026 — recomptée, en attente de décision
+
+Rapport : [`property-unit-35.md`](../data/property-unit-35.md), recompté en isolement du code,
+aucune divergence. Les étapes 1 et 2 sont faites ; l'étape 3 attend la décision du porteur.
+
+| Signal | Parcelles regroupées | Plus grande unité | Vendues ensemble, paires dont les deux sont vendues |
+|---|---:|---:|---:|
+| DVF même acte, chaîné | 17,0 % | 1 590 | par construction |
+| DVF même acte, parcelles contiguës, chaîné | 14,7 % | 171 | par construction |
+| Adresse BAN commune | 3,1 % | 41 | 92,8 % |
+| Bâti partagé, 10 % → 40 % de l'emprise | 12,0 % → 1,4 % | 48 → 6 | 69,2 % → 78,5 % |
+| Ligne de base, parcelles contiguës quelconques | — | — | 26,2 % à 37,8 % |
+
+Ce que la mesure établit :
+
+- **Le cas 90 n'est réuni par aucun signal.** Le garage couvre 0,06 % de la 321. La 322 n'a
+  jamais été vendue ; la 321 l'a été en 2018 avec la 323, qui touche les deux. L'intuition du
+  relecteur n'est ni confirmée ni infirmée. La ligne « capte exactement le motif du cas 90 » du
+  tableau des signaux est fausse.
+- **Le bâti partagé repose entièrement sur la relation secondaire**, dont BUG-09 renvoie le seuil
+  à E1 : il ne peut pas être retenu avant E1.
+- **Le chaînage DVF dans le temps crée une grappe de 1 590 parcelles** ; restreint aux parcelles
+  contiguës d'un même acte, il n'en crée plus. Mais un acte dit une propriété commune **à sa
+  date**, pas aujourd'hui, et 3 395 actes à plusieurs parcelles ont perdu leurs rattachements
+  (parcelles renumérotées), sur une archive 2014-2020 encore `pending`.
+- **L'adresse commune est le signal le mieux corroboré**, et le plus étroit.
 
 ## Travail à réaliser
 

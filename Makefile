@@ -44,6 +44,7 @@ help:
 	@echo "make ban-import DEPARTMENT=35     Archive/import one pinned DS-05 Brittany partition"
 	@echo "make ban-census ARCHIVE=path      Recount a pinned DS-05 archive, no database"
 	@echo "make mvt-benchmark                Measure cold/hot p95 for local MVT routes"
+	@echo "make property-unit-report DEPARTMENT=35  Measure parcel grouping signals (BUG-11)"
 	@echo "make e2e                          Run the local real-map Playwright flow"
 	@echo "make inventory ENV=production     Render inventory from VPS_* variables"
 	@echo "make bootstrap ENV=production     Bootstrap a clean VPS"
@@ -253,6 +254,13 @@ matching-report: matching-refresh
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		-v $(PWD)/docs/data:/workspace/docs/data \
 		dagster-code python pipelines/scripts/spatial_matching_report.py --department $(DEPARTMENT)
+
+# BUG-11 : ce que chaque signal de regroupement ferait des parcelles. Mesure, aucun choix.
+property-unit-report:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/property_unit_signals_report.py --department $(DEPARTMENT)
 
 bdnb-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
