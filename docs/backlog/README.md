@@ -69,6 +69,7 @@ dérivée du graphe de dépendances.
 | [A5](./A5-toute-modification-passe-par-un-ticket.md) | Toute modification du code passe par un ticket | transverse | — | S | Terminé | — |
 | [A6](./A6-demo-sous-ensemble-vps.md) | Démo déployable : un sous-ensemble de communes sur une petite machine | transverse | — | L | À faire | **prêt** |
 | [A7](./A7-ouvrir-la-serie-h.md) | Ouvrir la série H dans les outils du backlog, et aligner les documents de pilotage sur ADR-016 | transverse | — | S | Terminé | — |
+| [A8](./A8-condenser-claude-md.md) | Condenser `CLAUDE.md` sans perdre une consigne | transverse | — | S | Terminé | — |
 
 ### B — v0.3 Référentiel spatial 35
 
@@ -181,7 +182,7 @@ dérivée du graphe de dépendances.
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
 
-**46/78 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
+**47/79 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
 
 ### Verrous humains
 
