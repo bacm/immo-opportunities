@@ -199,8 +199,10 @@ dérivée du graphe de dépendances.
 | [H4](./H4-avis-juridique-donnees.md) | Obtenir un avis juridique écrit sur l'usage des données, préalable au radar | V2 | A7 | S | À faire | **verrou humain** |
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
+| [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | attend H2 |
+| [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | attend H2 |
 
-**50/82 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
+**50/84 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
 
 ### Verrous humains
 

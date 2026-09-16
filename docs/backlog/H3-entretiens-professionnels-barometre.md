@@ -53,6 +53,10 @@ prétexte : il leur est remis quoi qu'il arrive, et c'est ce qui rend l'entretie
   systématique, aucune variante sans propriétaire ne tient, et V3 (personnes morales) ou V4 (EPCI)
   remontent.
 - **Ce qui existe déjà chez eux** : un chiffre du baromètre qu'ils ont déjà ailleurs ne vaut rien.
+- **La carte et les équipements** : demandent-ils spontanément une carte, ou la proximité des
+  écoles, commerces, services de santé et parcs, et le paieraient-ils ? Question posée en fin
+  d'entretien, sans la suggérer avant. Elle alimente [H8](./H8-carte-communale-barometre.md) et
+  [D7](./D7-sources-territoriales.md), et la première condition de dégel (`SPEC.md` §11.3).
 
 ## Critères d'acceptation
 
