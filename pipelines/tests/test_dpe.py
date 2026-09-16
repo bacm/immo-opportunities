@@ -338,4 +338,21 @@ def test_the_pinned_extract_names_an_archive_because_the_api_is_not_a_path_back(
     # Le gzip ne doit dependre que des donnees : sans `mtime=0`, deux epinglages du meme contenu
     # auraient deux empreintes differentes et le checksum ne prouverait plus rien.
     assert "mtime=0" in source
-    assert '"archive": {"object_key": object_key(release, department)}' in source
+    # invariant-ok: assertion-supprimee — même assertion, `object_key` prend la famille (D9).
+    assert '"archive": {"object_key": object_key(family, release, department)}' in source
+
+
+def test_a_new_build_model_is_admitted_only_for_the_new_build_source() -> None:
+    """D9, ADR-021 : chaque jeu ADEME a sa liste fermée de modèles, et elles ne se mélangent pas."""
+    from immo_pipelines.market_data.dpe import DPE_FAMILIES
+
+    new_build = row(modele_dpe="DPE NEUF logement : RT2012")
+    # Un DPE neuf lu comme un existant est écarté avec son motif, jamais admis par défaut.
+    rejected = classify(new_build, snapshot_at=SNAPSHOT)
+    assert isinstance(rejected, Rejection) and rejected.reason == "unknown_assessment_model"
+    admitted = classify(new_build, snapshot_at=SNAPSHOT, models=DPE_FAMILIES["DS-13"].models)
+    assert not isinstance(admitted, Rejection)
+    existing = classify(row(), snapshot_at=SNAPSHOT, models=DPE_FAMILIES["DS-13"].models)
+    assert isinstance(existing, Rejection) and existing.reason == "unknown_assessment_model"
+    assert DPE_FAMILIES["DS-07"].api_slug == "dpe03existant"
+    assert DPE_FAMILIES["DS-13"].api_slug == "dpe02neuf"

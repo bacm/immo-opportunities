@@ -40,6 +40,7 @@ imposent au produit ; le chiffre à citer est celui du rapport, jamais celui de 
 - [Pistes d'analyse du marché du 35](./pistes-analyse-marche-35.md) — marge par prix d'entrée, décote énergétique, sondages non recomptés
 - [Qualité DVF](./dvf-quality-35.md) et [vérification](./dvf-verification-35.md)
 - [Appariement DPE](./dpe-matching-35.md) et [vérification](./dpe-verification-35.md)
+- [Appariement des DPE de logements neufs](./dpe-neuf-matching-35.md) — DS-13, affichés, hors mesures, recompté le 2026-09-16
 - [Qualité, couverture et fraîcheur métier par commune](./market-data-quality-35.md)
 - [Sonde : un signal d'abandon dans l'open data ?](./sonde-abandon-35.md) — non, sondage non recompté
 

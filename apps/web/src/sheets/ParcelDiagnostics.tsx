@@ -29,6 +29,7 @@ export function ParcelDiagnostics({ loaded }: { loaded: Loaded<ParcelEnergyAsses
   const rows = loaded.value
   if (rows.length === 0) return <p className="unknown-value">Aucun diagnostic rattaché aux bâtiments de cette parcelle.</p>
   const ambiguous = rows.filter((row) => row.relation_status !== 'certain').length
+  const newBuild = rows.filter((row) => row.data_source_id === 'DS-13').length
 
   // `assessment-*` distingue ces lignes de celles des ventes à l'inspection.
   return <>
@@ -51,6 +52,8 @@ export function ParcelDiagnostics({ loaded }: { loaded: Loaded<ParcelEnergyAsses
               {` · ${formatArea(row.surface_habitable_m2, 'surface non déclarée')}`}
             </span>
             <span className="record-side">
+              {/* DS-13 : diagnostic établi à la réception d'une construction (ADR-021). */}
+              <Chip>{row.data_source_id === 'DS-13' ? 'Neuf' : 'Existant'}</Chip>
               <Chip tone={certain ? 'good' : 'warn'}>{certain ? 'Rattachement certain' : 'Rattachement ambigu'}</Chip>
             </span>
           </header>
@@ -66,7 +69,8 @@ export function ParcelDiagnostics({ loaded }: { loaded: Loaded<ParcelEnergyAsses
     <p className="detail-note">
       {rows.length} diagnostic{rows.length > 1 ? 's' : ''} sur cette parcelle
       {rows.length > DISPLAY_LIMIT ? `, dont ${DISPLAY_LIMIT} affichés` : ''}
-      {ambiguous > 0 ? ` · ${ambiguous} par un bâtiment qui chevauche plusieurs parcelles` : ''}. Les diagnostics rattachés à la seule adresse n’apparaissent pas ici : la relation
+      {ambiguous > 0 ? ` · ${ambiguous} par un bâtiment qui chevauche plusieurs parcelles` : ''}
+      {newBuild > 0 ? ` · ${newBuild} de logement neuf, établi${newBuild > 1 ? 's' : ''} à la réception de la construction, qu’aucune mesure du marché ne lit` : ''}. Les diagnostics rattachés à la seule adresse n’apparaissent pas ici : la relation
       adresse ↔ parcelle n’est vérifiable par aucune règle géométrique, et l’inventer placerait
       un diagnostic sur environ une parcelle sur quatre à tort. Une étiquette est l’observation
       d’un diagnostic déposé, pas une preuve d’état du bâti.

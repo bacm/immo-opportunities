@@ -1222,6 +1222,11 @@ export interface components {
             building_id: string | null;
             /** Building Type */
             building_type: string | null;
+            /**
+             * Data Source Id
+             * @enum {string}
+             */
+            data_source_id: "DS-07" | "DS-13";
             /** Dpe Number */
             dpe_number: string;
             /** Energy Consumption Kwh M2 Year */

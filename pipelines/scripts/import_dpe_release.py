@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Importer une release DS-07 : diagnostics déposés, rattachés par identifiant déclaré — D4.
+"""Importer une release DS-07 ou DS-13 : diagnostics déposés, rattachés par identifiant déclaré.
+
+D4 pour les logements existants (DS-07), D9 pour les neufs (DS-13, ADR-021). Les deux jeux ont
+les mêmes colonnes et suivent les mêmes règles ; seuls diffèrent le contrat et la liste fermée des
+modèles. Un DPE neuf n'entre dans aucune mesure : ce sont les lecteurs qui filtrent la source.
 
 Le moteur `compute_renovation_features` est livré et testé depuis v0.6 ; ce script lui apporte la
 donnée réelle. Les règles d'éligibilité et la lecture de l'extrait vivent dans
@@ -46,7 +50,9 @@ from immo_pipelines.cadastre.catalog import DatasetCatalog
 from immo_pipelines.cadastre.manifest import load_release_manifest, project_root, resolve_asset
 from immo_pipelines.cadastre.settings import CadastreSettings
 from immo_pipelines.market_data.dpe import (
+    DPE_FAMILIES,
     DPE_TRANSFORMATION_VERSION,
+    DpeFamily,
     Rejection,
     missing_columns,
     read_extract,
@@ -71,8 +77,8 @@ CREATE TEMP TABLE dpe_stage (
 """
 
 
-def contract_fingerprint() -> str:
-    path = project_root() / "contracts" / "datasets" / "DS-07" / "v1.json"
+def contract_fingerprint(source_id: str) -> str:
+    path = project_root() / "contracts" / "datasets" / source_id / "v1.json"
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -87,11 +93,12 @@ def stage_rows(
     snapshot_at: date,
     release_id: str,
     import_run_id: str,
+    family: DpeFamily,
 ) -> Counter[str]:
     """Charger l'extrait dans une table de travail, en consignant chaque rejet avec son motif."""
     counters: Counter[str] = Counter()
     rejections: list[tuple[Any, ...]] = []
-    progress = Progress(0, "DS-07")
+    progress = Progress(0, family.source_id)
     with connection.cursor().copy(
         """
         COPY dpe_stage (
@@ -101,7 +108,7 @@ def stage_rows(
         """
     ) as copy:
         seen: set[str] = set()
-        for record in read_extract(path, snapshot_at=snapshot_at):
+        for record in read_extract(path, snapshot_at=snapshot_at, models=family.models):
             counters["source_rows"] += 1
             if isinstance(record, Rejection):
                 counters[f"rejected_{record.reason}"] += 1
@@ -329,6 +336,7 @@ def record_coverage(connection: psycopg.Connection[Any], release_id: str) -> int
 def main() -> int:
     parser = argparse.ArgumentParser(description="Archive and import one ADEME DPE extract")
     parser.add_argument("release")
+    parser.add_argument("--source", choices=sorted(DPE_FAMILIES), default="DS-07")
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
     parser.add_argument(
         "--snapshot",
@@ -337,7 +345,8 @@ def main() -> int:
     )
     arguments = parser.parse_args()
 
-    manifest = load_release_manifest("DS-07", arguments.release, arguments.department)
+    family = DPE_FAMILIES[arguments.source]
+    manifest = load_release_manifest(family.source_id, arguments.release, arguments.department)
     asset = manifest.asset("assessments")
     snapshot_at = (
         date.fromisoformat(arguments.snapshot)
@@ -348,7 +357,11 @@ def main() -> int:
     object_store = MinioObjectStore(
         settings.minio_endpoint, settings.minio_access_key, settings.minio_secret_key
     )
-    import_run_id = f"dpe:{manifest.release_key}:{manifest.department}:{DPE_TRANSFORMATION_VERSION}"
+    # DS-07 garde son identifiant de run historique ; les autres sources le préfixent.
+    prefix = "dpe" if family.source_id == "DS-07" else f"dpe-{family.source_id.lower()}"
+    import_run_id = (
+        f"{prefix}:{manifest.release_key}:{manifest.department}:{DPE_TRANSFORMATION_VERSION}"
+    )
 
     with psycopg.connect(
         host=settings.database_host,
@@ -362,9 +375,9 @@ def main() -> int:
             release_id=manifest.release_id,
             release_key=manifest.release_key,
             published_on=date.fromisoformat(manifest.source_published_on),
-            schema_fingerprint=contract_fingerprint(),
+            schema_fingerprint=contract_fingerprint(family.source_id),
             department_code=manifest.department,
-            data_source_id="DS-07",
+            data_source_id=family.source_id,
             # Les coordonnees BAN de l'extrait sont en Lambert 93. Le DPE lui-meme ne porte pas
             # de geometrie : la colonne dit d'ou viendraient les points, pas ce qu'on importe.
             source_srid=2154,
@@ -389,7 +402,7 @@ def main() -> int:
                 layer="assessments",
                 checksum_valid=True,
                 schema_valid=not missing,
-                schema_fingerprint=contract_fingerprint(),
+                schema_fingerprint=contract_fingerprint(family.source_id),
             )
             if missing:
                 raise SystemExit(f"Colonnes absentes de l'extrait : {', '.join(missing)}")
@@ -448,6 +461,7 @@ def main() -> int:
                 snapshot_at=snapshot_at,
                 release_id=manifest.release_id,
                 import_run_id=import_run_id,
+                family=family,
             )
             counters += resolve_and_insert(
                 connection,

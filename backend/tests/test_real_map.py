@@ -123,6 +123,7 @@ def assessment(relation_status: str = "certain", **overrides: Any) -> dict[str, 
         "identifier_provenance": "Reprise RNB",
         "address_label": "21 Rue Parmentier 35700 Rennes",
         "release_id": "DS-07@2026-09-14-extract",
+        "data_source_id": "DS-07",
     }
     return record | overrides
 
@@ -180,3 +181,25 @@ def test_parcel_energy_assessments_keep_missing_values_missing(monkeypatch: Any)
 
     assert response.status_code == 200
     assert response.json()[0]["surface_habitable_m2"] is None
+
+
+def test_parcel_energy_assessments_name_their_source(monkeypatch: Any) -> None:
+    """Un DPE neuf (DS-13) traverse l'API avec sa source, pour que l'écran le distingue — D9."""
+    monkeypatch.setattr(
+        "immo.api.routes.explorer.list_parcel_energy_assessments",
+        lambda _: [
+            assessment(),
+            assessment(
+                dpe_number="2235N0000001X",
+                release_id="DS-13@2026-09-16-extract",
+                data_source_id="DS-13",
+            ),
+        ],
+    )
+
+    response = TestClient(app).get(
+        "/api/v1/parcels/parcel:cadastre:35024000AP0209/energy-assessments"
+    )
+
+    assert response.status_code == 200
+    assert [row["data_source_id"] for row in response.json()] == ["DS-07", "DS-13"]

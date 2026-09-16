@@ -71,6 +71,7 @@ def volumes(connection: psycopg.Connection[Any], department: str) -> list[dict[s
         SELECT 'DS-07', 'diagnostics', count(*), count(DISTINCT commune_code),
                max(assessment_date)
           FROM observation.energy_assessment WHERE department_code = %(department)s
+           AND release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
         UNION ALL
         -- Une zone n'a pas de commune : c'est le **document** qui porte les siennes, et il en
         -- porte plusieurs quand c'est un PLUi. Le compte se fait donc sur les communes

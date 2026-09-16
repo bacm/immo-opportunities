@@ -214,6 +214,7 @@ class ParcelEnergyAssessmentResponse(BaseModel):
     identifier_provenance: str | None
     address_label: str | None
     release_id: str
+    data_source_id: Literal["DS-07", "DS-13"]
 
 
 @router.get(

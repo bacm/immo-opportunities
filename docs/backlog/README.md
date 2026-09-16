@@ -152,6 +152,7 @@ dérivée du graphe de dépendances.
 | [D6b](./D6b-verification-diagnostics-parcelle.md) | Voir les diagnostics d'une parcelle, pour vérifier que l'appariement DPE tient | v0.5 | D4 | S | Terminé | — |
 | [D7](./D7-sources-territoriales.md) | DS-10 population et DS-11 équipements : les variables qui séparent les marchés | v0.5 | D1 | L | À faire | **prêt** |
 | [D8](./D8-historique-dvf-2014.md) | Remonter l'historique DVF à 2014, depuis les publications DGFiP archivées | v0.5 | D1 | L | Terminé | — |
+| [D9](./D9-dpe-logements-neufs.md) | Importer les DPE de logements neufs (DS-13), hors baromètre | v0.5 | D4 | M | Terminé | — |
 
 ### E — v0.6 Scoring
 
@@ -210,7 +211,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**57/89 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
+**58/90 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 

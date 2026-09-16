@@ -408,6 +408,8 @@ def enrich(
            AND link.relation_status = 'certain'
           JOIN observation.energy_assessment AS assessment
             ON assessment.building_id = link.building_id
+           AND assessment.release_id IN (
+               SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
          WHERE parcel.cadastral_id = ANY(%(parcels)s::text[])
         """,
         parcels=parcels,

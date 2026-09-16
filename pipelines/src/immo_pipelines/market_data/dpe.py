@@ -60,6 +60,32 @@ DPE_TRANSFORMATION_VERSION = "1"
 # un modele inconnu est ecarte avec son motif, jamais admis par defaut.
 ASSESSMENT_MODELS = frozenset({"DPE 3CL 2021 méthode logement"})
 
+
+@dataclass(frozen=True, slots=True)
+class DpeFamily:
+    """Un jeu ADEME de diagnostics, et ce qui le distingue à l'import.
+
+    Les deux jeux ont les mêmes colonnes ; seuls diffèrent le slug de l'API et les modèles
+    réglementaires admis. Le neuf (DS-13) accompagne une livraison et n'entre dans aucune mesure
+    du baromètre ni du radar (ADR-021) : c'est aux lecteurs de filtrer la source, pas à l'import.
+    """
+
+    source_id: str
+    api_slug: str
+    archive_prefix: str
+    models: frozenset[str]
+
+
+DPE_FAMILIES: dict[str, DpeFamily] = {
+    "DS-07": DpeFamily("DS-07", "dpe03existant", "ds-07", ASSESSMENT_MODELS),
+    "DS-13": DpeFamily(
+        "DS-13",
+        "dpe02neuf",
+        "ds-13",
+        frozenset({"DPE NEUF logement : RT2012", "DPE NEUF logement : RE2020"}),
+    ),
+}
+
 # Les caracteristiques **declarees** du bien, par opposition aux sorties du calcul 3CL
 # (deperditions, couts, consommations par generateur) que le contrat n'admet pas comme
 # observations. `REN-007` ne porte que celles-ci.
@@ -171,7 +197,9 @@ def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "oui", "yes"}
 
 
-def classify(row: dict[str, str], *, snapshot_at: date) -> Assessment | Rejection:
+def classify(
+    row: dict[str, str], *, snapshot_at: date, models: frozenset[str] = ASSESSMENT_MODELS
+) -> Assessment | Rejection:
     """Dire si l'enregistrement est un diagnostic exploitable, ou pourquoi il ne l'est pas."""
     number = (row.get("numero_dpe") or "").strip()
     if not number:
@@ -181,7 +209,7 @@ def classify(row: dict[str, str], *, snapshot_at: date) -> Assessment | Rejectio
     if _truthy(row.get("dpe_desactive")):
         return Rejection(number, "deactivated", "dpe_desactive déclaré par la source")
     model = (row.get("modele_dpe") or "").strip()
-    if model not in ASSESSMENT_MODELS:
+    if model not in models:
         return Rejection(number, "unknown_assessment_model", f"modele_dpe {model!r}")
     established = _date(row.get("date_etablissement_dpe"))
     if established is None:
@@ -232,7 +260,9 @@ def missing_columns(path: Path) -> tuple[str, ...]:
     return tuple(column for column in REQUIRED_COLUMNS if column not in set(header))
 
 
-def read_extract(path: Path, *, snapshot_at: date) -> Iterator[Assessment | Rejection]:
+def read_extract(
+    path: Path, *, snapshot_at: date, models: frozenset[str] = ASSESSMENT_MODELS
+) -> Iterator[Assessment | Rejection]:
     """Parcourir l'extrait archivé, ligne par ligne, sans jamais le charger en entier.
 
     L'extrait départemental pèse 370 Mo décompressés et ses descriptions d'installation
@@ -240,4 +270,4 @@ def read_extract(path: Path, *, snapshot_at: date) -> Iterator[Assessment | Reje
     """
     with gzip.open(path, "rt", encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
-            yield classify(row, snapshot_at=snapshot_at)
+            yield classify(row, snapshot_at=snapshot_at, models=models)

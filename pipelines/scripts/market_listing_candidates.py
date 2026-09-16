@@ -79,7 +79,8 @@ def reference_date(connection: psycopg.Connection[Any]) -> date:
     rows = fetch(
         connection,
         "SELECT max(coalesce(deposited_at, assessment_date)) AS extracted FROM"
-        " observation.energy_assessment",
+        " observation.energy_assessment"
+        " WHERE release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')",
     )
     return cast(date, rows[0]["extracted"])
 
@@ -136,6 +137,8 @@ def population(connection: psycopg.Connection[Any], commune: str) -> list[dict[s
                 ON link.parcel_id = parcel.id AND link.relation_status = 'certain'
               JOIN observation.energy_assessment AS assessment
                 ON assessment.building_id = link.building_id
+               AND assessment.release_id IN (
+                   SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
              GROUP BY link.parcel_id
         ),
         mutation AS (
@@ -217,6 +220,8 @@ def cohort(connection: psycopg.Connection[Any], department: str, year: int) -> l
                 ON link.building_id = assessment.building_id
                AND link.relation_status = 'certain'
              WHERE assessment.department_code = %(department)s
+               AND assessment.release_id IN (
+                   SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
                AND assessment.properties->>'type_batiment' = 'maison'
              ORDER BY link.parcel_id,
                       coalesce(assessment.deposited_at, assessment.assessment_date),

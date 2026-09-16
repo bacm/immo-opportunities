@@ -462,6 +462,7 @@ Le rôle de chaque source dans le produit est en `SPEC.md` §13.1 ; ici, son ét
 | DS-08 | GPU | `display_only`, 152 documents sur 184, sans checksum |
 | DS-09 | Géorisques | `display_only` |
 | DS-10 à DS-12 | Sitadel, MAJIC PM, BODACC/Sirene | réservés, aucun contrat |
+| DS-13 | DPE neufs | `display_only`, 39 072 diagnostics, 18 671 conservés, rattachés au bâtiment à 24 % ; même table que DS-07, filtré hors des mesures (ADR-021) |
 
 ---
 
@@ -694,6 +695,7 @@ silence.
 | ADR-018 | Dégel restreint de l'Explorer, réduit à l'outil local de vérification des données | Remplacée par ADR-019 | [note](docs/decisions/ADR-018-degel-restreint-explorer.md) |
 | ADR-019 | Le gel de la plateforme est levé ; déploiement, publication de score et fiches DVF restent bornés | Acceptée | [note](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) |
 | ADR-020 | L'unité analysée reste la parcelle, sans regroupement, en attendant E1 | Acceptée | [note](docs/decisions/ADR-020-unite-analysee-parcelle.md) |
+| ADR-021 | Les DPE de logements neufs entrent comme source distincte DS-13, hors de toute mesure | Acceptée | [note](docs/decisions/ADR-021-dpe-logements-neufs.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de

@@ -1461,6 +1461,14 @@
             ],
             "title": "Building Type"
           },
+          "data_source_id": {
+            "enum": [
+              "DS-07",
+              "DS-13"
+            ],
+            "title": "Data Source Id",
+            "type": "string"
+          },
           "dpe_number": {
             "title": "Dpe Number",
             "type": "string"
@@ -1529,7 +1537,8 @@
           "relation_status",
           "identifier_provenance",
           "address_label",
-          "release_id"
+          "release_id",
+          "data_source_id"
         ],
         "title": "ParcelEnergyAssessmentResponse",
         "type": "object"

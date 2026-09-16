@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Régénère le rapport d'appariement DPE et les distributions REN — D4, DS-07.
+"""Régénère le rapport d'appariement DPE et les distributions REN — D4 (DS-07), D9 (DS-13).
 
 Le rapport ne se saisit pas à la main : il se recalcule depuis `observation.energy_assessment`,
 `meta.attribute_quarantine`, `meta.dataset_coverage_metric` et `meta.import_run`, qui sont la
@@ -34,6 +34,11 @@ from psycopg.rows import dict_row
 from immo_pipelines.cadastre.settings import CadastreSettings
 
 SOURCE = "DS-07"
+# DS-13, les logements neufs, a son propre fichier : il n'entre dans aucune mesure (ADR-021).
+OUTPUT_NAMES = {
+    "DS-07": "dpe-matching-{department}.md",
+    "DS-13": "dpe-neuf-matching-{department}.md",
+}
 
 
 def fetch(connection: psycopg.Connection[Any], sql: str, **parameters: Any) -> list[dict[str, Any]]:
@@ -41,7 +46,9 @@ def fetch(connection: psycopg.Connection[Any], sql: str, **parameters: Any) -> l
         return cast(list[dict[str, Any]], cursor.execute(sql, parameters).fetchall())
 
 
-def release(connection: psycopg.Connection[Any], department: str) -> dict[str, Any]:
+def release(
+    connection: psycopg.Connection[Any], department: str, source: str = SOURCE
+) -> dict[str, Any]:
     rows = fetch(
         connection,
         """
@@ -57,11 +64,11 @@ def release(connection: psycopg.Connection[Any], department: str) -> dict[str, A
          ORDER BY release.release_key DESC, run.completed_at DESC NULLS LAST
          LIMIT 1
         """,
-        source=SOURCE,
+        source=source,
         department=department,
     )
     if not rows:
-        raise SystemExit(f"Aucune release {SOURCE} : rien à rapporter.")
+        raise SystemExit(f"Aucune release {source} : rien à rapporter.")
     return rows[0]
 
 
@@ -365,7 +372,7 @@ def percent(part: Any, whole: Any) -> str:
     return f"{100 * float(part) / float(whole):.2f} %".replace(".", ",")
 
 
-def render(data: dict[str, Any], department: str, generated_on: str) -> str:
+def render(data: dict[str, Any], department: str, generated_on: str, source: str = SOURCE) -> str:
     head = data["release"]
     match = data["matching"]
     dist = data["distributions"]
@@ -376,14 +383,23 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
     lines: list[str] = []
     add = lines.append
 
-    add(f"# DS-07 DPE — appariement et distributions sur le {department}")
+    title = "DPE logements neufs" if source == "DS-13" else "DPE"
+    add(f"# {source} {title} — appariement et distributions sur le {department}")
     add("")
     add(f"**Généré le :** {generated_on} · **Release :** `{head['id']}`")
     add(f"· **Publiée par la source le :** {head['source_published_on']}")
     add(f"· **Run d'import :** `{head['import_run_id']}`")
     add(f"· **Verdict :** `{head['acceptance_status']}`")
     add("")
-    add("Ce fichier est **régénéré** par `make dpe-report`. Ne pas l'éditer à la main.")
+    command = "make dpe-report" + ("" if source == SOURCE else f" SOURCE={source}")
+    add(f"Ce fichier est **régénéré** par `{command}`. Ne pas l'éditer à la main.")
+    if source == "DS-13":
+        add("")
+        add(
+            "Diagnostics établis à la réception d'une construction. Affichés dans l'outil de "
+            "vérification, **exclus de toute mesure** du baromètre et du radar : un DPE neuf "
+            "accompagne une livraison, il n'annonce pas une vente (ADR-021)."
+        )
     add("")
     add("## Volumétrie")
     add("")
@@ -430,28 +446,37 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
     )
     add("")
     add(
-        f"**Taux d'appariement au bâtiment : {percent(match['building'], eligible)}** sur "
-        f"{thousands(match['communes'])} communes."
+        f"**Taux d'appariement au bâtiment : {percent(match['building'], eligible)}** des "
+        f"diagnostics éligibles, répartis sur {thousands(match['communes'])} communes déclarées "
+        "par la source."
     )
     add("")
     add(
         f"Parmi les diagnostics rattachés à la seule adresse, "
         f"**{thousands(match['ambiguous']['assessments'])}** partagent leur adresse avec un "
         f"autre diagnostic sans rattachement bâtiment, sur "
-        f"**{thousands(match['ambiguous']['addresses'])}** adresses. Le calcul les rendra "
-        "`ambiguous_match` : la cardinalité est réelle — un immeuble a plusieurs DPE légitimes "
-        "— et c'est la population que D6 doit revoir à la main."
+        f"**{thousands(match['ambiguous']['addresses'])}** adresses. "
+        + (
+            "La cardinalité est réelle — un programme neuf dépose un DPE par logement — et aucune "
+            "feature ne lit ces diagnostics (ADR-021)."
+            if source == "DS-13"
+            else "Le calcul les rendra `ambiguous_match` : la cardinalité est réelle — un immeuble "
+            "a plusieurs DPE légitimes — et c'est la population que D6 doit revoir à la main."
+        )
     )
     add("")
     add("### La source se contredit sur son propre géocodage")
     add("")
     add(
-        f"**{thousands(match['contradicted'])} diagnostics** portent un `identifiant_ban` qui se "
+        f"Parmi les diagnostics rattachés à la seule adresse, "
+        f"**{thousands(match['contradicted'])}** portent un `identifiant_ban` qui se "
         "résout dans notre référentiel alors que `statut_geocodage` annonce « aucune "
         "correspondance trouvée ». L'adresse est conservée — la jointure d'identifiant, elle, "
         "est vérifiable — et c'est la **confiance** qui devient absente avec le motif "
         "`contradictory_geocoding_status`. Quarantaine par attribut de BUG-03 : "
-        "l'enregistrement reste, l'attribut invérifiable s'en va motivé."
+        "l'enregistrement reste, l'attribut invérifiable s'en va motivé. Un diagnostic rattaché "
+        "au bâtiment peut porter le même statut : sa confiance vient alors de l'identifiant RNB, "
+        "pas du géocodage, et il n'est pas compté ici."
     )
     add("")
     add("### Communes aux taux extrêmes")
@@ -471,7 +496,7 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
             )
             assert ratio is not None
         add("")
-    add("## Distributions pour E1")
+    add("## Distributions descriptives" if source == "DS-13" else "## Distributions pour E1")
     add("")
     add(
         f"Sur les **{thousands(stored)} diagnostics conservés** — les "
@@ -502,7 +527,8 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
     add("### `REN-006` — fraîcheur des diagnostics")
     add("")
     add(
-        f"Du {consumption['oldest']} au {consumption['freshest']}, médiane au "
+        f"Date d'établissement du diagnostic : du {consumption['oldest']} au "
+        f"{consumption['freshest']}, médiane au "
         f"{str(consumption['median_date'])[:10]}. Un diagnostic ancien reste un diagnostic "
         "valide : sa fraîcheur alimente la confiance, elle n'invalide pas la valeur."
     )
@@ -537,7 +563,7 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
     for entry in dist["periods"]:
         add(f"| {entry['period']} | {thousands(entry['assessments'])} |")
     add("")
-    add("## Contrôles du contrat DS-07")
+    add(f"## Contrôles du contrat {source}")
     add("")
     add("| Contrôle | Résultat | Bloque la publication |")
     add("|---|---|---|")
@@ -576,7 +602,8 @@ def render(data: dict[str, Any], department: str, generated_on: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Regenerate the DS-07 matching report")
+    parser = argparse.ArgumentParser(description="Regenerate a DPE matching report")
+    parser.add_argument("--source", choices=sorted(OUTPUT_NAMES), default=SOURCE)
     parser.add_argument("--department", choices=("22", "29", "35", "56"), default="35")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--json", action="store_true", help="print the raw figures instead")
@@ -591,7 +618,8 @@ def main() -> int:
         user=settings.database_user,
         password=settings.database_password,
     ) as connection:
-        head = release(connection, department)
+        source = cast(str, arguments.source)
+        head = release(connection, department, source)
         release_id = cast(str, head["id"])
         data: dict[str, Any] = {
             "release": head,
@@ -616,9 +644,12 @@ def main() -> int:
         return 0
 
     output = arguments.output or (
-        Path(__file__).resolve().parents[2] / "docs" / "data" / f"dpe-matching-{department}.md"
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "data"
+        / OUTPUT_NAMES[source].format(department=department)
     )
-    output.write_text(render(data, department, date.today().isoformat()), encoding="utf-8")
+    output.write_text(render(data, department, date.today().isoformat(), source), encoding="utf-8")
     print(f"Wrote {output}")
     return 0
 

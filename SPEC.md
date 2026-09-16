@@ -338,6 +338,7 @@ L'état d'import de chaque source (acceptée, `display_only`, effectifs) est ten
 | DS-10 | Sitadel, autorisations d'urbanisme | SDES | réservé, aucun contrat | vérité terrain ex post de V1 |
 | DS-11 | MAJIC personnes morales | DGFiP | réservé, aucun contrat | propriétaire personne morale, V3 |
 | DS-12 | BODACC et Sirene | DILA / INSEE | réservé, aucun contrat | procédures collectives, V3 |
+| DS-13 | DPE logements neufs, extrait API | ADEME | en contrat | vérification seulement ; jamais dans une mesure ([ADR-021](./docs/decisions/ADR-021-dpe-logements-neufs.md)) |
 
 ### 13.2 Ce qui n'a pas de source
 
@@ -353,6 +354,8 @@ photo aérienne ou la visite lève.
 - **Dans le radar** : les mêmes, plus DS-05 pour l'adresse si H4 l'autorise, DS-08 pour le zonage
   comme contexte.
 - **Affichées, non classifiantes** : DS-03, DS-04, DS-09, dans la plateforme.
+- **Affichée, exclue de toute mesure** : DS-13. Un DPE neuf accompagne une livraison, il
+  n'annonce pas une vente ; le baromètre, le radar et les features ne lisent que DS-07.
 - **Réservées** : DS-10 à DS-12, sans contrat ni import tant qu'une ADR n'ouvre pas V1 ou V3.
 
 ### 13.4 Registre des mesures du baromètre

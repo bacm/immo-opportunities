@@ -523,6 +523,9 @@ def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
     absents : les poser sur une parcelle demanderait la relation adresse ↔ parcelle, que B4 a
     établie non vérifiable avec environ 24 % d'erreur irréductible.
 
+    Les DPE de logements neufs (DS-13, ADR-021) y figurent avec leur source : l'écran de
+    vérification les montre, aucune mesure ne les lit.
+
     `relation_status` sort tel qu'il est en base. Un bâtiment chevauche 2,24 parcelles en
     moyenne : montrer un rattachement ambigu comme certain attribuerait un diagnostic à la
     mauvaise parcelle, et D6a a déjà établi qu'un tel écran est pire qu'un écran absent.
@@ -535,6 +538,7 @@ def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
                assessment.energy_consumption_kwh_m2_year,
                assessment.building_id,
                assessment.release_id,
+               release.data_source_id,
                relation.relation_status,
                assessment.properties->>'type_batiment' AS building_type,
                assessment.properties->>'provenance_id_rnb' AS identifier_provenance,
@@ -546,6 +550,7 @@ def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
                     THEN (assessment.properties->>'surface_habitable_logement')::numeric
                END AS surface_habitable_m2
           FROM observation.energy_assessment AS assessment
+          JOIN meta.dataset_release AS release ON release.id = assessment.release_id
           JOIN reference.building_parcel AS relation
             ON relation.building_id = assessment.building_id
           JOIN reference.parcel AS parcel ON parcel.id = relation.parcel_id
@@ -582,6 +587,8 @@ def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
             # La release est montree pour que deux versions de transformation coexistantes se
             # voient a l'ecran : D6a en a trouve 133 066 doublons sur DVF, apres coup.
             "release_id": row["release_id"],
+            # DS-07 logements existants, DS-13 logements neufs (ADR-021) : l'écran les distingue.
+            "data_source_id": row["data_source_id"],
         }
         for row in rows
     ]

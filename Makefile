@@ -132,19 +132,19 @@ dpe-pin:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		-v $(PWD)/contracts:/workspace/contracts \
 		dagster-code python pipelines/scripts/pin_dpe_release.py \
-		--release $(RELEASE) --department $(DEPARTMENT)
+		--release $(RELEASE) --department $(DEPARTMENT) --source $(or $(SOURCE),DS-07)
 
 dpe-import:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
-		dagster-code python pipelines/scripts/import_dpe_release.py 2026-09-14-extract \
-		--department $(DEPARTMENT) $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
+		dagster-code python pipelines/scripts/import_dpe_release.py $(or $(RELEASE),2026-09-14-extract) \
+		--department $(DEPARTMENT) --source $(or $(SOURCE),DS-07) $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
 
 dpe-report:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		-v $(PWD)/docs/data:/workspace/docs/data \
-		dagster-code python pipelines/scripts/dpe_matching_report.py --department $(DEPARTMENT)
+		dagster-code python pipelines/scripts/dpe_matching_report.py --department $(DEPARTMENT) --source $(or $(SOURCE),DS-07)
 
 georisques-pin:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \

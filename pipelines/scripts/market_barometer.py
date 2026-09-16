@@ -823,6 +823,8 @@ SELECT a.dpe_number, link.parcel_id, parcel.commune_code,
   JOIN reference.parcel parcel ON parcel.id = link.parcel_id
  WHERE a.department_code = %(department)s
    AND a.cancelled_at IS NULL
+   -- DS-07 seulement : un DPE neuf (DS-13) accompagne une livraison, pas une vente (ADR-021).
+   AND a.release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
 """
 
 SALE_DATES_SQL = """
@@ -882,6 +884,7 @@ d AS (
          count(*) FILTER (WHERE a.building_id IS NULL) AS unattached
     FROM observation.energy_assessment a
    WHERE a.department_code = %(department)s AND a.cancelled_at IS NULL
+     AND a.release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
    GROUP BY 1)
 SELECT coalesce(m.commune_code, d.commune_code) AS commune_code,
        coalesce(m.total, 0) AS mutations,  -- invariant-ok: compte, pas manquant
@@ -896,6 +899,7 @@ SELECT count(*) AS n
   FROM observation.energy_assessment a
  WHERE a.department_code = %(department)s
    AND a.cancelled_at IS NULL
+   AND a.release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')
    AND a.building_id IS NOT NULL
    AND NOT EXISTS (
      SELECT 1 FROM reference.building_parcel link
@@ -1566,7 +1570,8 @@ def collect(connection: psycopg.Connection[Any], department: str, parameters: Pa
         connection,
         "SELECT min(coalesce(deposited_at, assessment_date)) AS first,"
         " max(coalesce(deposited_at, assessment_date)) AS last"
-        " FROM observation.energy_assessment WHERE department_code = %(department)s",
+        " FROM observation.energy_assessment WHERE department_code = %(department)s"
+        " AND release_id IN (SELECT id FROM meta.dataset_release WHERE data_source_id = 'DS-07')",
         department=department,
     )[0]
 

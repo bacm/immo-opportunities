@@ -383,3 +383,15 @@ test('une fiche parcelle annonce ses ventes et ses diagnostics, et nomme ses bâ
   await expect(page.getByRole('tab', { name: 'Sources' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('heading', { name: 'Provenance' })).toBeVisible()
 })
+
+/**
+ * DPE de logements neufs — D9, ADR-021. Une construction récente de Betton montre son diagnostic
+ * de réception, marqué « Neuf » ; aucune mesure du marché ne le lit.
+ */
+test('un DPE de logement neuf s’affiche et se distingue d’un DPE existant', async ({ page }) => {
+  await page.goto('/?lon=-1.64&lat=48.18&z=18&type=parcel&id=parcel:cadastre:35024000AP0175')
+  await page.getByRole('tab', { name: /Diagnostics DPE/ }).click()
+  await expect(page.locator('.assessment-row').first()).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.assessment-row .chip', { hasText: /^Neuf$/ }).first()).toBeVisible()
+  await expect(page.getByText(/de logement neuf, établis? à la réception de la construction/)).toBeVisible()
+})

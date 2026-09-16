@@ -153,7 +153,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .record > header { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
 .record-title { font-weight: 700; font-size: 14px; }
 .record-sub { color: var(--muted); font-size: 12px; }
-.record-side { margin-left: auto; }
+.record-side { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .record-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .lots { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .transaction-lot { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); font-size: 13px; }

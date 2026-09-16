@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Épingler une release DS-07 : constituer l'extrait DPE, l'archiver, le checksumer — D4.
+"""Épingler une release DPE (DS-07 ou DS-13) : constituer, archiver, checksumer l'extrait — D4, D9.
 
 ## Pourquoi un extrait, et pas un fichier du producteur
 
@@ -44,9 +44,15 @@ from typing import Any
 
 from immo_pipelines.cadastre.archive import MinioObjectStore
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.market_data.dpe import DPE_FAMILIES, DpeFamily
 
-DATASET = "dpe03existant"
-API = f"https://data.ademe.fr/data-fair/api/v1/datasets/{DATASET}/lines"
+# DS-07 (existants) ou DS-13 (neufs, ADR-021) : mêmes colonnes, même constitution d'extrait.
+
+
+def api_url(family: DpeFamily) -> str:
+    return f"https://data.ademe.fr/data-fair/api/v1/datasets/{family.api_slug}/lines"
+
+
 USER_AGENT = "ImmoOpportunitiesDataPipeline/0.1 (+https://github.com/)"
 
 # La page maximale acceptee par data-fair. Une page de 10 000 lignes pese 16 Mo et demande une
@@ -107,7 +113,7 @@ def _strip_header(payload: bytes) -> bytes:
     return payload[cut + 1 :] if cut >= 0 else b""
 
 
-def download_extract(department: str, destination: Path) -> dict[str, Any]:
+def download_extract(family: DpeFamily, department: str, destination: Path) -> dict[str, Any]:
     query = urllib.parse.urlencode(
         {
             "format": "csv",
@@ -118,7 +124,7 @@ def download_extract(department: str, destination: Path) -> dict[str, Any]:
             "sort": "_i",
         }
     )
-    url: str | None = f"{API}?{query}"
+    url: str | None = f"{api_url(family)}?{query}"
     pages = 0
     raw_bytes = 0
     header: bytes = b""
@@ -154,22 +160,24 @@ def download_extract(department: str, destination: Path) -> dict[str, Any]:
     return {
         "sha256": digest.hexdigest(),
         "byte_size": destination.stat().st_size,
-        "uncompressed_byte_size": raw_bytes + len(header) + 1,
+        # La page 1 est écrite avec son en-tête : `raw_bytes` le compte déjà. L'ajouter une seconde
+        # fois gonflait la taille d'une ligne d'en-tête (relevé par le recompte de D9).
+        "uncompressed_byte_size": raw_bytes,
         "pages": pages,
         "column_count": len(columns),
         "source_last_modified": last_modified,
     }
 
 
-def object_key(release: str, department: str) -> str:
-    return f"ds-07/{release}/{department}/assessments.csv.gz"
+def object_key(family: DpeFamily, release: str, department: str) -> str:
+    return f"{family.archive_prefix}/{release}/{department}/assessments.csv.gz"
 
 
 def manifest(
-    release: str, department: str, extract: dict[str, Any], published_on: str
+    family: DpeFamily, release: str, department: str, extract: dict[str, Any], published_on: str
 ) -> dict[str, Any]:
     return {
-        "release_id": f"DS-07@{release}",
+        "release_id": f"{family.source_id}@{release}",
         "release_key": release,
         "source_published_on": published_on,
         "department": department,
@@ -180,7 +188,7 @@ def manifest(
             "`source_published_on` reprend le `last-modified` annoncé par l'API pour le jeu."
         ),
         "discovery": {
-            "catalog_entry": f"https://data.ademe.fr/datasets/{DATASET}",
+            "catalog_entry": f"https://data.ademe.fr/datasets/{family.api_slug}",
             "api_is_not_a_path_back": (
                 "L'URL rejouée demain rendrait d'autres octets : le jeu est mis à jour en "
                 "continu. Seule l'archive nommée ci-dessous permet de retrouver les octets "
@@ -193,7 +201,8 @@ def manifest(
                 "celle du producteur, pas la nôtre."
             ),
             "projection": (
-                "Aucune : les 226 colonnes de la source sont archivées. Le contrat demande "
+                f"Aucune : les {extract['column_count']} colonnes de la source sont archivées. "
+                "Le contrat demande "
                 "`additional_properties: preserve`, et un extrait ne se ré-épingle pas à "
                 "l'identique."
             ),
@@ -201,12 +210,14 @@ def manifest(
         "assets": [
             {
                 "layer": "assessments",
-                "url": f"{API}?format=csv&qs=code_departement_ban%3A{department}&sort=_i",
+                "url": (
+                    f"{api_url(family)}?format=csv&qs=code_departement_ban%3A{department}&sort=_i"
+                ),
                 "sha256": extract["sha256"],
                 "byte_size": extract["byte_size"],
                 "media_type": "text/csv",
                 "content_encoding": "gzip",
-                "archive": {"object_key": object_key(release, department)},
+                "archive": {"object_key": object_key(family, release, department)},
                 "extract": {
                     "pages": extract["pages"],
                     "page_size": PAGE_SIZE,
@@ -222,7 +233,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Pin one ADEME DPE department extract")
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
     parser.add_argument("--release", required=True, help="clé de release, par exemple 2026-09-14")
+    parser.add_argument("--source", choices=sorted(DPE_FAMILIES), default="DS-07")
     arguments = parser.parse_args()
+    family = DPE_FAMILIES[arguments.source]
 
     settings = CadastreSettings.from_environment()
     object_store = MinioObjectStore(
@@ -232,22 +245,22 @@ def main() -> int:
         Path(__file__).resolve().parents[2]
         / "contracts"
         / "datasets"
-        / "DS-07"
+        / family.source_id
         / "releases"
         / f"{arguments.release}-{arguments.department}.json"
     )
     with tempfile.TemporaryDirectory(prefix="immo-dpe-pin-") as temporary:
         local = Path(temporary) / "assessments.csv.gz"
-        print(f"DS-07 {arguments.department} : constitution de l'extrait", flush=True)
-        extract = download_extract(arguments.department, local)
-        key = object_key(arguments.release, arguments.department)
+        print(f"{family.source_id} {arguments.department} : constitution de l'extrait", flush=True)
+        extract = download_extract(family, arguments.department, local)
+        key = object_key(family, arguments.release, arguments.department)
         object_store.put_file(
             local,
             key,
             {
                 "content-type": "text/csv",
                 "x-amz-meta-sha256": extract["sha256"],
-                "x-amz-meta-release": f"DS-07@{arguments.release}",
+                "x-amz-meta-release": f"{family.source_id}@{arguments.release}",
             },
         )
         print(f"archivé sous {key}", flush=True)
@@ -260,7 +273,7 @@ def main() -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             json.dumps(
-                manifest(arguments.release, arguments.department, extract, published_on),
+                manifest(family, arguments.release, arguments.department, extract, published_on),
                 ensure_ascii=False,
                 indent=2,
             )
