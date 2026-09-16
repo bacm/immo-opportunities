@@ -6,7 +6,12 @@ vient d'une vente réelle identifiable : les identifiants sont fabriqués pour l
 
 from typing import Any
 
-from immo_pipelines.market_data.dvf import DVF_TRANSFORMATION_VERSION, Mutation
+from immo_pipelines.market_data.dvf import (
+    DVF_TRANSFORMATION_VERSION,
+    LAND_ALL_CULTURES_ALLOCATION,
+    SIMPLE_ALLOCATION,
+    Mutation,
+)
 
 
 def line(**overrides: str) -> dict[str, str]:
@@ -106,4 +111,30 @@ def test_un_bien_decrit_deux_fois_ne_fait_pas_deux_lots() -> None:
 
 def test_la_version_de_transformation_porte_le_changement_de_regle() -> None:
     """Sans nouvelle version, le réimport garderait les lignes de la règle précédente (BUG-09)."""
-    assert DVF_TRANSFORMATION_VERSION == "5"
+    # invariant-ok: assertion-supprimee — la version 5 devient 6 (BUG-18).
+    assert DVF_TRANSFORMATION_VERSION == "6"
+
+
+def test_un_terrain_a_deux_cultures_porte_la_surface_des_deux() -> None:
+    """BUG-18 : le prix de la parcelle ne se rapporte pas à une seule de ses cultures."""
+    parcel = "35000000AA0001"
+    mutation = Mutation(
+        [land(parcel, "600", "terres"), land(parcel, "400", "prés"), land(parcel, "400", "prés")]
+    )
+    assert mutation.complexity() is None
+    [lot] = mutation.priced_lots()
+    # La ligne répétée à l'identique ne compte qu'une fois.
+    assert mutation.lot_surface(lot) == 1000
+    assert mutation.lot_allocation(lot) == LAND_ALL_CULTURES_ALLOCATION
+
+
+def test_un_terrain_a_une_culture_et_une_maison_gardent_leur_regle() -> None:
+    single = Mutation([land("35000000AA0001", "600", "terres")])
+    [lot] = single.priced_lots()
+    assert single.lot_surface(lot) == 600
+    assert single.lot_allocation(lot) == SIMPLE_ALLOCATION
+    built = Mutation([house(), land("35000000AA0002", "900", "prés")])
+    [house_lot] = built.priced_lots()
+    # La surface d'une maison reste sa surface bâtie, jamais celle du terrain.
+    assert built.lot_surface(house_lot) == 110
+    assert built.lot_allocation(house_lot) == SIMPLE_ALLOCATION

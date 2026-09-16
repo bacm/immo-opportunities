@@ -2,7 +2,7 @@
 
 **Date :** 14 septembre 2026 · **Ticket :** [D1](../backlog/D1-import-dvf-ds06.md)
 **Releases :** `DS-06@2026-09-13` millésimes 2021-2025, `DS-06@2019-04-archive` millésimes
-2014-2020 · **Transformation :** version 5 (H7, 16 septembre 2026)
+2014-2020 · **Transformation :** version 6 (H7 le 16 septembre 2026, BUG-18 le 17)
 
 ## La source a changé, et le contrat dit pourquoi
 
@@ -242,7 +242,8 @@ faux et parfaitement crédible.
 
 Millésimes 2021-2025, `DS-06@2026-09-13`, 133 066 mutations. Les chiffres de la version 4 viennent
 de [`dvf-multi-parcelles-35.md`](./dvf-multi-parcelles-35.md), qui rejoue la règle de la version 4
-sur les mêmes archives ; ceux de la version 5 sont en base et au run d'import.
+sur les mêmes archives ; ceux de la version 5 sont au run d'import, et la version 6 (BUG-18) les
+laisse identiques : elle ne change que la surface de certains terrains.
 
 | Motif | Version 4 | Version 5 | Part en version 5 |
 |---|---:|---:|---:|
@@ -307,15 +308,26 @@ libellé nouveau le fasse savoir.
 
 ## Distributions observées du prix au m²
 
-Millésimes 2021-2025, version 5, sur les lots au prix alloué, rattachés à une parcelle, de nature
+Millésimes 2021-2025, version 6, sur les lots au prix alloué, rattachés à une parcelle, de nature
 marchande (vente, VEFA, vente de terrain à bâtir) :
 
 | Type de bien | Lots | Q1 | Médiane | Q3 |
 |---|---:|---:|---:|---:|
 | Maison | 30 921 | 1 769 € | **2 400 €** | 3 122 € |
-| Terrain | 19 775 | 1 € | **64 €** | 174 € |
+| Terrain | 19 775 | 1 € | **61 €** | 174 € |
 | Appartement | 4 343 | 2 596 € | **3 824 €** | 5 000 € |
 | Local industriel ou commercial | 3 283 | 600 € | **1 319 €** | 2 470 € |
+
+**Version 6 (BUG-18).** Un terrain vendu seul et décrit par plusieurs natures de culture portait
+son prix sur la surface de la culture de la ligne pricée. Toute la release 2021-2025, sans le
+filtre du tableau, en compte 1 228 ventes (1 733 dans l'archive 2014-2020) ; 1 171 d'entre elles
+figurent parmi les 19 775 lots du tableau. Leur surface réelle est en médiane 2,17 fois (2,14 dans
+l'archive) celle de la culture retenue. Le lot porte désormais la somme de ses couples (nature de
+culture, surface) distincts, avec la méthode `single_land_lot_all_cultures` : deux cultures de
+même nature et de même surface comptent une fois — dans l'archive, où la nature n'est pas
+convertie, deux cultures de même surface. Un acte sans parcelle rapproche ses cultures par acte.
+La médiane terrain passe de 64 € à 61 €. Les maisons et appartements, et donc le baromètre, n'en
+sont pas touchés.
 
 La médiane maison passe de 2 526 € (version 4, même filtre, règle rejouée sur les archives) à
 2 400 € : les ventes rendues par la version 5 sont plus rurales, pas moins chères que leur commune

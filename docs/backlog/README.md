@@ -120,11 +120,12 @@ dérivée du graphe de dépendances.
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
 | [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | Terminé | — |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
-| [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
+| [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | En cours | en cours |
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | Terminé | — |
 | [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-17](./BUG-17-identifiants-a-deux-chiffres.md) | Un ticket numéroté au-delà de 9 est refusé par `ticket-check` et ignoré comme dépendance | dette transverse | — | S | Terminé | — |
+| [BUG-18](./BUG-18-surface-des-terrains-multi-cultures.md) | Un terrain à plusieurs natures de culture est prié sur la surface d'une seule | dette transverse | H7 | S | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -212,7 +213,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**63/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, G6, G7.
+**64/92 terminés.** Prêts à démarrer : A6, BUG-02, G6, G7.
 
 ### Verrous humains
 
@@ -223,11 +224,17 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 - **H3** — revue humaine · preuve attendue : `docs/data/entretiens-professionnels-35.md`
 - **H4** — décision humaine · preuve attendue : `docs/decisions/avis-juridique-donnees-2026.md`
 
+### Déjà démarré
+
+Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
+
+- **BUG-13** — backend/migrations/versions/, backend/tests/, pipelines/scripts/compute_morphology_features.py, pipelines/scripts/compute_building_features.py, pipelines/tests/, Makefile, docs/data/building-features-35.md
+
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-13, G6
+1. A6, BUG-02, G6
 2. G7
 
 <!-- END:tickets -->

@@ -1,6 +1,6 @@
 # Baromètre du marché — département 35
 
-**Généré le :** 2026-09-16 · **Mesures :** BAR-001 à BAR-009 de [`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** [H1](../backlog/H1-barometre-marche-35-mesures.md) · **Prix DVF :** transformation version 5 ([H7](../backlog/H7-mutations-multi-parcelles.md), [`dvf-quality-35.md`](./dvf-quality-35.md))
+**Généré le :** 2026-09-16 · **Mesures :** BAR-001 à BAR-009 de [`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** [H1](../backlog/H1-barometre-marche-35-mesures.md) · **Prix DVF :** transformation version 6 ([H7](../backlog/H7-mutations-multi-parcelles.md), [`dvf-quality-35.md`](./dvf-quality-35.md))
 
 **Recompté le 2026-09-16** par `recompte-preuve` — H7, transformation DVF version 5 : trois passes en isolement du code — mesures et CSV en entier, dix-neuf documents en entier, profil et qualité DVF — aucune divergence de valeur.
 

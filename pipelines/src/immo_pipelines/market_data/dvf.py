@@ -23,7 +23,8 @@ import psycopg
 # 4 : un bien decrit plusieurs fois par la source ne compte plus pour plusieurs lots.
 # 5 : les lots chiffrables sont testes avant les parcelles ; une vente a un seul lot bati sur
 #     plusieurs parcelles garde son prix (H7, docs/data/dvf-multi-parcelles-35.md).
-DVF_TRANSFORMATION_VERSION = "5"
+# 6 : un terrain a plusieurs natures de culture porte la surface de toutes (BUG-18).
+DVF_TRANSFORMATION_VERSION = "6"
 
 # La version entre dans l'identifiant de chaque ligne, et pas seulement dans une constante. Sans
 # cela, `ON CONFLICT DO NOTHING` conserve les lignes de la version precedente et un correctif de
@@ -31,6 +32,9 @@ DVF_TRANSFORMATION_VERSION = "5"
 # regle du rang etait ecrite, testee, et 1 240 355 relations fautives restaient en base.
 
 SIMPLE_ALLOCATION = "single_property_full_price"
+# Le lot de terrain unique d'un acte, decrit par plusieurs natures de culture : le prix va au lot
+# entier, rapporte a la somme des surfaces de ses cultures. Aucun prix n'est reparti par culture.
+LAND_ALL_CULTURES_ALLOCATION = "single_land_lot_all_cultures"
 
 # Une ligne sans `type_local` n'est pas une ligne dont le type manque : c'est un lot de terrain.
 # `geo-dvf` decrit le bati par `type_local` et le non-bati par `nature_culture` et
@@ -90,6 +94,18 @@ def _surface(row: dict[str, str]) -> float | None:
     return value if value > 0 else None
 
 
+def _land_cultures(rows: list[dict[str, str]], parcel: str) -> dict[tuple[str, float], None]:
+    """Les natures de culture distinctes d'une parcelle, avec leur surface, dans l'ordre lu."""
+    cultures: dict[tuple[str, float], None] = {}
+    for row in rows:
+        if row["type_local"] or (row.get("id_parcelle") or "") != parcel:
+            continue
+        surface = _surface(row)
+        if surface is not None:
+            cultures[(row.get("nature_culture") or "", surface)] = None
+    return cultures
+
+
 @dataclass
 class Mutation:
     """Les lignes d'une même mutation, avant toute décision."""
@@ -120,6 +136,27 @@ class Mutation:
             return built
         return _distinct_lots([row for row in self.rows if _surface(row) is not None])
 
+    def lot_surface(self, lot: dict[str, str]) -> float | None:
+        """La surface du lot : bâtie pour un local ; pour un terrain, toutes ses cultures.
+
+        `geo-dvf` décrit une parcelle en « terres » et en « prés » sur deux lignes, que la
+        déduplication réunit en un lot. Garder la surface de la première ligne seulement
+        rapportait le prix de la parcelle à une partie d'elle : 1 228 ventes de terrain sur
+        2021-2025, surface réelle 2,17 fois plus grande en médiane (BUG-18).
+        """
+        if lot["type_local"]:
+            return _surface(lot)
+        cultures = _land_cultures(self.rows, lot.get("id_parcelle") or "")
+        return sum(surface for _, surface in cultures) if cultures else None
+
+    def lot_allocation(self, lot: dict[str, str]) -> str:
+        if (
+            not lot["type_local"]
+            and len(_land_cultures(self.rows, lot.get("id_parcelle") or "")) > 1
+        ):
+            return LAND_ALL_CULTURES_ALLOCATION
+        return SIMPLE_ALLOCATION
+
     @property
     def price(self) -> float | None:
         values = {row["valeur_fonciere"] for row in self.rows if row["valeur_fonciere"]}
@@ -148,7 +185,7 @@ class Mutation:
             # a l'un d'eux fabriquerait un prix au m2 faux et credible. Une maison avec son
             # garage tombe ici, et c'est voulu.
             return "no_priced_lot" if not lots else "multiple_priced_lots"
-        if _surface(lots[0]) is None:
+        if self.lot_surface(lots[0]) is None:
             return "surface_missing"
         if len(self.parcels) > 1 and not lots[0]["type_local"]:
             # Une vente de terrain sur plusieurs parcelles dont un seul lot porte une surface :
@@ -210,9 +247,11 @@ def import_year(
 
         priced: set[int] = {id(row) for row in mutation.priced_lots()} if reason is None else set()
         for index, row in enumerate(mutation.rows):
-            surface = _surface(row)
-            # Le prix ne va qu'au lot auquel il se rapporte, jamais a chaque lot de la mutation.
-            allocatable = id(row) in priced and surface is not None
+            # Le prix ne va qu'au lot auquel il se rapporte, jamais a chaque lot de la mutation ;
+            # la ligne qui le porte recoit la surface du lot entier (BUG-18).
+            allocatable = id(row) in priced
+            surface = mutation.lot_surface(row) if allocatable else _surface(row)
+            allocatable = allocatable and surface is not None
             properties.append(
                 (
                     f"transaction-property:dvf:{release_id}:{mutation_id}:{index}",
@@ -222,7 +261,7 @@ def import_year(
                     row["type_local"] or LAND_PROPERTY_TYPE,
                     surface,
                     mutation.price if allocatable else None,
-                    SIMPLE_ALLOCATION if allocatable else None,
+                    mutation.lot_allocation(row) if allocatable else None,
                     json.dumps(
                         {
                             "type_local": row["type_local"] or None,
