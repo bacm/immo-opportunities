@@ -21,4 +21,6 @@ COPY backend backend
 
 USER 10001:10001
 EXPOSE 8000
-CMD ["uvicorn", "immo.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Le journal d'accès d'uvicorn écrit la chaîne de requête, donc les adresses recherchées ;
+# `immo.access` le remplace, avec le gabarit de route et le `request_id` (G7).
+CMD ["uvicorn", "immo.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

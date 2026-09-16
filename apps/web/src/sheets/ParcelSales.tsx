@@ -1,7 +1,7 @@
 import { LoaderCircle } from 'lucide-react'
 import type { ParcelTransaction } from '../api'
 import { formatArea, formatDate, formatEuro } from '../format'
-import { Chip, State } from '../ui'
+import { Chip, RequestReference, State } from '../ui'
 import type { Loaded } from './useLoad'
 
 /**
@@ -22,7 +22,7 @@ const several = (count: number | null) => count !== null && count > 1
 
 export function ParcelSales({ loaded }: { loaded: Loaded<ParcelTransaction[]> }) {
   if (loaded.status === 'failed') {
-    return <p className="inline-error" role="alert">Mutations indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.</p>
+    return <p className="inline-error" role="alert">Mutations indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.<RequestReference reference={loaded.reference} /></p>
   }
   if (loaded.status === 'loading') return <State icon={<LoaderCircle className="spin" />} title="Chargement des ventes" text="Lecture des mutations DVF rattachées." />
   const rows = loaded.value

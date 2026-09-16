@@ -30,8 +30,83 @@ discovery.relabel "containers" {
 loki.source.docker "containers" {
 	host          = "unix:///var/run/docker.sock"
 	targets       = discovery.relabel.containers.output
-	forward_to    = [loki.write.local.receiver]
+	forward_to    = [loki.process.observability.receiver]
 	relabel_rules = discovery.relabel.containers.rules
+}
+
+// G7 : latences tirées des journaux, exposées sur /metrics d'Alloy que Prometheus scrape.
+// Les étiquettes restent bornées — gabarit de route, classe de statut, couche, zoom — et sont
+// retirées du flux Loki après usage.
+loki.process "observability" {
+	forward_to = [loki.write.local.receiver]
+
+	stage.match {
+		selector = "{service=\"api\"} |= \"request_completed\""
+
+		stage.regex {
+			expression = "route=(?P<route>\\S+) path=\\S+ status=(?P<status_class>\\d)\\d\\d duration_ms=(?P<duration_ms>[0-9.]+)"
+		}
+
+		stage.labels {
+			values = {
+				route        = "",
+				status_class = "",
+			}
+		}
+
+		stage.metrics {
+			metric.histogram {
+				name              = "api_request_duration_milliseconds"
+				prefix            = "immo_"
+				description       = "Durée des requêtes API par gabarit de route (journal immo.access)."
+				source            = "duration_ms"
+				buckets           = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+				max_idle_duration = "24h"
+			}
+		}
+
+		stage.label_drop {
+			values = ["route", "status_class"]
+		}
+	}
+
+	stage.match {
+		selector = "{service=\"caddy\"} |= \"http.log.access\" |= \"/tiles/v1/\""
+
+		stage.json {
+			expressions = {
+				uri      = "request.uri",
+				duration = "",
+			}
+		}
+
+		stage.regex {
+			source     = "uri"
+			expression = "^/tiles/v1/(?P<layer>[a-z_]+)/(?P<zoom>\\d+)/"
+		}
+
+		stage.labels {
+			values = {
+				layer = "",
+				zoom  = "",
+			}
+		}
+
+		stage.metrics {
+			metric.histogram {
+				name              = "tile_request_duration_seconds"
+				prefix            = "immo_"
+				description       = "Durée des tuiles servies par Caddy, par couche et zoom."
+				source            = "duration"
+				buckets           = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5]
+				max_idle_duration = "24h"
+			}
+		}
+
+		stage.label_drop {
+			values = ["layer", "zoom"]
+		}
+	}
 }
 
 loki.write "local" {

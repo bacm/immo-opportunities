@@ -1,37 +1,87 @@
 #!/usr/bin/env bash
+# Métriques de fraîcheur et d'import pour le collecteur textfile de node-exporter (G7).
+#
+# Par source et territoire : date de publication de la release importée par le producteur,
+# dernier import réussi, dernier échec. Le motif d'un échec reste en
+# base (`meta.import_run.error_message`) et dans l'API d'administration : un texte libre n'est
+# jamais une étiquette de métrique.
+#
+# En production, les chemins par défaut conviennent. Sur un poste : `make pilot-metrics`, qui
+# passe `IMMO_COMPOSE_FILES`, `IMMO_ENV_FILE` et `RUNTIME_DATA_PATH`.
 set -euo pipefail
 
 project_dir=${IMMO_PROJECT_DIR:-/opt/immo}
 runtime_root=${RUNTIME_DATA_PATH:-/srv/immo/runtime}
+env_file=${IMMO_ENV_FILE:-${project_dir}/.env}
+compose_files=${IMMO_COMPOSE_FILES:-compose.yaml compose.prod.yaml compose.observability.yaml}
 mkdir -p "${runtime_root}/metrics"
 
-compose=(
-  docker compose --project-directory "${project_dir}" --env-file "${project_dir}/.env"
-  -f "${project_dir}/compose.yaml" -f "${project_dir}/compose.prod.yaml"
-  -f "${project_dir}/compose.observability.yaml"
-)
+compose=(docker compose --project-directory "${project_dir}" --env-file "${env_file}")
+for file in ${compose_files}; do
+  compose+=(-f "${project_dir}/${file}")
+done
+
 query_output=$("${compose[@]}" exec -T postgres /bin/bash -ec '
   export PGPASSWORD="$(cat /run/secrets/postgres_superuser_password)"
   psql -U postgres -d immo -At -F "|" -c "
-    SELECT '\''import'\'', COALESCE(extract(epoch FROM max(completed_at))::bigint, 0)::text
+    SELECT '\''import'\'', COALESCE(extract(epoch FROM max(completed_at))::bigint, 0)::text, '\'''\'', '\'''\'', '\'''\''
       FROM meta.import_run WHERE status = '\''succeeded'\''
     UNION ALL
-    SELECT data_source_id, COALESCE(extract(epoch FROM max(published_at))::bigint, 0)::text
-      FROM meta.active_dataset_release GROUP BY data_source_id ORDER BY 1;
+    SELECT '\''publication'\'', COALESCE(extract(epoch FROM max(published_at))::bigint, 0)::text,
+           data_source_id, '\'''\'', '\'''\''
+      FROM meta.active_dataset_release GROUP BY data_source_id
+    UNION ALL
+    SELECT '\''source'\'',
+           COALESCE(extract(epoch FROM max(run.completed_at)
+                    FILTER (WHERE run.status = '\''succeeded'\''))::bigint, 0)::text,
+           release.data_source_id, run.territory_type, run.territory_code
+      FROM meta.import_run AS run
+      JOIN meta.dataset_release AS release ON release.id = run.release_id
+     GROUP BY release.data_source_id, run.territory_type, run.territory_code
+    UNION ALL
+    SELECT '\''published'\'',
+           extract(epoch FROM max(release.source_published_on))::bigint::text,
+           release.data_source_id, run.territory_type, run.territory_code
+      FROM meta.import_run AS run
+      JOIN meta.dataset_release AS release ON release.id = run.release_id
+     WHERE run.status = '\''succeeded'\'' AND release.source_published_on IS NOT NULL
+     GROUP BY release.data_source_id, run.territory_type, run.territory_code
+    UNION ALL
+    SELECT '\''failure'\'',
+           extract(epoch FROM max(COALESCE(run.completed_at, run.started_at)))::bigint::text,
+           release.data_source_id, run.territory_type, run.territory_code
+      FROM meta.import_run AS run
+      JOIN meta.dataset_release AS release ON release.id = run.release_id
+     WHERE run.status = '\''failed'\''
+     GROUP BY release.data_source_id, run.territory_type, run.territory_code
+     ORDER BY 1, 3, 4, 5;
   "
 ')
 
-metric_tmp=$(mktemp "${runtime_root}/metrics/.pilot.XXXXXX")
-{
+render_metrics() {
   echo '# HELP immo_import_last_success_timestamp_seconds Last successful import.'
   echo '# TYPE immo_import_last_success_timestamp_seconds gauge'
-  while IFS='|' read -r code timestamp; do
-    if [[ ${code} == import ]]; then
-      echo "immo_import_last_success_timestamp_seconds ${timestamp}"
-    else
-      echo "immo_source_last_publication_timestamp_seconds{dataset=\"${code}\"} ${timestamp}"
-    fi
-  done <<<"${query_output}"
-} >"${metric_tmp}"
+  echo '# HELP immo_source_last_publication_timestamp_seconds Last publication of an active release, by source.'
+  echo '# TYPE immo_source_last_publication_timestamp_seconds gauge'
+  echo '# HELP immo_source_release_published_timestamp_seconds Producer publication date of the newest imported release.'
+  echo '# TYPE immo_source_release_published_timestamp_seconds gauge'
+  echo '# HELP immo_source_last_import_success_timestamp_seconds Last successful import by source and territory, 0 if none.'
+  echo '# TYPE immo_source_last_import_success_timestamp_seconds gauge'
+  echo '# HELP immo_source_last_import_failure_timestamp_seconds Last failed import by source and territory.'
+  echo '# TYPE immo_source_last_import_failure_timestamp_seconds gauge'
+  while IFS='|' read -r kind timestamp dataset territory_type territory; do
+    local labels="dataset=\"${dataset}\",territory_type=\"${territory_type}\",territory=\"${territory}\""
+    case ${kind} in
+      import) echo "immo_import_last_success_timestamp_seconds ${timestamp}" ;;
+      publication) echo "immo_source_last_publication_timestamp_seconds{dataset=\"${dataset}\"} ${timestamp}" ;;
+      source) echo "immo_source_last_import_success_timestamp_seconds{${labels}} ${timestamp}" ;;
+      published) echo "immo_source_release_published_timestamp_seconds{${labels}} ${timestamp}" ;;
+      failure) echo "immo_source_last_import_failure_timestamp_seconds{${labels}} ${timestamp}" ;;
+    esac
+  done
+}
+
+metric_tmp=$(mktemp "${runtime_root}/metrics/.pilot.XXXXXX")
+render_metrics <<<"${query_output}" >"${metric_tmp}"
 chmod 0644 "${metric_tmp}"
 mv -- "${metric_tmp}" "${runtime_root}/metrics/pilot.prom"

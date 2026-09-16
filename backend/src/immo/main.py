@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 
 from immo import __version__
@@ -15,8 +17,23 @@ from immo.api.routes.scoring import router as scoring_router
 from immo.api.routes.spatial import router as spatial_router
 from immo.config import get_settings
 
+LOG_FORMAT = "%(levelname)s %(name)s %(message)s"
+
+
+def configure_logging() -> None:
+    """Les journaux `immo.*` sortent au niveau INFO, une fois : sans handler, le journal d'accès
+    et son `request_id` n'atteignaient jamais la sortie du conteneur (G7)."""
+    logger = logging.getLogger("immo")
+    logger.setLevel(logging.INFO)
+    if not any(getattr(handler, "immo_handler", False) for handler in logger.handlers):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        handler.immo_handler = True  # type: ignore[attr-defined]
+        logger.addHandler(handler)
+
 
 def create_app() -> FastAPI:
+    configure_logging()
     settings = get_settings()
     docs_url = "/docs" if settings.docs_enabled else None
     app = FastAPI(

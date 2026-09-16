@@ -37,11 +37,28 @@ export type EntityDetail = Omit<GeneratedEntityDetail, 'area_m2' | 'center' | 'b
 
 type ErrorPayload = { detail?: string; error?: { message?: string } }
 
-/** Une réponse en erreur garde son statut : un 404 (inconnu) n'est pas une panne. */
+/**
+ * Un identifiant par requête, que l'API reprend dans ses journaux : cité par l'utilisateur, il
+ * retrouve la requête (G7). `randomUUID` n'existe qu'en contexte sécurisé.
+ */
+export function newRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+/**
+ * Une réponse en erreur garde son statut : un 404 (inconnu) n'est pas une panne. Le statut 0 dit
+ * que le service n'a pas répondu du tout.
+ */
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly requestId: string) {
     super(message)
   }
+}
+
+/** La référence à citer pour une panne, quand elle vient d'une requête de l'API. */
+export function failureReference(error: unknown): string | undefined {
+  return error instanceof ApiError ? error.requestId : undefined
 }
 
 async function request<T>(
@@ -49,11 +66,19 @@ async function request<T>(
   init: RequestInit = {},
 ): Promise<T> {
   const token = getAccessToken()
+  const requestId = newRequestId()
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
+  headers.set('X-Request-ID', requestId)
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.body) headers.set('Content-Type', 'application/json')
-  const response = await fetch(path, { ...init, headers })
+  let response: Response
+  try {
+    response = await fetch(path, { ...init, headers })
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') throw error
+    throw new ApiError('Le service local n’a pas répondu', 0, requestId)
+  }
   if (!response.ok) {
     let message = `La requête a échoué (${response.status})`
     try {
@@ -63,7 +88,7 @@ async function request<T>(
     } catch {
       // Preserve the HTTP fallback message when the proxy returns a non-JSON error.
     }
-    throw new ApiError(message, response.status)
+    throw new ApiError(message, response.status, requestId)
   }
   return response.json() as Promise<T>
 }

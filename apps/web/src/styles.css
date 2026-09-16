@@ -120,6 +120,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .section-head h3 { margin: 0; }
 .detail-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .callout { margin: 14px 0 0; padding: 10px 12px; border-radius: var(--radius); background: var(--soft); border-left: 3px solid #9eb7ae; color: #44534c; font-size: 12px; line-height: 1.5; }
+.request-reference { font-size: 12px; overflow-wrap: anywhere; }
 .inline-error { margin: 0; padding: 10px 12px; border-radius: var(--radius); background: var(--bad-bg); color: var(--bad-ink); font-size: 13px; line-height: 1.45; }
 .unknown-value { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .key-figures { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }

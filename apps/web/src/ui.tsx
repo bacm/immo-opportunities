@@ -6,6 +6,12 @@ export function State({ icon, title, text, action }: { icon: ReactNode; title: s
   return <div className="empty-state"><span>{icon}</span><strong>{title}</strong><p>{text}</p>{action}</div>
 }
 
+/** La référence d'une requête en panne, à citer pour la retrouver dans les journaux (G7). */
+export function RequestReference({ reference }: { reference?: string }) {
+  if (!reference) return null
+  return <> Référence : <code className="request-reference">{reference}</code>.</>
+}
+
 export type Tone = 'neutral' | 'good' | 'warn' | 'bad'
 
 export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {

@@ -45,6 +45,8 @@ help:
 	@echo "make ban-census ARCHIVE=path      Recount a pinned DS-05 archive, no database"
 	@echo "make mvt-benchmark                Measure cold/hot p95 for local MVT routes"
 	@echo "make property-unit-report DEPARTMENT=35  Measure parcel grouping signals (BUG-11)"
+	@echo "make observability-check          Validate Prometheus, alert tests, Alloy and Caddy config (G7)"
+	@echo "make pilot-metrics                Export source freshness and import failures (G7)"
 	@echo "make building-features DEPARTMENT=35  Write BLD/REN features on physical buildings (BUG-13)"
 	@echo "make e2e                          Run the local real-map Playwright flow"
 	@echo "make inventory ENV=production     Render inventory from VPS_* variables"
@@ -248,6 +250,24 @@ morphology-features:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/compute_morphology_features.py \
 		--department $(DEPARTMENT) $(if $(COMMUNE),--commune $(COMMUNE),)
+
+# G7 : configuration d'observabilité validée par les outils des images épinglées.
+observability-check:
+	docker run --rm --entrypoint promtool -v $(PWD)/config/prometheus:/etc/prometheus:ro \
+		$${PROMETHEUS_IMAGE:-prom/prometheus:v3.12.0} check config /etc/prometheus/prometheus.yml
+	docker run --rm --entrypoint promtool -v $(PWD)/config/prometheus:/p:ro -w /p \
+		$${PROMETHEUS_IMAGE:-prom/prometheus:v3.12.0} test rules alerts.test.yml
+	docker run --rm -v $(PWD)/config/alloy/config.alloy:/c.alloy:ro \
+		$${ALLOY_IMAGE:-grafana/alloy:v1.18.0} fmt /c.alloy >/dev/null
+	docker run --rm -v $(PWD)/config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+		$${CADDY_IMAGE:-caddy:2.11.4-alpine} caddy validate --config /etc/caddy/Caddyfile \
+		--adapter caddyfile
+
+pilot-metrics:
+	IMMO_PROJECT_DIR=$(PWD) IMMO_ENV_FILE=$(PWD)/$(COMPOSE_ENV_FILE) \
+		IMMO_COMPOSE_FILES="compose.yaml compose.dev.yaml compose.observability.yaml" \
+		RUNTIME_DATA_PATH=$(or $(RUNTIME_DATA_PATH),$(PWD)/.runtime) \
+		./scripts/export-pilot-metrics
 
 building-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \

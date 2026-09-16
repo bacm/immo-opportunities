@@ -25,3 +25,26 @@ groups:
         labels: { severity: critical }
         annotations:
           summary: Une cible Prometheus est indisponible.
+      # G7 : les seuls événements qui appellent une action pendant le pilote.
+      - alert: ImportFailedNotRecovered
+        expr: immo_source_last_import_failure_timestamp_seconds > immo_source_last_import_success_timestamp_seconds
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Import {{ $labels.dataset }} en échec sur {{ $labels.territory_type }} {{ $labels.territory }}, sans réussite depuis. Motif : meta.import_run.error_message."
+      - alert: UpstreamUnhealthy
+        expr: caddy_reverse_proxy_upstreams_healthy == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.upstream }} échoue au contrôle de santé de Caddy (API : /health/ready, Martin : /health)."
+      # Paramètre déclaré, pas une cible produit : le p95 sur 10 min dépasse trois fois celui des
+      # 24 dernières heures. SPEC.md ne fixe aucune cible de latence.
+      - alert: ApiLatencyDegraded
+        expr: >
+          histogram_quantile(0.95, sum by (le) (rate(immo_api_request_duration_milliseconds_bucket[10m])))
+          > 3 * histogram_quantile(0.95, sum by (le) (rate(immo_api_request_duration_milliseconds_bucket[24h])))
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: Le p95 de l'API sur 10 minutes dépasse trois fois son p95 des 24 dernières heures.

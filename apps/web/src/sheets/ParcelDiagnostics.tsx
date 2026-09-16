@@ -1,7 +1,7 @@
 import { LoaderCircle } from 'lucide-react'
 import type { ParcelEnergyAssessment } from '../api'
 import { entityLabel, formatArea, formatDate } from '../format'
-import { Chip, State } from '../ui'
+import { Chip, RequestReference, State } from '../ui'
 import type { Loaded } from './useLoad'
 
 /** Plafond d'affichage, annoncé à l'écran et jamais silencieux : une parcelle rennaise porte
@@ -23,7 +23,7 @@ const DISPLAY_LIMIT = 50
  */
 export function ParcelDiagnostics({ loaded }: { loaded: Loaded<ParcelEnergyAssessment[]> }) {
   if (loaded.status === 'failed') {
-    return <p className="inline-error" role="alert">Diagnostics indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.</p>
+    return <p className="inline-error" role="alert">Diagnostics indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.<RequestReference reference={loaded.reference} /></p>
   }
   if (loaded.status === 'loading') return <State icon={<LoaderCircle className="spin" />} title="Chargement des diagnostics" text="Lecture des DPE rattachés aux bâtiments de la parcelle." />
   const rows = loaded.value

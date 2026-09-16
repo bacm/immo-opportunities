@@ -46,7 +46,7 @@ est partiellement couvert par les organisations et RLS; FR-016 reste expliciteme
 | OpenAPI génère le client TypeScript | contrat et client généré | validé |
 | Tâches longues hors processus web | Dagster pour imports | validé pour imports; Celery non requis au parcours livré |
 | Backup, réplication, restauration vierge | scripts/timers/runbook | test réel absent |
-| Traces, métriques, logs corrélés | request ID, Prometheus, Loki, dashboard | partiel |
+| Traces, métriques, logs corrélés | request ID du client web à l'API, Prometheus, Loki, tableau de bord et alertes ([G7](./pilot-operations-v0.8-report.md#observabilité--g7-16-septembre-2026)) | validé pour le périmètre pilote, sur pile locale ; OpenTelemetry (N6) reste à faire |
 | Parcours critiques en CI | workflow CI et tests, [preuve du run](./ci-proof.md) | validé pour les contrôles de `make check`; intégration PostGIS et e2e absentes de la CI |
 | Staging et rollback automatisés | workflow multi-environnement, fonctions rollback | exécution externe absente |
 | Backup et clé de reprise hors cible | réplication configurable | cible/clé externes absentes |

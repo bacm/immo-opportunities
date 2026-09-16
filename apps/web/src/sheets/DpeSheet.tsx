@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Gauge, LoaderCircle, Map as MapIcon, TriangleAlert } from 'lucide-react'
 import { loadEnergyAssessment, type EnergyAssessmentLookup, type EntityType } from '../api'
 import { QUARANTINE_REASONS, entityLabel, formatDate } from '../format'
-import { Chip, Facts, Section, State } from '../ui'
+import { Chip, Facts, RequestReference, Section, State } from '../ui'
 import { SheetFrame } from './SheetFrame'
 import { useLoad } from './useLoad'
 
@@ -27,7 +27,7 @@ export function DpeSheet({ dpeNumber, onClose, onRelated }: {
   const loaded = useLoad(dpeNumber, loadEnergyAssessment)
   return <SheetFrame kind="Diagnostic DPE" icon={<Gauge size={22} />} title={dpeNumber} subtitle="Recherche par numéro, écarts d’import compris" onClose={onClose}>
     {loaded.status === 'loading' && <State icon={<LoaderCircle className="spin" />} title="Recherche du diagnostic" text="Lecture des diagnostics conservés et des écarts d’import." />}
-    {loaded.status === 'failed' && <Section><p className="inline-error" role="alert">Recherche indisponible : le service local n’a pas répondu. Rien n’est affirmé sur ce diagnostic.</p></Section>}
+    {loaded.status === 'failed' && <Section><p className="inline-error" role="alert">Recherche indisponible : le service local n’a pas répondu. Rien n’est affirmé sur ce diagnostic.<RequestReference reference={loaded.reference} /></p></Section>}
     {loaded.status === 'ready' && loaded.value === null && <State icon={<TriangleAlert />} title="Diagnostic inconnu" text="Ce numéro n’est ni parmi les diagnostics importés, ni parmi les écarts d’import. Il peut être absent des extraits ADEME du 35, ou postérieur à leur date." />}
     {loaded.status === 'ready' && loaded.value !== null && <Lookup lookup={loaded.value} onRelated={onRelated} />}
   </SheetFrame>

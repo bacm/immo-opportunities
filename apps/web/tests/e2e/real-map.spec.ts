@@ -96,6 +96,19 @@ test('un service en panne n’est jamais présenté comme une absence de mutatio
   await expect(page.getByText(/Aucun diagnostic rattaché/)).toHaveCount(0)
 })
 
+test('une panne affiche la référence que l’API reçoit, pour retrouver la requête (G7)', async ({ page }) => {
+  let sent = ''
+  await page.route('**/api/v1/parcels/*/transactions', (route) => {
+    sent = route.request().headers()['x-request-id'] ?? ''
+    return route.fulfill({ status: 500, json: { detail: 'panne' } })
+  })
+  await page.goto('/?lon=-1.6&lat=48.1&z=18&type=parcel&id=parcel:cadastre:35024000AP0207')
+  await page.getByRole('tab', { name: /Ventes DVF/ }).click()
+  await expect(page.getByText(/Mutations indisponibles/)).toBeVisible()
+  expect(sent).toMatch(/^[A-Za-z0-9._-]{1,128}$/)
+  await expect(page.locator('.request-reference')).toHaveText(sent)
+})
+
 test('la revue est une fenêtre modale qui se ferme par Échap', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Revue' }).click()

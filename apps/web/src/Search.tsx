@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Gauge, LoaderCircle, Map as MapIcon, MapPin, Search as SearchIcon, X } from 'lucide-react'
-import { searchEntities, type SearchResult } from './api'
+import { failureReference, searchEntities, type SearchResult } from './api'
 import { asDpeNumber } from './format'
+import { RequestReference } from './ui'
 
 type Option = { kind: 'dpe'; number: string } | { kind: 'entity'; result: SearchResult }
 
@@ -23,6 +24,7 @@ export function Search({ initialQuery, onQueryChange, onChoose, onChooseDpe }: {
   const [active, setActive] = useState(0)
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [reference, setReference] = useState<string>()
   const searching = query.trim().length >= 3
   // Un numéro de DPE ne se cherche pas dans le référentiel : il ouvre directement sa fiche (C7).
   const dpeNumber = asDpeNumber(query)
@@ -61,6 +63,7 @@ export function Search({ initialQuery, onQueryChange, onChoose, onChooseDpe }: {
           if ((error as Error).name === 'AbortError') return
           setResults([])
           setFailed(true)
+          setReference(failureReference(error))
         })
         .finally(() => setLoading(false))
     }, 220)
@@ -130,7 +133,7 @@ export function Search({ initialQuery, onQueryChange, onChoose, onChooseDpe }: {
               <span><strong>{option.result.label}</strong><small>{option.result.secondary_label}</small></span>
             </>}
       </button>)}
-      {!loading && failed && <p className="inline-error">Recherche indisponible : le service local ne répond pas.</p>}
+      {!loading && failed && <p className="inline-error">Recherche indisponible : le service local ne répond pas.<RequestReference reference={reference} /></p>}
       {!loading && !failed && options.length === 0 && <p>Aucune adresse, parcelle ni numéro de DPE du 35 ne correspond.</p>}
     </div>}
   </div>

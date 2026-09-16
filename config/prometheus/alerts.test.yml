@@ -1,0 +1,68 @@
+# Tests des alertes de G7 : `make observability-check`.
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'immo_source_last_import_failure_timestamp_seconds{dataset="DS-08",territory_type="department",territory="35"}'
+        values: '2000x10'
+      - series: 'immo_source_last_import_success_timestamp_seconds{dataset="DS-08",territory_type="department",territory="35"}'
+        values: '1000x10'
+      - series: 'immo_source_last_import_failure_timestamp_seconds{dataset="DS-06",territory_type="department",territory="35"}'
+        values: '1000x10'
+      - series: 'immo_source_last_import_success_timestamp_seconds{dataset="DS-06",territory_type="department",territory="35"}'
+        values: '2000x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: ImportFailedNotRecovered
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              dataset: DS-08
+              territory_type: department
+              territory: "35"
+            exp_annotations:
+              summary: "Import DS-08 en échec sur department 35, sans réussite depuis. Motif : meta.import_run.error_message."
+
+  - interval: 1m
+    input_series:
+      - series: 'caddy_reverse_proxy_upstreams_healthy{upstream="api:8000"}'
+        values: '1 1 0 0 0 0 0'
+      - series: 'caddy_reverse_proxy_upstreams_healthy{upstream="martin:3000"}'
+        values: '1x6'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: UpstreamUnhealthy
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: UpstreamUnhealthy
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              upstream: api:8000
+            exp_annotations:
+              summary: "api:8000 échoue au contrôle de santé de Caddy (API : /health/ready, Martin : /health)."
+
+  # 24 h à moins de 100 ms, puis une heure entre 100 ms et 1 s.
+  - interval: 1m
+    input_series:
+      - series: 'immo_api_request_duration_milliseconds_bucket{le="100"}'
+        values: '0+10x1440 14400x60'
+      - series: 'immo_api_request_duration_milliseconds_bucket{le="1000"}'
+        values: '0+10x1500'
+      - series: 'immo_api_request_duration_milliseconds_bucket{le="+Inf"}'
+        values: '0+10x1500'
+    alert_rule_test:
+      - eval_time: 1400m
+        alertname: ApiLatencyDegraded
+        exp_alerts: []
+      - eval_time: 1500m
+        alertname: ApiLatencyDegraded
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Le p95 de l'API sur 10 minutes dépasse trois fois son p95 des 24 dernières heures.

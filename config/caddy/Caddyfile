@@ -7,8 +7,30 @@
 	}
 }
 
+# Contrôle actif : `caddy_reverse_proxy_upstreams_healthy` dit si Martin répond (G7).
+(martin) {
+	reverse_proxy martin:3000 {
+		health_uri /health
+		health_interval 15s
+	}
+}
+
 {$SITE_ADDRESS:http://localhost:8080} {
 	encode zstd gzip
+
+	# Journal d'accès pour la latence des tuiles par zoom (G7). Ni en-têtes, ni chaîne de requête
+	# (une recherche porte une adresse), IP tronquée.
+	log {
+		output stdout
+		format filter {
+			request>headers delete
+			resp_headers delete
+			request>uri regexp \?.*$ ""
+			request>remote_ip ip_mask 16 32
+			request>client_ip ip_mask 16 32
+			wrap json
+		}
+	}
 
 	header {
 		-Server
@@ -16,6 +38,10 @@
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 	}
+
+	# La référence envoyée par le client, seul en-tête gardé : elle retrouve une requête même quand
+	# l'API n'a pas répondu (G7).
+	log_append request_id {http.request.header.X-Request-ID}
 
 	handle /health {
 		respond "ok" 200
@@ -26,25 +52,28 @@
 	}
 
 	handle /api/* {
-		reverse_proxy api:8000
+		reverse_proxy api:8000 {
+			health_uri /health/ready
+			health_interval 15s
+		}
 	}
 
 	handle /tiles/v1/parcels/* {
 		uri strip_suffix .mvt
 		uri replace /tiles/v1/parcels /parcels
-		reverse_proxy martin:3000
+		import martin
 	}
 
 	handle /tiles/v1/buildings/* {
 		uri strip_suffix .mvt
 		uri replace /tiles/v1/buildings /buildings
-		reverse_proxy martin:3000
+		import martin
 	}
 
 	handle /tiles/v1/opportunities/* {
 		uri strip_suffix .mvt
 		uri replace /tiles/v1/opportunities /opportunities
-		reverse_proxy martin:3000
+		import martin
 	}
 
 	handle {
