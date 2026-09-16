@@ -324,3 +324,16 @@ test('changer de parcelle recharge ses diagnostics, et signale un rattachement a
   expect(await page.locator('.assessment-row').count()).toBe(4)
   expect(await page.getByText('Rattachement ambigu').count()).toBe(4)
 })
+
+/**
+ * L'objet analysé est une parcelle, pas un bien — BUG-11, ADR-020.
+ *
+ * Cas 90 de la revue B4 : `35288000DA0322` est un garage de 16 m² sur parcelle propre, à côté de
+ * la maison de `DA0321`. Aucun signal autorisé ne les réunit ; la fiche doit le dire plutôt que
+ * laisser lire le garage comme un bien.
+ */
+test('une fiche parcelle dit qu’elle décrit une parcelle, pas un bien', async ({ page }) => {
+  await page.goto('/?lon=-2.0&lat=48.65&z=18&type=parcel&id=parcel:cadastre:35288000DA0322')
+  await expect(page.getByText('PARCELLE', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/Objet analysé : une parcelle cadastrale, pas un bien/)).toBeVisible()
+})

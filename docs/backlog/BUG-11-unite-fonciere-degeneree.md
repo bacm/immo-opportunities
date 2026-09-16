@@ -1,8 +1,8 @@
 # BUG-11 — L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer
 
-**Version :** v0.6 · **Taille :** L · **État :** En cours
+**Version :** v0.6 · **Taille :** L · **État :** Terminé
 **Dépend de :** D1 · **Bloque :** E2, E3
-**Touche :** docs/data/property-unit-35.md, backend/migrations/versions/
+**Touche :** docs/data/property-unit-35.md, pipelines/scripts/property_unit_signals_report.py, apps/web/src/App.tsx, Makefile
 **Découvert par :** revue manuelle B4, cas 90, 10 septembre 2026
 
 ## Contexte à charger
@@ -153,10 +153,10 @@ ticket **mesure et documente** ; le choix du signal est une décision, qui revie
 - **Cas de référence** : cas 90 (`DA0321`, `DA0322`) et cas 55 (`ZS0089`, `ZS0091`).
 - **Aucune migration** tant que la décision n'est pas écrite.
 
-## Mesure du 16 septembre 2026 — recomptée, en attente de décision
+## Mesure du 16 septembre 2026 — recomptée
 
 Rapport : [`property-unit-35.md`](../data/property-unit-35.md), recompté en isolement du code,
-aucune divergence. Les étapes 1 et 2 sont faites ; l'étape 3 attend la décision du porteur.
+aucune divergence. Étapes 1 à 3 faites ; la décision est écrite ci-dessous.
 
 | Signal | Parcelles regroupées | Plus grande unité | Vendues ensemble, paires dont les deux sont vendues |
 |---|---:|---:|---:|
@@ -179,6 +179,14 @@ Ce que la mesure établit :
   date**, pas aujourd'hui, et 3 395 actes à plusieurs parcelles ont perdu leurs rattachements
   (parcelles renumérotées), sur une archive 2014-2020 encore `pending`.
 - **L'adresse commune est le signal le mieux corroboré**, et le plus étroit.
+
+## Décision — 16 septembre 2026
+
+Le porteur retient l'option « aucun regroupement », en attendant E1 :
+[ADR-020](../decisions/ADR-020-unite-analysee-parcelle.md). L'étape 5 est appliquée : chaque fiche
+parcelle et unité foncière de l'Explorer dit qu'elle décrit une parcelle, pas un bien (test e2e).
+Aucune migration : `unit_type` et `exclusion_reason` restent tels quels. La reprise du bâti
+partagé est portée par E1.
 
 ## Travail à réaliser
 

@@ -3,6 +3,13 @@
 **Version :** v0.6 · **Taille :** L · **État :** À faire
 **Dépend de :** D6 · **Bloque :** E2, E3, E4, E5
 
+## Reprise de BUG-11 — 16 septembre 2026
+
+[ADR-020](../decisions/ADR-020-unite-analysee-parcelle.md) laisse l'unité analysée à la parcelle.
+Le seuil de la relation bâtiment ↔ parcelle secondaire que ce ticket établit permet de
+remesurer le bâti partagé, seul et combiné à l'adresse commune, avec
+`make property-unit-report`, puis de décider d'un regroupement.
+
 ## Contexte à charger
 
 - `contracts/scoring/feature-registry-v1.json`

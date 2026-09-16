@@ -118,7 +118,7 @@ dérivée du graphe de dépendances.
 | [BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md) | Une release remplacée n'est jamais retirée | dette transverse | — | M | À faire | **prêt** |
 | [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) | Un tiers des relations bâtiment ↔ parcelle sont des contacts marginaux déclarés certains | v0.3 | — | M | Terminé | — |
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
-| [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | En cours | en cours |
+| [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | Terminé | — |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
 | [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | À faire | **prêt** |
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | Terminé | — |
@@ -208,7 +208,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**54/87 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
+**55/87 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 
@@ -220,20 +220,12 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 - **H4** — décision humaine · preuve attendue : `docs/decisions/avis-juridique-donnees-2026.md`
 - **H8** — décision humaine · preuve attendue : `docs/decisions/ADR-017-carte-communale-barometre.md`
 
-### Déjà démarré
-
-Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
-
-- **BUG-11** — docs/data/property-unit-35.md, backend/migrations/versions/
-
-Prêts mais **retenus par un travail en cours** : BUG-08, BUG-13.
-
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, D7, G6, H7
-2. G7
+1. A6, BUG-02, BUG-08, D7, G6, H7
+2. BUG-13, G7
 
 <!-- END:tickets -->
 
