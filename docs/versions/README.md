@@ -24,10 +24,10 @@ plateforme que ces versions construisaient : il est porté par la série de tick
 | [v0.2 — Cadastre 35](./v0.2-cadastre-35.md) | Terminée | DS-01 importé, accepté, publié |
 | [v0.3 — Référentiel spatial](./v0.3-spatial-reference.md) | Terminée | parcelles, bâtiments physiques, adresses ; revue B4 ; résultats négatifs établis |
 | [v0.4 — Carte réelle](./v0.4-real-map.md) | Terminée | Explorer connecté à PostGIS et Martin |
-| [v0.5 — Données métier](./v0.5-market-data.md) | Gelée — DS-06 à DS-09 importés en `display_only` ; D6 et D7 suspendus | DVF, DPE, GPU, Géorisques sur le 35 |
-| [v0.6 — Scoring](./v0.6-scoring.md) | Gelée par ADR-016 | moteur écrit, jamais appelé ; listes E8 et E8f produites |
-| [v0.7 — MVP connecté](./v0.7-connected-mvp.md) | Gelée par ADR-016 | workflow et multi-tenant écrits, sans candidat |
-| [v0.8 — Pilote Bretagne](./v0.8-brittany-pilot.md) | Gelée par ADR-016 | socle régional écrit, jamais déployé |
+| [v0.5 — Données métier](./v0.5-market-data.md) | À faire — DS-06 à DS-09 importés en `display_only` ; D6 et D7 repris par ADR-019 | DVF, DPE, GPU, Géorisques sur le 35 |
+| [v0.6 — Scoring](./v0.6-scoring.md) | À faire — dégelée par ADR-019 | moteur écrit, jamais appelé ; listes E8 et E8f produites |
+| [v0.7 — MVP connecté](./v0.7-connected-mvp.md) | À faire — dégelée par ADR-019 | workflow et multi-tenant écrits, sans candidat |
+| [v0.8 — Pilote Bretagne](./v0.8-brittany-pilot.md) | Bloquée — extension hors périmètre avant un abonné du 35 (`SPEC.md` §6.4) | socle régional écrit, jamais déployé |
 | Série H — baromètre et radar | En cours | [H1 à H6](../backlog/README.md#h--intelligence-de-marché-puis-radar-adr-016) |
 
 ## Clôture d'une version

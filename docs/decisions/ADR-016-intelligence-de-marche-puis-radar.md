@@ -1,6 +1,7 @@
 # ADR-016 — Le produit devient une intelligence de marché, puis un radar de mise en vente
 
 **Date :** 15 septembre 2026
+**Remplacée en partie :** le point 3 de la décision (gel de la plateforme) est levé par [ADR-019](./ADR-019-lever-le-gel-de-la-plateforme.md), le 16 septembre 2026. Les points 1, 2 et 4 restent valides.
 
 **Contexte.** L'audit du 15 septembre ([`docs/audit-critique-2026-09-15.md`](../audit-critique-2026-09-15.md))
 établit que la définition initiale — candidats off-market pour marchands de biens, deux

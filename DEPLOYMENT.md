@@ -1,11 +1,12 @@
 # Immo Opportunities — déploiement VPS
 
-**Statut :** gelé avec la plateforme ([ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)). **Jamais exécuté.**
+**Statut :** jamais exécuté ; interdit pour un tiers tant que les conditions d'`ARCHITECTURE.md` §25.2 ne sont pas remplies ([ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)).
 **Cible décrite :** VPS Ubuntu 24.04 x86_64 générique, GitHub Actions + Ansible + Docker Compose.
 
 Le produit actif (baromètre V5) n'a besoin d'aucun déploiement : il tourne sur la base locale et
-produit des documents. Ce contrat ne redevient pertinent que si le radar (V2) exige un envoi
-automatisé, ou si la plateforme est dégelée. Il est conservé tel quel, avec ses bloqueurs.
+produit des documents. Ce contrat redevient pertinent si le radar (V2) exige un envoi
+automatisé, ou quand la plateforme, de nouveau développée, visera un premier déploiement. Il est
+conservé tel quel, avec ses bloqueurs.
 
 ## 1. Ce qui est écrit
 

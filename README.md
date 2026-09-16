@@ -4,10 +4,11 @@ Intelligence de marché immobilier à partir de données publiques, sur l'Ille-e
 produit décidé le 15 septembre 2026 ([ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md))
 est un **baromètre du marché par EPCI**, puis un **radar hebdomadaire de mise en vente** fondé sur
 le dépôt des diagnostics énergétiques. La plateforme cartographique écrite avant cette décision
-existe dans le dépôt et est gelée.
+existe dans le dépôt ; gelée le 15 septembre, elle se développe de nouveau depuis le 16
+([ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)), sans être déployée.
 
 - [Spécification produit](./SPEC.md) — version 1.0, provisoire jusqu'aux premiers entretiens
-- [Architecture](./ARCHITECTURE.md) — ce qui existe, ce qui est gelé, ce qui est défectueux
+- [Architecture](./ARCHITECTURE.md) — ce qui existe, ce qui est défectueux, ce qui manque avant un déploiement
 - [Audit du 15 septembre 2026](./docs/audit-critique-2026-09-15.md) — pourquoi
 - [Backlog et chemin critique](./docs/backlog/README.md)
 - [Rapports de données](./docs/data/README.md)
@@ -24,7 +25,7 @@ le baromètre.
 
 - Docker Engine avec Compose v2, 16 Go de RAM et 100 Go de disque libre pour la base du 35 ;
 - Python 3.13 géré par `uv` ;
-- Node.js 24 et pnpm 10 (plateforme gelée seulement).
+- Node.js 24 et pnpm 10 (plateforme seulement).
 
 ## Développement local
 

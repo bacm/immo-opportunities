@@ -51,7 +51,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 /**
  * L'Explorer est l'outil local de vérification des données du 35 (ADR-018) : on y cherche une
  * adresse ou une parcelle, on la voit sur la carte, et sa fiche montre ce que la base en dit.
- * Rien de la plateforme gelée n'y est rendu — ni candidat, ni score, ni administration.
+ * Aucun candidat, score ni administration n'y est rendu tant qu'aucun score n'est publié ; ces
+ * écrans, retirés par C4, se reprennent de l'historique (ADR-019).
  */
 
 const DEFAULT_VIEW: MapView = { longitude: -1.6778, latitude: 48.1173, zoom: 14 }

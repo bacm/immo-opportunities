@@ -2,7 +2,7 @@
 
 **Périmètre :** ce qu'il reste à faire pour livrer le produit décidé par
 [ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) — le baromètre du 35, puis
-le radar de mise en vente — et ce qui est gelé avec la plateforme.
+le radar de mise en vente — et la plateforme, de nouveau développée depuis [ADR-019](../decisions/ADR-019-lever-le-gel-de-la-plateforme.md).
 
 Ce dossier est un **plan d'exécution**, pas une source de vérité produit. L'ordre des sources :
 `SPEC.md` → `ARCHITECTURE.md` → [`docs/decisions/`](../decisions/) → [`contracts/`](../../contracts/) →
@@ -45,10 +45,13 @@ A7 ──► H1 ──► H2 ──► H3 ──┬──► H5 radar (H4 avis j
 | [H5](./H5-radar-mise-en-vente.md) | le radar hebdomadaire de mise en vente |
 | [H6](./H6-reecrire-spec.md) | `SPEC.md` réécrit après le premier retour client |
 
-**Tout le reste est gelé**, pas abandonné : D6, E1 à E7, F1 à F3, G1 à G8, BUG-02, BUG-08,
-BUG-11, BUG-13, D7, A6, G6, G7 restent dans le tableau avec leur disponibilité dérivée, mais
-aucun ne se prend avant le verdict de H3. E9 reste disponible pour être joint aux entretiens de
-H3, à condition de corriger son protocole (aveugle cassé sur la liste E8f, audit §3.4).
+**La plateforme n'est plus gelée** ([ADR-019](../decisions/ADR-019-lever-le-gel-de-la-plateforme.md), 16 septembre 2026) : D6, E1 à E7, F1 à F3,
+G1 à G8, BUG-02, BUG-08, BUG-11, BUG-13, D7, A6, G6, G7 se prennent selon leur disponibilité
+dérivée, sans ordre imposé par rapport à la série H. Leurs limites sont dans `SPEC.md` §11.3 :
+aucun score publié sans profiling (E1 d'abord), aucun déploiement pour un tiers avant
+`ARCHITECTURE.md` §25.2, aucune fiche de mutations montrée à un tiers avant H4. BUG-11 reste le
+mur de tout score parcellaire. E9 reste disponible pour être joint aux entretiens de H3, à
+condition de corriger son protocole (aveugle cassé sur la liste E8f, audit §3.4).
 
 ## Questions ouvertes
 
@@ -80,6 +83,7 @@ dérivée du graphe de dépendances.
 | [A1](./A1-preuve-ci-github.md) | Exécuter le workflow CI sur GitHub et attacher la preuve | v0.1 | — | S | Terminé | — |
 | [A10](./A10-spec-sans-etat-ni-historique.md) | `SPEC.md` ne porte ni état réel, ni résultat mesuré, ni décision : une règle de propriété et son application | transverse | A9 | M | Terminé | — |
 | [A11](./A11-decision-selon-ce-que-le-choix-engage.md) | Une décision se reconnaît à ce que le choix engage, pas au silence de `SPEC.md` | transverse | A10 | S | Terminé | — |
+| [A12](./A12-lever-le-gel-de-la-plateforme.md) | Lever le gel de la plateforme | transverse | C4 | M | Terminé | — |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
@@ -204,7 +208,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**53/86 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
+**54/87 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 

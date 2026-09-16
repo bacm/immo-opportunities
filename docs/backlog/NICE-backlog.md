@@ -2,7 +2,7 @@
 
 **État :** aucun de ces items ne démarre avant qu'un professionnel du 35 paie le baromètre ou le
 radar ([H3](./H3-entretiens-professionnels-barometre.md), [H5](./H5-radar-mise-en-vente.md)). Ils
-supposaient tous la plateforme, gelée par [ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md) ;
+supposaient tous la plateforme ; son dégel par [ADR-019](../decisions/ADR-019-lever-le-gel-de-la-plateforme.md) ne les avance pas, faute de score ;
 ils sont conservés pour ne pas être redécouverts, pas pour être planifiés.
 
 La raison n'est pas dogmatique : chacun suppose connu quelque chose qui ne l'est pas. Un export

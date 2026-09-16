@@ -3,7 +3,9 @@
 Intelligence de marché immobilier sur l'Ille-et-Vilaine, à partir de données publiques : un
 baromètre du marché par EPCI, puis un radar hebdomadaire de mise en vente
 ([ADR-016](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)). La plateforme
-cartographique antérieure est gelée. **Répondre et documenter en français.**
+cartographique antérieure se développe de nouveau, sans être déployée
+([ADR-019](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)). **Répondre et documenter en
+français.**
 
 ## Où trouver l'information
 
@@ -16,7 +18,7 @@ l'historique : on y va pour une preuve. Sources de vérité, dans l'ordre : `SPE
 |---|---|
 | Implémenter un ticket | `docs/backlog/<ID>-*.md`, son bloc « Contexte à charger », et les sections de `SPEC.md` qu'il cite. Rien d'autre. |
 | Savoir quoi faire ensuite, état du projet, chemin critique | `docs/backlog/README.md` |
-| Pourquoi le produit a changé, ce qui est gelé et à quelles conditions | ADR-016 ; `SPEC.md` §6.2, §11 |
+| Pourquoi le produit a changé, ce que la plateforme peut et ne peut pas faire | ADR-016, ADR-019 ; `SPEC.md` §6.2, §11 |
 | Périmètre et hors périmètre | `SPEC.md` §6, en particulier §6.4 |
 | Ce que les données ont déjà établi sur le 35, à ne pas redécouvrir | `docs/data/README.md`, puis le rapport cité ; ce que cela impose : `SPEC.md` §10 |
 | Mesures du baromètre `BAR-*`, radar | `SPEC.md` §7, §8 |
@@ -29,9 +31,9 @@ l'historique : on y va pour une preuve. Sources de vérité, dans l'ordre : `SPE
 
 ## Garde-fous, quel que soit le ticket
 
-- **Plateforme gelée** : aucune ligne dans `apps/web/`, `backend/src/immo/api/`, le moteur de
-  score, `infra/`, `config/`, les fichiers Compose, sans ADR de dégel (SPEC §11). L'API locale
-  reste locale.
+- **Plateforme** : développable sous ticket, jamais déployée pour un tiers avant les conditions
+  d'`ARCHITECTURE.md` §25.2 ; aucun score publié sans profiling écrit ; aucune fiche de mutations
+  par parcelle montrée à un tiers avant H4 (SPEC §11.3). L'API locale reste locale.
 - **Données** : valeur manquante reste manquante avec un motif, jamais zéro ; jamais un taux sans
   son effectif ni un effectif sans son filtre ; aucun seuil territorial inventé, un seuil de
   support est un paramètre déclaré ; aucune combinaison de signaux en score sans profiling écrit ;
@@ -63,7 +65,7 @@ confidentialité, selon le cas. Un ticket d'outillage (CI, scripts, `Makefile`) 
 
 **Décision ou implémentation.** Un choix est une **décision** — ADR ou amendement de `SPEC.md`,
 sous ticket, avant le code — s'il change ce qui est publié (définition d'une mesure, filtre,
-seuil, source, unité), touche un interdit de §13 ou §18 ou le périmètre gelé, ajoute une
+seuil, source, unité), touche un interdit de §13 ou §18 ou une limite de §11.3, ajoute une
 dépendance, une table ou un service, ou est coûteux à défaire (schéma, contrat publié, donnée
 importée). Tout le reste est un **choix d'implémentation** : l'agent le tranche, l'écrit dans
 « Choix retenus » du ticket, et continue.

@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap');
 
-/* Outil local de vérification (ADR-018). Plancher typographique : 12 px, aucune exception —
-   les libellés à 8-9 px de la plateforme gelée étaient illisibles (ARCHITECTURE.md §6.3). */
+/* Plancher typographique : 12 px, aucune exception — les libellés à 8-9 px d'avant C4 étaient
+   illisibles (ARCHITECTURE.md §6.3). */
 :root {
   font-family: 'DM Sans', Inter, system-ui, sans-serif;
   font-size: 14px;

@@ -30,6 +30,12 @@ gelée (§6.2), qui ne se dégèle qu'aux conditions de §11.3. Une carte de cha
 des étiquettes DPE ne peut donc pas s'implémenter : elle demande une décision, puis un amendement
 de `SPEC.md` sous ticket.
 
+**Mise à jour du 16 septembre 2026 (A12).** Le gel est levé par
+[ADR-019](../decisions/ADR-019-lever-le-gel-de-la-plateforme.md) : une carte interactive dans
+l'Explorer n'est plus bloquée, et la condition « un professionnel a demandé une carte » du point 4
+n'existe plus. Reste §7.5, qui exclut toute carte **du baromètre** : la décision porte désormais
+sur ce seul point, et sur la maille (§18.4).
+
 ## Ce que la décision tranche
 
 1. **La forme.** Proposition : une carte choroplèthe statique en SVG, par commune et par EPCI,

@@ -1,4 +1,4 @@
-# Cartographie — gelée
+# Cartographie
 
 - `styles/real-map-v1.json` : seul artefact de ce répertoire, couches parcelles et bâtiments ;
 - `martin/` : documentation du serveur MVT ; Martin est configuré par sa chaîne de connexion dans

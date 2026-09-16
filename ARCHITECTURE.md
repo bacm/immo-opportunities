@@ -17,10 +17,11 @@ qui importent, mesurent et produisent des documents, et un outillage de preuve (
 manifestes, rapports, recompte). Elle n'a ni utilisateur connecté, ni API publique, ni
 déploiement.
 
-**L'architecture gelée** est la plateforme applicative écrite entre le 4 et le 15 septembre 2026 :
-SPA React/MapLibre, API FastAPI, moteur de score, multi-tenant OIDC/RLS, tuiles Martin, Dagster,
-observabilité, déploiement Ansible. Elle existe, elle tourne en local, elle est décrite ici avec
-ses défauts connus, et rien n'y est ajouté tant que le gel n'est pas levé par une ADR.
+**La plateforme** est l'application écrite entre le 4 et le 15 septembre 2026 : SPA
+React/MapLibre, API FastAPI, moteur de score, multi-tenant OIDC/RLS, tuiles Martin, Dagster,
+observabilité, déploiement Ansible. Gelée par ADR-016, elle se développe de nouveau depuis
+[ADR-019](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md). Elle tourne en local, elle est décrite ici avec ses défauts connus, et elle ne se
+déploie pour personne avant les conditions de §25.2.
 
 ### Stack réelle
 
@@ -31,17 +32,17 @@ Ce tableau décrit ce qui est dans `uv.lock`, `pnpm-lock.yaml` et `compose.yaml`
 | Base | PostgreSQL 15 + PostGIS 3.5 (`postgis/postgis:15-3.5`) | active |
 | Accès base | SQL brut via `sqlalchemy.text()`, psycopg 3, aucun modèle ORM ; Alembic, 24 révisions | active |
 | Scripts d'import et de mesure | Python 3.13, `httpx`, `tenacity`, `shapely`, `pyproj`, `pyshp`, `py7zr`, `ijson`, `minio` | active |
-| Orchestrateur | Dagster 1.10, **un asset réel** (DS-01) ; les 25 autres cibles utilisent son image comme interpréteur | gelé de fait |
+| Orchestrateur | Dagster 1.10, **un asset réel** (DS-01) ; les 25 autres cibles utilisent son image comme interpréteur | sous-employé |
 | Stockage brut | MinIO en conteneur, 6 Go d'archives épinglées | actif, remplacement envisagé (§13) |
-| API | FastAPI 0.141, Pydantic 2, 45 routes dont 4 authentifiées | gelée |
-| Frontend | React 19, Vite 6, TypeScript strict, MapLibre 6 via `react-map-gl` 8, `oidc-client-ts`, CSS custom, client généré par `openapi-typescript` | outil local de vérification (ADR-018) |
-| Tuiles | Martin 1.13, trois fonctions PostGIS | gelé |
-| Identité | Keycloak 26.7, OIDC Authorization Code + PKCE | gelé |
-| Reverse proxy | Caddy 2.11 | gelé |
-| Observabilité | Prometheus, Loki, Grafana, Alloy, node-exporter | gelé, sans usage démontré |
+| API | FastAPI 0.141, Pydantic 2, 45 routes dont 4 authentifiées | local, non déployable en l'état |
+| Frontend | React 19, Vite 6, TypeScript strict, MapLibre 6 via `react-map-gl` 8, `oidc-client-ts`, CSS custom, client généré par `openapi-typescript` | outil local de vérification (C4) |
+| Tuiles | Martin 1.13, trois fonctions PostGIS | local |
+| Identité | Keycloak 26.7, OIDC Authorization Code + PKCE | local, aucun utilisateur |
+| Reverse proxy | Caddy 2.11 | local |
+| Observabilité | Prometheus, Loki, Grafana, Alloy, node-exporter | sans usage démontré |
 | Cache et file | Redis 8 — **référencé par aucun code** | à retirer |
 | Packaging | Docker Compose v2, 20 services, 16 conteneurs permanents | actif en local |
-| Infrastructure | Ansible + SOPS/age, GitHub Actions ; **jamais exécuté** | gelé |
+| Infrastructure | Ansible + SOPS/age, GitHub Actions ; **jamais exécuté** | non exécuté |
 | Outillage | uv 0.10, Ruff, Pyright strict, pytest ; pnpm 10, `tsc`, Playwright | actif |
 
 Ce qui était déclaré dans la version 0.1 et **n'existe pas** : MUI, TanStack Query, Zustand,
@@ -52,7 +53,7 @@ d'intégration PostGIS.
 ### Versions de runtime
 
 Python 3.13, Node.js 24, PostgreSQL 15 (fin de support novembre 2027 — une migration majeure est
-à prévoir si la plateforme est dégelée). Les versions exactes sont dans les lockfiles.
+à prévoir avant tout déploiement de la plateforme). Les versions exactes sont dans les lockfiles.
 
 ---
 
@@ -71,7 +72,7 @@ transformation. Chaque chiffre dans `docs/data/` nomme son filtre, sa cohorte et
 
 ### 2.3 Pré-calculer plutôt que recalculer à la lecture
 
-Principe de la plateforme gelée. Pour le produit actif, il n'y a pas de lecture interactive :
+Principe de la plateforme. Pour le baromètre, il n'y a pas de lecture interactive :
 une génération de document par millésime.
 
 ### 2.4 Une seule source de vérité transactionnelle
@@ -86,8 +87,8 @@ utilisateur) ; il s'applique au produit actif.
 
 ### 2.6 Un service par conteneur
 
-Règle de la plateforme gelée, tenue. Sa conséquence — 19 chaînes d'approvisionnement à patcher
-pour un produit sans utilisateur — est un des motifs du gel.
+Règle de la plateforme, tenue. Sa conséquence — 19 chaînes d'approvisionnement à patcher pour
+un produit sans utilisateur — a été un des motifs du gel d'ADR-016.
 
 ---
 
@@ -112,7 +113,7 @@ pipelines/scripts/*_report.py, market_barometer.py (H1), market_listing_candidat
 docs/data/*.md, CSV, HTML autonome  ── recompte-preuve avant publication
 ```
 
-### 3.2 Architecture gelée
+### 3.2 Plateforme
 
 ```text
                     Caddy (TLS, routage)
@@ -161,7 +162,7 @@ utilisateur de la plateforme sont courtes et positionnent le contexte RLS par `s
 
 ```text
 immo-opportunities/
-├── apps/web/                 # SPA React (gelée) : src/App.tsx, RealMap.tsx, ReviewMap.tsx, api.ts, auth.ts
+├── apps/web/                 # SPA React (outil de vérification) : src/App.tsx, RealMap.tsx, ReviewMap.tsx, api.ts, auth.ts
 ├── backend/
 │   ├── src/immo/             # modules plats + api/routes/
 │   ├── migrations/versions/  # 24 révisions Alembic, 5 925 lignes de SQL
@@ -220,17 +221,17 @@ routes d'API correspondantes existent toujours ; le code front se récupère au 
 Corrigés par C4 : vue initiale à lon 0 / lat 0, carte vide sans explication sous le zoom 13,
 inconnu peint comme zéro (la couche a disparu), `fetch` bruts qui affichaient « aucune donnée »
 sur un 500, typographie à 8-9 px, modale sans piège de focus. Reste : renouvellement OIDC
-silencieux bloqué par `X-Frame-Options: DENY`, hors du dégel. Détail d'origine : audit §9.
+silencieux bloqué par `X-Frame-Options: DENY`. Détail d'origine : audit §9.
 
 ### 6.4 Règle
 
-Aucune autre ligne dans `apps/web/` sans ADR, tant que H3 n'a pas rendu son verdict. Si le gel
-est levé : rester sur `App.tsx` + CSS custom + MapLibre, ou décider par ADR une convergence vers
-une bibliothèque. Pas les deux.
+Rester sur `App.tsx` + CSS custom + MapLibre, ou décider par ADR une convergence vers une
+bibliothèque. Pas les deux. Les écrans de candidats retirés par C4 se reprennent de l'historique
+quand un score publié existe.
 
 ---
 
-## 7. API et backend — gelés
+## 7. API et backend
 
 ### 7.1 Ce qui existe
 
@@ -261,7 +262,7 @@ n'est envisagé.
 
 ---
 
-## 8. Architecture cartographique — gelée
+## 8. Architecture cartographique
 
 Martin sert trois fonctions PostGIS (`tiles.parcels`, `tiles.buildings`,
 `tiles.opportunities`) depuis des tables de rendu en EPSG:3857 (`tiles.*_render_v1`),
@@ -292,10 +293,10 @@ reference     zones, adresses, parcelles, bâtiments, bâtiments physiques, unit
 feature       définitions et 19,9 M de valeurs                                              ~8,5 Go
 observation   transactions, DPE, urbanisme, risques, routes                                 ~2,1 Go
 tiles         tables de rendu et fonctions MVT                                              ~1,7 Go
-scoring       17 tables, toutes vides                                                       gelé
-market        3 tables, vides                                                               gelé
-app           11 tables, vides                                                              gelé
-audit         1 table, vide                                                                 gelé
+scoring       17 tables, toutes vides                                                       plateforme
+market        3 tables, vides                                                               plateforme
+app           11 tables, vides                                                              plateforme
+audit         1 table, vide                                                                 plateforme
 ```
 
 85 tables, 30 vides. 29 Go pour le seul département 35, doublés en huit jours par l'ajout de
@@ -318,7 +319,7 @@ immo              propriétaire, membre des trois       — rôle de connexion d
 
 La matrice de privilèges de la migration 0001 est correcte et décorative tant que l'API se
 connecte en `immo`. Correction : un rôle de connexion dédié ou `SET LOCAL ROLE api_rw` en tête de
-chaque transaction, avant tout dégel.
+chaque transaction, avant tout déploiement (§25.2).
 
 ### 9.4 Multi-tenant
 
@@ -339,8 +340,8 @@ Aucun. Envisagé pour `feature.feature_value` et les tables de rendu si quatre d
 
 Les imports sont des **scripts CLI** lancés par `make` dans le conteneur `dagster-code` utilisé
 comme interpréteur Python. Dagster n'orchestre que DS-01 (`assets/cadastre.py`) ; le daemon et le
-webserver tournent sans objet. BUG-02 propose de porter les imports vers Dagster ; il est gelé
-avec la plateforme, et la question de garder Dagster est ouverte (§22).
+webserver tournent sans objet. BUG-02 propose de porter les imports vers Dagster ; il est de nouveau
+disponible, et la question de garder Dagster est ouverte (§22).
 
 Vingt-cinq cibles `make` couvrent les neuf datasets, les bâtiments physiques, les features
 morphologiques et urbaines, les rapports, les listes E8 et E8f, le kit terrain. La séquence
@@ -469,7 +470,7 @@ envisagé (§22) et non décidé.
 
 ---
 
-## 12. Authentification et autorisation — gelées
+## 12. Authentification et autorisation
 
 Keycloak 26.7 fournit l'identité OIDC ; l'API valide les JWT RS256 (`PyJWKClient`, audience,
 issuer, claims requis) ; les rôles métier (`platform_admin`, `organization_admin`, `analyst`,
@@ -492,8 +493,7 @@ les pipelines l'utilisent.
 
 **Envisagé, non décidé** : remplacer MinIO par un bucket S3 compatible chez l'hébergeur. L'audit
 §10.6 chiffre l'écart à un facteur 40 à 100 dès qu'on compte le second MinIO qu'exigerait la
-réplication hors site. Décision par ADR si la plateforme est dégelée ou si un déploiement devient
-nécessaire pour V2.
+réplication hors site. Décision par ADR avant le premier déploiement de la plateforme ou de V2.
 
 ---
 
@@ -535,7 +535,7 @@ quatre règles d'alerte sans Alertmanager, donc routées nulle part ; un backend
 `/metrics` et ne possède qu'un logger d'accès. Alloy monte le socket Docker en root.
 
 La version 0.1 annonçait OpenTelemetry ; rien n'est instrumenté. G7 (observabilité minimale) est
-gelé. `docker logs` suffit au produit actif.
+disponible. `docker logs` suffit tant que rien n'est déployé.
 
 ---
 
@@ -582,7 +582,7 @@ dépendent d'identifiants réels en base. `pytest-cov` installé, jamais lancé.
 ### 17.3 Ce qui est décidé
 
 Pour V5 : tests sur fixture de chaque mesure du baromètre, dont « support insuffisant » et
-« cohorte non couverte » ; `recompte-preuve` avant publication. Pour tout dégel : un service
+« cohorte non couverte » ; `recompte-preuve` avant publication. Pour la plateforme, avant tout déploiement : un service
 PostGIS en CI et une dizaine de tests d'intégration sur migrations, RLS et requêtes spatiales,
 en remplacement des tests qui lisent le source.
 
@@ -661,8 +661,8 @@ silence.
 | Retirer `dagster-webserver` et `dagster-daemon` | un asset, aucune route, aucun healthcheck | sans effet mesurable |
 | Retirer la stack d'observabilité | aucun scrutage utile, deux services root | `docker logs` suffit à V5 |
 | MinIO → S3 compatible | coût et réplication | si déploiement de V2 |
-| Keycloak → JWT signé par l'API | 539 Mio pour zéro utilisateur | si dégel sans multi-tenant |
-| Bind mounts en dev et service Vite | `make rebuild` recrée PostgreSQL | si dégel du front |
+| Keycloak → JWT signé par l'API | 539 Mio pour zéro utilisateur | si la plateforme reste sans multi-tenant |
+| Bind mounts en dev et service Vite | `make rebuild` recrée PostgreSQL | le front se développe de nouveau (ADR-019) |
 | PostGIS natif arm64 en local | mesures non transposables | immédiat |
 | PostgreSQL 15 → 17 | fin de support 2027 | avant tout déploiement |
 
@@ -672,23 +672,24 @@ silence.
 
 | ID | Décision | Statut | Note |
 |---|---|---|---|
-| ADR-001 | Monolithe modulaire pour le métier | Acceptée, gelée | — |
-| ADR-002 | React/Vite plutôt que Next.js | Acceptée, gelée | — |
-| ADR-003 | FastAPI + SQLAlchemy plutôt qu'APIFlask/SQLModel | Acceptée, gelée | — |
+| ADR-001 | Monolithe modulaire pour le métier | Acceptée | — |
+| ADR-002 | React/Vite plutôt que Next.js | Acceptée | — |
+| ADR-003 | FastAPI + SQLAlchemy plutôt qu'APIFlask/SQLModel | Acceptée | — |
 | ADR-004 | PostgreSQL/PostGIS comme source de vérité | Acceptée | — |
-| ADR-005 | Martin pour les tuiles MVT | Acceptée, gelée | — |
+| ADR-005 | Martin pour les tuiles MVT | Acceptée | — |
 | ADR-006 | Dagster pour les pipelines régionaux | Acceptée, non appliquée (un asset) | — |
 | ADR-007 | Celery limité aux tâches applicatives | Acceptée, jamais installé | — |
-| ADR-008 | Keycloak/OIDC pour l'identité | Acceptée, gelée | — |
+| ADR-008 | Keycloak/OIDC pour l'identité | Acceptée | — |
 | ADR-009 | Tous les workloads dans Docker Compose sur VPS générique déployé par GitHub Actions et Ansible | Acceptée, jamais exécutée | — |
-| ADR-010 | Scoring régional pré-calculé et snapshots immuables | Acceptée, gelée | — |
+| ADR-010 | Scoring régional pré-calculé et snapshots immuables | Acceptée | — |
 | ADR-011 | Lambert-93 pour les calculs, WGS84 pour l'échange, Web Mercator pour les tuiles | Acceptée | — |
 | ADR-012 | Pas de ML ni de Kubernetes au MVP | Acceptée | — |
 | ADR-013 | Sauvegardes obligatoirement hors du serveur cible | Acceptée, non appliquée | — |
 | ADR-014 | SOPS + `age` pour les secrets versionnés | Acceptée | — |
 | ADR-015 | Boucle de développement : contrôle déterministe, recompte adversarial, verrou humain déclaré | Acceptée | [note](docs/decisions/ADR-015-boucle-autonome.md) |
-| ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
-| ADR-018 | Dégel restreint de l'Explorer, réduit à l'outil local de vérification des données | Acceptée | [note](docs/decisions/ADR-018-degel-restreint-explorer.md) |
+| ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée ; gel levé par ADR-019 | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
+| ADR-018 | Dégel restreint de l'Explorer, réduit à l'outil local de vérification des données | Remplacée par ADR-019 | [note](docs/decisions/ADR-018-degel-restreint-explorer.md) |
+| ADR-019 | Le gel de la plateforme est levé ; déploiement, publication de score et fiches DVF restent bornés | Acceptée | [note](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de
@@ -699,7 +700,8 @@ s'écrit ici, avec son fichier.
 
 ## 24. Séquence d'implémentation
 
-Celle d'ADR-016 :
+Celle d'ADR-016 pour le baromètre et le radar ; la plateforme avance en parallèle, sans ordre
+imposé ([ADR-019](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)) :
 
 1. H1 — mesures du baromètre, reproductibles, recomptées.
 2. H2 — document publiable par EPCI.
@@ -707,10 +709,10 @@ Celle d'ADR-016 :
 4. H4 — avis juridique ; verrou humain, en parallèle.
 5. H5 — radar hebdomadaire, colonnes fixées par H4.
 6. ADR de sortie de H3 : poursuivre, bifurquer vers V9 (vision, abandon), ouvrir V1 ou V3,
-   dégeler, arrêter.
+   faire de la plateforme le produit, arrêter.
 
-Rien d'autre ne démarre. Les révisions de §22.2 se décident au moment où un déploiement ou un
-dégel les rend nécessaires, pas avant.
+Les révisions de §22.2 se décident au moment où un déploiement ou un ticket de plateforme les
+rend nécessaires, pas avant.
 
 ---
 
@@ -724,7 +726,7 @@ dégel les rend nécessaires, pas avant.
 - aucune donnée nominative dans le baromètre ; colonnes du radar bornées par l'avis juridique ;
 - la séquence de reconstitution du 35 couvre les neuf datasets et les calculs dérivés.
 
-### 25.2 Conditions de dégel de la plateforme
+### 25.2 Conditions de déploiement de la plateforme
 
 - authentification sur toutes les routes hors `/health` ; rôle base de moindre privilège ;
   `statement_timeout` ; bbox bornée ;

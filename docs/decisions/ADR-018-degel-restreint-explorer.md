@@ -1,6 +1,7 @@
 # ADR-018 — Dégel restreint de l'Explorer : un outil local de vérification, sans bouton mort
 
 **Date :** 16 septembre 2026
+**Remplacée :** par [ADR-019](./ADR-019-lever-le-gel-de-la-plateforme.md), le 16 septembre 2026. Le dégel restreint n'a plus d'objet ; ce que C4 a fait reste en place.
 
 **Contexte.** ADR-016 gèle la plateforme jusqu'au verdict de H3, et `SPEC.md` §11.3 ne lève le
 gel qu'après H3, sur demande chiffrée d'un professionnel. Pourtant l'Explorer n'est pas inerte :

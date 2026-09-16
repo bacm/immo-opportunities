@@ -2,6 +2,7 @@
 
 **Version :** 1.0 — **provisoire jusqu'au verdict de H3**
 **Statut :** référence, réécrite le 15 septembre 2026 sur décision [ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)
+**Amendée :** le 16 septembre 2026, gel de la plateforme levé par [ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)
 **Remplace :** la version 0.2 du 3 août 2026, conservée dans l'historique git (`git show a32d439:SPEC.md`)
 **Zone :** Ille-et-Vilaine (35) ; les autres départements bretons ne sont pas en périmètre tant qu'un abonné du 35 n'existe pas
 **Révision :** ce document se réécrit, ne s'amende pas ; la prochaine réécriture suit le verdict de H3
@@ -28,8 +29,8 @@ avis juridique et au verdict des premiers professionnels rencontrés, est **un r
 de mise en vente** (V2) fondé sur le dépôt des diagnostics de performance énergétique.
 
 Ce que le produit n'est plus : une plateforme cartographique de détection de candidats off-market
-pour marchands de biens. Cette plateforme existe dans le dépôt, elle est **gelée** (§11), et cette
-spécification dit pourquoi.
+pour marchands de biens. Cette plateforme existe dans le dépôt ; gelée par ADR-016, elle est de
+nouveau développée depuis [ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md), sous les limites de §11.
 
 ---
 
@@ -122,12 +123,12 @@ pourcentage ni aucune inférence statistique, et H3 le dit.
 - **V2, le radar de mise en vente**, conditionné à H4 (avis juridique) et H3 (verdict) : §8.
 - Le référentiel spatial du 35 et les quatre sources métier importées, qui alimentent les deux.
 
-### 6.2 Gelé
+### 6.2 La plateforme, en développement exploratoire
 
-La plateforme : Explorer carte/liste/fiche, moteur de score, workflow de qualification, scénarios
-financiers, administration régionale, multi-tenant OIDC/RLS, tuiles, déploiement VPS. Elle existe,
-elle est décrite en §11, et rien n'y est ajouté tant que H3 n'a pas rendu son verdict. Seule
-exception : l'Explorer, réduit à l'outil local de vérification des données (§11.3, ADR-018).
+Explorer carte et fiche, moteur de score, workflow de qualification, scénarios financiers,
+administration régionale, multi-tenant OIDC/RLS, tuiles, déploiement VPS. Elle existe, elle est
+décrite en §11, et elle se développe sous ticket depuis [ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md), sans ordre imposé par
+rapport au baromètre. Elle n'est ni publiée ni déployée (§11.3).
 
 ### 6.3 Différé, ouvert
 
@@ -258,10 +259,11 @@ première ligne. Pas une prédiction sur un bien : une fréquence observée sur 
 | RD-004 | Taux et courbe de référence issus du baromètre recompté | référence croisée |
 | RD-005 | Première ligne : « ce n'est pas de l'off-market » | présente dans chaque envoi |
 
-### 9.3 Plateforme gelée
+### 9.3 Plateforme
 
 FR-001 à FR-016 de la version 0.2 décrivaient l'Explorer, le scoring, le workflow, les exports
-et les alertes. Elles ne sont ni abandonnées ni actives : voir §11.
+et les alertes. Elles restent la référence de la plateforme, à reprendre ticket par ticket
+(`git show a32d439:SPEC.md`), sous les limites de §11.3.
 
 ---
 
@@ -275,38 +277,36 @@ rapport, leur filtre et leur état de recompte. Ce qu'elles imposent au produit 
 - **Le baromètre mesure la marge par prix d'entrée et la décote énergétique** (§7) ; la décote
   mesurée ne soutient pas une stratégie rénovation-revente, qui sort du périmètre.
 - **L'objet « bien » est inconstructible** avec les données autorisées : l'adresse, le bâtiment
-  et l'unité foncière ne se rattachent pas à la parcelle de façon fiable. C'est la raison du gel
-  (§11) et de l'agrégation du baromètre à la commune et à l'EPCI (§13.11).
+  et l'unité foncière ne se rattachent pas à la parcelle de façon fiable. C'est la limite de la
+  plateforme (§11) et la raison de l'agrégation du baromètre à la commune et à l'EPCI (§13.11).
 - **Deux motifs de rejet terrain n'ont aucune source** (§13.2) ; aucune liste morphologique ne
   les lèvera.
 
 ---
 
-## 11. La plateforme gelée
+## 11. La plateforme
 
 ### 11.1 Ce qui existe
 
 Ce que la plateforme contient, et ce qui y est vide ou défectueux, est décrit dans
 [`ARCHITECTURE.md`](./ARCHITECTURE.md) §3.2, §6 à §8 et §12.
 
-### 11.2 Pourquoi elle est gelée
+### 11.2 Pourquoi elle a été gelée, et ce qui reste vrai
 
-L'objet qu'elle score, une parcelle, n'est pas un bien (§10), et personne ne l'a vue. Construire
-davantage avant un verdict client serait spécifier une seconde fois sans client. Le raisonnement
-complet est dans [ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md).
+[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) l'a gelée parce que
+l'objet qu'elle score, une parcelle, n'est pas un bien (§10), et que personne ne l'avait vue.
+[ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) lève le gel pour avancer sans attendre H3 ; elle ne résout pas le premier constat, qui
+reste la limite de tout score parcellaire.
 
-### 11.3 Conditions de dégel
+### 11.3 Limites de la plateforme
 
-Le gel se lève par une ADR, après H3, et seulement si :
-
-- un professionnel a demandé une carte, une fiche ou un workflow, et l'a dit avec un prix ;
-- la définition de score à publier est fondée sur un profiling observé, pas sur les seuils en dur
-  du moteur ;
-- les conditions techniques d'[`ARCHITECTURE.md`](./ARCHITECTURE.md) §25.2 sont remplies avant
-  tout déploiement.
-
-Seule exception : l'Explorer réduit à l'outil local de vérification de §15, sans fonctionnalité
-nouvelle ni ligne hors `apps/web/` ([ADR-018](./docs/decisions/ADR-018-degel-restreint-explorer.md)).
+- **Publication d'un score** : seulement sur une définition fondée sur un profiling observé,
+  jamais sur les seuils en dur du moteur.
+- **Déploiement accessible à un tiers** : seulement une fois remplies les conditions
+  d'[`ARCHITECTURE.md`](./ARCHITECTURE.md) §25.2.
+- **Mutations par parcelle montrées à un tiers** : seulement après l'avis de H4 (§18.4).
+- **Données** : les interdits de §13 et §18 et le hors-périmètre de §6.4 s'y appliquent comme au
+  baromètre.
 
 ---
 
@@ -333,8 +333,8 @@ L'état d'import de chaque source (acceptée, `display_only`, effectifs) est ten
 | DS-05 | Base Adresse Nationale | BAN / IGN | en contrat | recherche ; jamais un rattachement adresse ↔ parcelle |
 | DS-06 | DVF géolocalisé Etalab 2021-2025 + archive DGFiP 2014-2020 | DGFiP / Etalab | en contrat | **baromètre, radar** |
 | DS-07 | DPE logements existants, extrait API | ADEME | en contrat | **baromètre, radar** |
-| DS-08 | Géoportail de l'urbanisme, CNIG | collectivités / GPU | en contrat | contexte ; gelé |
-| DS-09 | Géorisques, dix familles | DGPR / BRGM | en contrat | contexte ; gelé |
+| DS-08 | Géoportail de l'urbanisme, CNIG | collectivités / GPU | en contrat | contexte ; plateforme |
+| DS-09 | Géorisques, dix familles | DGPR / BRGM | en contrat | contexte ; plateforme |
 | DS-10 | Sitadel, autorisations d'urbanisme | SDES | réservé, aucun contrat | vérité terrain ex post de V1 |
 | DS-11 | MAJIC personnes morales | DGFiP | réservé, aucun contrat | propriétaire personne morale, V3 |
 | DS-12 | BODACC et Sirene | DILA / INSEE | réservé, aucun contrat | procédures collectives, V3 |
@@ -352,7 +352,7 @@ photo aérienne ou la visite lève.
   à une parcelle bâtie.
 - **Dans le radar** : les mêmes, plus DS-05 pour l'adresse si H4 l'autorise, DS-08 pour le zonage
   comme contexte.
-- **Affichées, non classifiantes** : DS-03, DS-04, DS-09, dans la plateforme gelée.
+- **Affichées, non classifiantes** : DS-03, DS-04, DS-09, dans la plateforme.
 - **Réservées** : DS-10 à DS-12, sans contrat ni import tant qu'une ADR n'ouvre pas V1 ou V3.
 
 ### 13.4 Registre des mesures du baromètre
@@ -372,11 +372,11 @@ photo aérienne ou la visite lève.
 Les supports sont des paramètres du script, affichés dans la sortie, et contestables. Ils ne sont
 pas des seuils de sens métier.
 
-### 13.5 Features de la plateforme gelée
+### 13.5 Features de la plateforme
 
 Les registres LAND-*, BLD-*, URB-*, MKT-*, RISK-*, REN-* et FIN-* de la version 0.2 vivent dans
-`contracts/features/` et `contracts/scoring/`. Ils sont gelés avec la plateforme. L'audit §8.4
-note que douze contrats sur quatorze ne sont lus par aucun code.
+`contracts/features/` et `contracts/scoring/`, en `draft`. L'audit §8.4 note que douze contrats
+sur quatorze ne sont lus par aucun code.
 
 ### 13.6 Données et features interdites
 
@@ -448,9 +448,9 @@ release DS-07 par semaine dans `meta.dataset_release` et rien d'autre.
   par `make market-barometer` et `make market-barometer-kit`. Aucune API.
 - **Radar** : un fichier par secteur et par semaine, canal fixé par H3. Aucune API tant qu'un
   abonné n'existe pas.
-- **API et tuiles de la plateforme** : gelées ; l'API reste servie en local pour la vérification
-  des données (fiches parcelle, mutations, diagnostics), sans authentification, ce qui interdit
-  tout déploiement public en l'état.
+- **API, tuiles et Explorer de la plateforme** : servis en local ; l'Explorer sert aujourd'hui à
+  vérifier les données (fiches, mutations, diagnostics). L'API est en grande partie sans
+  authentification, ce qui interdit tout déploiement public en l'état (§11.3).
 
 ---
 
@@ -458,7 +458,7 @@ release DS-07 par semaine dans `meta.dataset_release` et rien d'autre.
 
 Définie dans [`ARCHITECTURE.md`](./ARCHITECTURE.md). En une phrase : PostgreSQL/PostGIS porte les
 données, des scripts Python reproductibles les importent et produisent des documents ; la
-plateforme applicative existe autour et est gelée.
+plateforme applicative existe autour, se développe, et n'est pas déployée.
 
 ---
 
@@ -471,7 +471,7 @@ plateforme applicative existe autour et est gelée.
 - **Ressources** : la base du 35 pèse 29 Go ; le baromètre tourne sur la base locale ; aucun
   déploiement n'est requis pour V5.
 - Les exigences de performance, disponibilité et accessibilité de la version 0.2 s'appliquent à la
-  plateforme gelée et sont suspendues avec elle.
+  plateforme au plus tard à son premier déploiement.
 
 ---
 
@@ -501,8 +501,8 @@ particuliers à des professionnels engage une responsabilité que H4 qualifie.
 Loi 2018-727, décret 2018-1350, article L112 A du LPF : finalité de transparence des marchés,
 **interdiction de réidentification** ayant pour objet ou pour effet de remonter au vendeur ou à
 l'acheteur. Le baromètre, agrégé, est conforme par construction. Une fiche parcellaire montrant les
-mutations d'une parcelle identifiée avec son adresse, comme la plateforme gelée le fait, est
-**à qualifier** : question 1 de H4.
+mutations d'une parcelle identifiée avec son adresse, comme l'Explorer le fait, est
+**à qualifier** : question 1 de H4, et ne sort pas du local avant (§11.3).
 
 ### 18.5 Revue juridique
 
@@ -517,7 +517,7 @@ MAJIC PM × BODACC.
 
 Il n'y a pas d'interface d'administration pour V5. Les gestes sont des cibles `make` :
 `market-barometer`, `market-barometer-kit`, et les imports existants (`dvf-import`, `dpe-pin`,
-`dpe-import`). L'administration régionale de la plateforme est gelée.
+`dpe-import`). L'administration régionale de la plateforme existe, sans usage.
 
 ---
 
@@ -543,9 +543,10 @@ Celle d'[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)
 H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ──► H5 radar (H4 avis juridique)
 ```
 
-L'avancement est dans [`docs/backlog/README.md`](./docs/backlog/README.md). Après H3, une ADR tranche : poursuivre V5 et V2, bifurquer vers V9 (vision, abandon), ouvrir
-V1 ou V3, dégeler la plateforme, ou
-arrêter. Aucune extension géographique avant un abonné du 35.
+La plateforme se développe en parallèle, sans ordre imposé ([ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md)).
+L'avancement est dans [`docs/backlog/README.md`](./docs/backlog/README.md). Après H3, une ADR
+tranche : poursuivre V5 et V2, bifurquer vers V9 (vision, abandon), ouvrir V1 ou V3, faire de la
+plateforme le produit, ou arrêter. Aucune extension géographique avant un abonné du 35.
 
 ---
 
@@ -580,7 +581,8 @@ pas avant.
 | Rattachement DPE à 59 % biaise les mesures | moyen | biais écrit dans chaque page ; mesure de sensibilité avec et sans relations ambiguës |
 | Réforme DPE 2026 rend les étiquettes non comparables | moyen | rupture de série déclarée |
 | Le marché régional plafonne bas | moyen | assumé : c'est un produit de niche jusqu'à preuve du contraire |
-| La plateforme gelée est déployée par erreur | élevé | 41 routes anonymes, rôle propriétaire : aucun déploiement sans les corrections de §11.3 |
+| La plateforme est déployée avant d'être sûre | élevé | 41 routes anonymes, rôle propriétaire : aucun déploiement sans les conditions de §11.3 |
+| La plateforme absorbe le temps de H3 | élevé | H3 reste le verrou du radar ; §21 tranche après H3 |
 
 ---
 
@@ -588,8 +590,8 @@ pas avant.
 
 Les décisions vivent dans [`docs/decisions/`](./docs/decisions/), indexées dans
 [`ARCHITECTURE.md`](./ARCHITECTURE.md) §23. Cette version repose sur
-[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) ; ADR-001 à ADR-015
-restent valides pour la plateforme gelée. Ce qu'une décision impose au produit est écrit dans la
+[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md), dont le gel est levé
+par [ADR-019](./docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) ; ADR-001 à ADR-015 restent valides pour la plateforme. Ce qu'une décision impose au produit est écrit dans la
 section concernée (§6.3, §6.4, §10, §13.6), pas ici.
 
 ---
@@ -607,7 +609,7 @@ elles conditionnent H5 et la suite.
 La DoD générale d'une tâche est dans [`CLAUDE.md`](./CLAUDE.md) ; les critères d'acceptation du
 baromètre et du radar sont ceux des tickets [H1](./docs/backlog/H1-barometre-marche-35-mesures.md)
 à [H5](./docs/backlog/H5-radar-mise-en-vente.md) ; le radar n'est terminé qu'avec un abonné du 35
-ou un refus explicite documenté. Le dégel de la plateforme relève de §11.3.
+ou un refus explicite documenté. Les limites de la plateforme sont en §11.3.
 
 ---
 
@@ -640,8 +642,8 @@ suivies sur une durée fixe.
 **Effectif** : nombre d'observations qui fondent un taux ; toujours publié avec lui.
 **Filtre de cohorte** : règles d'inclusion écrites dans la sortie, sans lesquelles un effectif n'est
 pas reproductible.
-**Gel** : état de la plateforme applicative — existante, non développée, non déployée, dégelée par
-ADR seulement.
+**Gel** : état de la plateforme applicative du 15 au 16 septembre 2026 (ADR-016), levé par
+ADR-019.
 **Plus-value nette de marché** : ratio revente / achat divisé par l'évolution du prix médian de la
 commune sur la période.
 **Radar** : flux hebdomadaire des parcelles dont un premier DPE vient d'être déposé.

@@ -164,8 +164,8 @@ make field-test-kit COMMUNE=35051
   chemin durable ; `scripts/backup-platform` le sauvegarde en entier, sur la machine sauvegardée.
   Une copie de `raw-sources` hors de ce poste est le minimum, non fait.
 - **L'état exact de DS-08** : sans checksum, un rejeu n'est pas comparable.
-- **Aucun `OpportunitySnapshot`** : le moteur de score n'a pas d'appelant et la plateforme est
-  gelée (ADR-016). C'est l'état réel du produit.
+- **Aucun `OpportunitySnapshot`** : le moteur de score n'a pas d'appelant, et aucune définition de
+  score n'est fondée sur un profiling (`SPEC.md` §11.3). C'est l'état réel du produit.
 - **Le baromètre** (H1) n'existe pas encore ; quand il existera, `make market-barometer` sera
   l'étape 11.
 - **Un rebuild d'image** (`make rebuild`) est nécessaire après toute modification de

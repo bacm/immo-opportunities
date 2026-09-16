@@ -1,4 +1,4 @@
-# Contrats de scoring — gelés
+# Contrats de scoring — brouillons
 
 [`division-extension-v1`](./division-extension-v1.json) et
 [`renovation-resale-v1`](./renovation-resale-v1.json) sont lues par `scoring/engine.py`
@@ -9,4 +9,4 @@ aucun code.
 
 Aucun seuil territorial n'est inscrit dans ces contrats. Les bornes de classe de score (40, 60,
 80) et de confiance (0,6, 0,8) sont **en dur dans le moteur** (`engine.py:458-465`, audit §8.5) :
-elles devront en sortir avant tout dégel.
+elles devront en sortir avant toute publication de score (`SPEC.md` §11.3).
