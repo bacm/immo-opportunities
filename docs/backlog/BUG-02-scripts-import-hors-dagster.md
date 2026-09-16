@@ -1,7 +1,9 @@
 # BUG-02 — Les imports réels passent par des scripts one-shot, pas par Dagster
 
-**Version :** dette transverse · **Taille :** L · **État :** À faire
-**Touche :** pipelines/src/immo_pipelines/assets/, pipelines/src/immo_pipelines/definitions.py
+**Version :** dette transverse · **Taille :** L · **État :** Terminé
+**Touche :** pipelines/src/immo_pipelines/assets/, pipelines/src/immo_pipelines/definitions.py, pipelines/src/immo_pipelines/spatial/release_import.py, pipelines/scripts/import_rnb_release.py, pipelines/scripts/import_ban_release.py, pipelines/tests/, docs/backlog/BUG-19-imports-restants-hors-dagster.md, docs/data/mvp-dod-traceability.md
+**Nature :** implémentation
+**DoD :** preuve sans objet — changement d'orchestration, aucun chiffre publié ; la matérialisation réelle est consignée dans le ticket
 **Non bloquant** pour le chemin critique, mais bloquant pour la DoD architecture §25
 (« pipelines partitionnés 22/29/35/56 »).
 
@@ -77,7 +79,51 @@ manuelles sans reprise ni observabilité.
 - la partition département existe pour toutes les sources importées ;
 - `docs/data/mvp-dod-traceability.md` peut passer la ligne « pipelines partitionnés » à validé.
 
+## Choix retenus — 16 septembre 2026
+
+Pris par l'agent sur délégation du porteur (« enchaîne en prenant les meilleures décisions »).
+
+- **Ordonnancement.** Le ticket recommandait d'attendre E3. Le chemin critique est aujourd'hui
+  tenu par des verrous humains (D6, H3, H4) : ce ticket ne retarde rien, et G1 en dépendra.
+- **Logique commune** dans `immo_pipelines.spatial.release_import` : une description par source
+  (`SourceImport` : source, couche, SRID, préfixe de run, version de transformation, importeur)
+  et une fonction `import_department_release`, qui enregistre la release, résout l'asset
+  (archive en base, archive nommée, puis amont — `resolve_asset`, inchangé), importe et
+  rafraîchit les métriques. Les clés de run et d'idempotence sont **identiques** à celles des
+  scripts : un asset rematérialisé retrouve les imports déjà faits.
+- **Assets** `ds02_rnb_release` et `ds05_ban_release`, partitionnés release × département comme
+  le cadastre, une dimension release dynamique par source.
+- **Scripts conservés** comme entrée en ligne de commande : ils délèguent à la même fonction.
+  Les cibles `make rnb-import` et `make ban-import` ne changent pas.
+- **Périmètre.** DS-02 et DS-05, comme le demande le ticket. Les sept autres imports par script
+  (BDNB, BD TOPO, DVF, DPE, GPU, Géorisques, INSEE) suivent le même modèle sous
+  [BUG-19](./BUG-19-imports-restants-hors-dagster.md) ; le critère « aucune source ne contourne »
+  ne sera tenu qu'à sa clôture.
+
 ## Ordonnancement recommandé
 
 À traiter **après** E3 (premier score publié) et **avant** G1 (extension régionale). Le faire plus
 tôt retarde le chemin critique ; le faire plus tard rend G1 ingérable.
+
+## Résultat — 16 septembre 2026
+
+- `immo_pipelines.spatial.release_import` porte la logique commune ; les deux scripts y délèguent
+  (`make rnb-import`, `make ban-import` inchangés). La version RNB y a déménagé avec son
+  commentaire.
+- Assets `ds02_rnb_release` et `ds05_ban_release`, partitionnés release × département (dimension
+  release dynamique `rnb_releases`, `ban_releases`), inscrits aux définitions.
+- **Sur la base réelle** : `make ban-import DEPARTMENT=35` rejoue la release 2026-06-17 depuis
+  l'archive en base, avec la même clé, en saut d'idempotence. Puis, par Dagster, sur l'instance du
+  poste : `ds05_ban_release` (35 × 2026-06-17) et `ds02_rnb_release` (35 × 2026-09-05)
+  matérialisées, origine `database_archive`, runs `ban:2026-06-17:35:ban-csv-normalize@2` et
+  `rnb:2026-09-05:35:2` retrouvés — aucun téléchargement, aucun run nouveau.
+- Tests (`test_source_release_assets.py`) : rematérialisation sans téléchargement et à clés
+  stables ; checksum divergent arrêté avant tout asset brut et tout import ; clés identiques aux
+  scripts d'avant ; partition département ; matérialisation Dagster d'une partition.
+- Les métriques d'import passent par la même table (`meta.import_run`) et la même route
+  d'administration (`GET /api/v1/admin/import-runs`) que le cadastre.
+- **Critères non encore tenus** : sept sources s'importent encore par script, suivies par
+  [BUG-19](./BUG-19-imports-restants-hors-dagster.md) ; la ligne « pipelines partitionnés » de la
+  traçabilité reste partielle jusqu'à sa clôture. La release, elle, est enregistrée avant la
+  vérification du checksum, comme pour le cadastre : c'est l'entrée de catalogue, pas une donnée.
+

@@ -39,7 +39,7 @@ est partiellement couvert par les organisations et RLS; FR-016 reste expliciteme
 | PostgreSQL/PostGIS migré automatiquement | service migrate, test réel 0001→0015 | validé |
 | Rôles et isolation organisations | RLS forcé, tests v0.7 | local validé, production absent |
 | Release importée/validée/publiée/annulée | fonctions source et bundle régional | technique validée, région réelle absente |
-| Pipelines partitionnés 22/29/35/56 | partitions Dagster statiques | validé pour Cadastre; manifests autres sources absents |
+| Pipelines partitionnés 22/29/35/56 | partitions Dagster release × département | validé pour Cadastre, RNB et BAN ([BUG-02](../backlog/BUG-02-scripts-import-hors-dagster.md)) ; les autres sources s'importent encore par script ([BUG-19](../backlog/BUG-19-imports-restants-hors-dagster.md)) |
 | Score publié reproductible | snapshots immuables | moteur validé, score réel non publié |
 | Martin limité aux vues autorisées | rôle `tiles_ro`, fonctions MVT | validé |
 | MVT sans GeoJSON régional | MapLibre/Martin | validé |

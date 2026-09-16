@@ -1,28 +1,18 @@
+"""Archiver et importer une release départementale BAN — entrée en ligne de commande.
+
+La logique vit dans `immo_pipelines.spatial.release_import`, partagée avec l'asset Dagster
+`ds05_ban_release` (BUG-02).
+"""
+
 import argparse
-import hashlib
 import json
-import tempfile
 from dataclasses import asdict
-from datetime import date
-from pathlib import Path
 
 import psycopg
 
 from immo_pipelines.cadastre.archive import MinioObjectStore
-from immo_pipelines.cadastre.catalog import DatasetCatalog
-from immo_pipelines.cadastre.manifest import (
-    load_release_manifest,
-    project_root,
-    resolve_asset,
-)
 from immo_pipelines.cadastre.settings import CadastreSettings
-from immo_pipelines.spatial.ban import BAN_TRANSFORMATION_VERSION
-from immo_pipelines.spatial.importer import BanImporter
-
-
-def contract_fingerprint() -> str:
-    path = project_root() / "contracts" / "datasets" / "DS-05" / "v1.json"
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+from immo_pipelines.spatial.release_import import BAN, import_department_release
 
 
 def main() -> int:
@@ -31,13 +21,10 @@ def main() -> int:
     parser.add_argument("--department", choices=("22", "29", "35", "56"), required=True)
     arguments = parser.parse_args()
 
-    manifest = load_release_manifest("DS-05", arguments.release, arguments.department)
-    asset = manifest.asset("addresses")
     settings = CadastreSettings.from_environment()
     object_store = MinioObjectStore(
         settings.minio_endpoint, settings.minio_access_key, settings.minio_secret_key
     )
-
     with psycopg.connect(
         host=settings.database_host,
         port=settings.database_port,
@@ -45,46 +32,16 @@ def main() -> int:
         user=settings.database_user,
         password=settings.database_password,
     ) as connection:
-        catalog = DatasetCatalog(connection)
-        catalog.register_release(
-            release_id=manifest.release_id,
-            release_key=manifest.release_key,
-            published_on=date.fromisoformat(manifest.source_published_on),
-            schema_fingerprint=contract_fingerprint(),
-            department_code=manifest.department,
-            data_source_id="DS-05",
-            source_srid=2154,
+        result = import_department_release(
+            BAN,
+            arguments.release,
+            arguments.department,
+            connection=connection,
+            object_store=object_store,
         )
-        with tempfile.TemporaryDirectory(prefix="immo-ban-") as temporary_directory:
-            local_path = Path(temporary_directory) / "addresses.csv.gz"
-            resolved = resolve_asset(
-                catalog=catalog,
-                object_store=object_store,
-                manifest=manifest,
-                asset=asset,
-                destination=local_path,
-                # La source coupe la connexion avant les en-tetes de reponse avec httpx.
-                prefer_curl=True,
-            )
-            importer = BanImporter(connection)
-            outcome = importer.import_archive(
-                # Deux transformations differentes sont deux imports differents :
-                # partager l'identifiant de run les rendrait indiscernables et ferait
-                # collisionner la cle primaire de meta.import_run au reimport.
-                import_run_id=(
-                    f"ban:{manifest.release_key}:{manifest.department}:{BAN_TRANSFORMATION_VERSION}"
-                ),
-                release_id=manifest.release_id,
-                department_code=manifest.department,
-                raw_asset_id=resolved.raw_asset_id,
-                source_path=local_path,
-                idempotency_key=(
-                    f"{manifest.release_id}:{manifest.department}:addresses:"
-                    f"{resolved.sha256}:{BAN_TRANSFORMATION_VERSION}"
-                ),
-            )
-            importer.refresh_match_metrics(manifest.release_id, manifest.department)
-    print(json.dumps({**asdict(outcome), "asset_origin": resolved.origin}, sort_keys=True))
+    print(
+        json.dumps({**asdict(result.outcome), "asset_origin": result.asset_origin}, sort_keys=True)
+    )
     return 0
 
 

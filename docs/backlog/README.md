@@ -109,7 +109,7 @@ dérivée du graphe de dépendances.
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
 | [BUG-01](./BUG-01-chiffres-audit-ban.md) | Volumétries BAN erronées dans le rapport spatial 35 | v0.3 | — | S | Terminé | — |
-| [BUG-02](./BUG-02-scripts-import-hors-dagster.md) | Les imports réels passent par des scripts one-shot, pas par Dagster | dette transverse | — | L | À faire | **prêt** |
+| [BUG-02](./BUG-02-scripts-import-hors-dagster.md) | Les imports réels passent par des scripts one-shot, pas par Dagster | dette transverse | — | L | Terminé | — |
 | [BUG-03](./BUG-03-quarantaine-par-attribut.md) | Le modèle de quarantaine ne connaît que l'enregistrement, pas l'attribut | v0.3 | — | M | Terminé | — |
 | [BUG-04](./BUG-04-propagation-referentiel-spatial.md) | Publier DS-01 ne propage pas le référentiel spatial canonique | v0.3 | — | S | Terminé | — |
 | [BUG-05](./BUG-05-ds02-rnb-non-reproductible.md) | DS-02 RNB n'est pas reproductible : l'URL épinglée est un alias mouvant | v0.3 | — | M | Terminé | — |
@@ -126,6 +126,7 @@ dérivée du graphe de dépendances.
 | [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-17](./BUG-17-identifiants-a-deux-chiffres.md) | Un ticket numéroté au-delà de 9 est refusé par `ticket-check` et ignoré comme dépendance | dette transverse | — | S | Terminé | — |
 | [BUG-18](./BUG-18-surface-des-terrains-multi-cultures.md) | Un terrain à plusieurs natures de culture est prié sur la surface d'une seule | dette transverse | H7 | S | Terminé | — |
+| [BUG-19](./BUG-19-imports-restants-hors-dagster.md) | Sept imports réels passent encore par des scripts, hors du graphe d'assets | dette transverse | BUG-02 | L | À faire | **prêt** |
 
 ### C — v0.4 Carte réelle
 
@@ -213,7 +214,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**66/92 terminés.** Prêts à démarrer : A6, BUG-02, G6.
+**67/93 terminés.** Prêts à démarrer : A6, BUG-19, G6.
 
 ### Verrous humains
 
@@ -228,7 +229,7 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, G6
+1. A6, BUG-19, G6
 
 <!-- END:tickets -->
 
