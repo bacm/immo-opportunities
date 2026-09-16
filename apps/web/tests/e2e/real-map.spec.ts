@@ -27,132 +27,84 @@ test('recherche réelle, sélection, fiche et URL persistante', async ({ page })
   expect(regionalGeoJsonRequests).toEqual([])
 })
 
-test('recherche → fiche → scénario → statut → note sans fixture de production', async ({ page }) => {
-  const opportunity = {
-    id: 'opportunity:test:connected', property_unit_id: 'property-unit:test:connected',
-    strategy: 'division_extension', score: 78.4, score_class: 'high_priority',
-    confidence_score: 82, confidence_level: 'high', segment_code: 'rennes-urban',
-    snapshot_at: '2026-08-01', calculated_at: '2026-08-02T10:00:00+00:00',
-    baseline_selected: true,
-  }
-  let candidateStatus = 'new'
-  const notes: Array<{ id: string; body: string; author: string; created_at: string }> = []
-  const scenarios: Array<Record<string, unknown>> = []
-
-  await page.route('**/api/v1/opportunities?**', (route) => route.fulfill({
-    json: [opportunity], headers: { 'Access-Control-Expose-Headers': 'X-Next-Cursor' },
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected', (route) => route.fulfill({
-    json: {
-      ...opportunity, definition_id: 'division-extension-v1', definition_version: 1,
-      eligible: true, eligibility_results: [], missing_features: ['RISK-004'],
-      publication_blockers: [], release_ids: ['DS-01:test'], financial_scenario: null,
-      components: [{ code: 'land_capacity', score: 80 }],
-    },
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/evidence', (route) => route.fulfill({
-    json: [{ feature_code: 'LAND-004', impact: 8.5, explanation: 'Surface utile favorable.', quality: 'accepted', observed_at: '2026-08-01' }],
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/comparables', (route) => route.fulfill({
-    json: [{ transaction_id: 'dvf:1', included: true, reason: 'Même segment', normalized_price_m2: 3150 }],
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/sources', (route) => route.fulfill({
-    json: [{ data_source_id: 'DS-01', name: 'Cadastre', producer: 'DGFiP', release_id: 'DS-01:test' }],
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/workspace', (route) => route.fulfill({
-    json: { state: { status: candidateStatus, favorite: false, rejection_reasons: [], rejection_comment: null, updated_at: null }, history: [], notes, scenarios },
-  }))
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/status', async (route) => {
-    const payload = route.request().postDataJSON() as { status: string }
-    candidateStatus = payload.status
-    await route.fulfill({ json: { status: candidateStatus, favorite: false, rejection_reasons: [], rejection_comment: null, updated_at: '2026-08-07T12:00:00+00:00' } })
+/**
+ * L'Explorer réduit à l'outil de vérification — C4, ADR-018.
+ *
+ * Les écrans de la plateforme gelée (candidats, recherches sauvegardées, pilote régional) sont
+ * sortis du front ; leurs tests sont partis avec eux, et le code se retrouve au commit de C4.
+ * invariant-ok: assertion-supprimee — les assertions retirées portaient sur ces écrans retirés.
+ */
+test('aucun contrôle mort : chaque bouton visible a un nom et un effet, rien n’appelle la plateforme gelée', async ({ page }) => {
+  const frozenCalls: string[] = []
+  page.on('request', (request) => {
+    if (/\/api\/v1\/(opportunities|admin|saved-searches)/.test(request.url())) frozenCalls.push(request.url())
   })
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/scenarios', async (route) => {
-    const assumptions = route.request().postDataJSON() as Record<string, number>
-    const result = { id: 'scenario:user:test', assumptions, results: { total_cost_eur: 270000, net_margin_eur: 70000, return_on_cost: 0.259 }, created_at: '2026-08-07T12:00:00+00:00' }
-    scenarios.unshift(result)
-    await route.fulfill({ status: 201, json: result })
-  })
-  await page.route('**/api/v1/opportunities/opportunity%3Atest%3Aconnected/notes', async (route) => {
-    const payload = route.request().postDataJSON() as { body: string }
-    const result = { id: 'note:test', body: payload.body, author: 'Ada', created_at: '2026-08-07T12:00:00+00:00' }
-    notes.unshift(result)
-    await route.fulfill({ status: 201, json: result })
-  })
-
-  const startedAt = Date.now()
   await page.goto('/')
-  const card = page.getByRole('button', { name: /property-unit:test:connected/ })
-  await expect(card).toBeVisible()
-  await card.click()
-  await expect(page).toHaveURL(/opportunity=opportunity%3Atest%3Aconnected/)
-  await expect(page.getByText('Surface utile favorable.')).toBeVisible()
-  await expect(page.getByText(/Inconnues : RISK-004/)).toBeVisible()
-  expect(Date.now() - startedAt).toBeLessThan(1_000)
+  await expect(page.getByRole('heading', { name: 'Vérification des données' })).toBeVisible()
 
-  await page.getByLabel('Acquisition').fill('200000')
-  await page.getByLabel('Travaux').fill('50000')
-  await page.getByLabel('Revente').fill('340000')
-  await page.getByLabel('Frais').fill('20000')
-  await page.getByRole('button', { name: 'Recalculer et sauvegarder' }).click()
-  await expect(page.getByText('70 000 €', { exact: true })).toBeVisible()
-
-  await page.getByLabel('Statut du candidat').selectOption('retained')
-  await expect(page.getByLabel('Statut du candidat')).toHaveValue('retained')
-  await page.getByLabel('Nouvelle note').fill('Accès à confirmer sur place.')
-  await page.getByRole('button', { name: 'Ajouter la note' }).click()
-  await expect(page.getByText('Accès à confirmer sur place.')).toBeVisible()
-
-  await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.getByLabel('Statut du candidat')).toBeVisible()
-  await expect(page.getByLabel('Nouvelle note')).toBeVisible()
-})
-
-test('inconnu reste distinct de zéro et les contrôles ont un nom accessible', async ({ page }) => {
-  await page.route('**/api/v1/opportunities?**', (route) => route.fulfill({ json: [{
-    id: 'opportunity:test:unknown', property_unit_id: 'property-unit:test:unknown',
-    strategy: 'renovation_resale', score: null, score_class: null, confidence_score: 25,
-    confidence_level: 'low', segment_code: 'unknown', snapshot_at: '2025-01-01',
-    calculated_at: '2025-01-02T10:00:00+00:00', baseline_selected: false,
-  }] }))
-  await page.goto('/')
-  await expect(page.getByText('Inconnu')).toBeVisible()
   const unnamed = await page.locator('button:not([aria-label])').evaluateAll((buttons) => buttons.filter((button) => !(button.textContent ?? '').trim() && !button.getAttribute('title')).length)
   expect(unnamed).toBe(0)
+
+  // La liste exhaustive des boutons de l'écran d'accueil : un bouton ajouté sans effet vérifié
+  // fait échouer ce test.
+  const labels = await page.getByRole('button').evaluateAll((buttons) => buttons
+    .filter((button) => (button as HTMLElement).offsetParent !== null)
+    .map((button) => button.getAttribute('aria-label') ?? (button.textContent ?? '').trim()))
+  expect(labels.sort()).toEqual(['Carte', 'Orthophoto IGN', 'Plan', 'Revue', 'Zoom in', 'Zoom out'].sort())
+
+  await page.getByRole('button', { name: 'Orthophoto IGN' }).click()
+  await expect(page).toHaveURL(/base=ortho/)
+  await expect(page.getByText(/Orthophoto © IGN/)).toBeVisible()
+  await page.getByRole('button', { name: 'Plan', exact: true }).click()
+  await expect(page).not.toHaveURL(/base=ortho/)
+
+  const zoomBefore = Number(new URL(page.url()).searchParams.get('z'))
+  await page.getByRole('button', { name: 'Zoom in' }).click()
+  await expect.poll(() => Number(new URL(page.url()).searchParams.get('z'))).toBeGreaterThan(zoomBefore)
+
+  await page.getByRole('button', { name: 'Revue' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  for (const gone of ['Aide', 'Paramètres', 'Pilote', 'Sauvegarder', 'Stratégie', 'Score minimum', 'Département']) {
+    await expect(page.getByLabel(gone, { exact: true })).toHaveCount(0)
+  }
+  expect(frozenCalls).toEqual([])
 })
 
-test('sélecteur Bretagne et gate régional refusent une fausse couverture', async ({ page }) => {
-  await page.route('**/api/v1/opportunities?**', (route) => route.fulfill({ json: [] }))
-  await page.route('**/api/v1/session', (route) => route.fulfill({ json: {
-    user_id: 'user:test', display_name: 'Admin', email: null,
-    organization_id: 'org:test', organization_name: 'Test', role: 'platform_admin',
-  } }))
-  await page.route('**/api/v1/admin/import-runs', (route) => route.fulfill({ json: [] }))
-  await page.route('**/api/v1/admin/data-quality', (route) => route.fulfill({ json: [] }))
-  await page.route('**/api/v1/admin/brittany/readiness', (route) => route.fulfill({ json: {
-    publishable: false,
-    blockers: ['regional_data_not_covered', 'score_definitions_not_active'],
-    territories: Object.fromEntries(['22', '29', '35', '56'].map((code) => [code, {
-      covered: false,
-      sources: Array.from({ length: 9 }, (_, index) => ({
-        data_source_id: `DS-${String(index + 1).padStart(2, '0')}`,
-        release_id: null, acceptance_status: 'missing', blocking_quality_count: 0, ready: false,
-      })),
-    }])),
-    active_score_count: 0,
-    segmentation: { id: 'brittany-market-segments', version: 1, status: 'draft' },
-    active_bundle: null,
-  } }))
-
+test('une URL nue ouvre Rennes, et une carte trop dézoomée le dit', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Département').selectOption('29')
-  await expect(page).toHaveURL(/department=29/)
-  await expect(page.getByText('Bretagne · département 29')).toBeVisible()
-  await page.getByRole('button', { name: /Pilote/ }).click()
-  await expect(page.getByRole('heading', { name: 'Pilote Bretagne' })).toBeVisible()
-  await expect(page.getByText('Publication bloquée')).toBeVisible()
-  await expect(page.getByText('Département 56')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Publier la Bretagne' })).toBeDisabled()
+  await expect.poll(() => new URL(page.url()).searchParams.get('lat')).toMatch(/^48\.1/)
+  expect(new URL(page.url()).searchParams.get('lon')).toMatch(/^-1\.6/)
+  await expect(page.getByText(/Les parcelles s’affichent à partir du zoom/)).toHaveCount(0)
+
+  await page.goto('/?lon=-1.68&lat=48.11&z=10')
+  await expect(page.getByText(/Les parcelles s’affichent à partir du zoom 13/)).toBeVisible()
+  await page.getByRole('button', { name: 'Zoomer ici' }).click()
+  await expect(page.getByText(/Les parcelles s’affichent à partir du zoom/)).toHaveCount(0, { timeout: 10_000 })
+  expect(Number(new URL(page.url()).searchParams.get('z'))).toBeGreaterThanOrEqual(13)
+})
+
+test('un service en panne n’est jamais présenté comme une absence de mutation ou de diagnostic', async ({ page }) => {
+  await page.route('**/api/v1/parcels/*/transactions', (route) => route.fulfill({ status: 500, json: { detail: 'panne' } }))
+  await page.route('**/api/v1/parcels/*/energy-assessments', (route) => route.fulfill({ status: 500, json: { detail: 'panne' } }))
+  await page.goto('/?lon=-1.6&lat=48.1&z=18&type=parcel&id=parcel:cadastre:35024000AP0207')
+  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await expect(page.getByText(/Mutations indisponibles/)).toBeVisible()
+  await expect(page.getByText('Aucune mutation rattachée à cette parcelle.')).toHaveCount(0)
+  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await expect(page.getByText(/Diagnostics indisponibles/)).toBeVisible()
+  await expect(page.getByText(/Aucun diagnostic rattaché/)).toHaveCount(0)
+})
+
+test('la revue est une fenêtre modale qui se ferme par Échap', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Revue' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: /Échantillon b4-/ })).toBeVisible({ timeout: 20_000 })
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Carte' })).toHaveAttribute('aria-current', 'page')
 })
 
 test('recherche d’adresse réelle : recentrage, entités liées, appariements et URL partageable', async ({ page }) => {
@@ -273,7 +225,7 @@ test('territoire non couvert : jamais présenté comme un résultat vide', async
 
   await expect(page.getByText(/territoire non couvert/)).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText(/ne veut rien dire ici/)).toBeVisible()
-  // L'état « aucun résultat » ne doit jamais accompagner un territoire non couvert.
+  // L'état « couvert » ne doit jamais accompagner un territoire non couvert.
   await expect(page.getByText(/territoire couvert/)).toHaveCount(0)
 })
 
@@ -286,10 +238,10 @@ test('données partielles : les sources absentes sont nommées, pas comptées', 
 
   await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
-  await expect(page.getByText(/Classement incomplet/)).toBeVisible()
+  await expect(page.getByText(/Rattachements incomplets/)).toBeVisible()
 })
 
-test('territoire couvert : une absence de candidat signifie bien aucun résultat', async ({ page }) => {
+test('territoire couvert : une fiche sans rattachement signifie bien que la base n’en connaît aucun', async ({ page }) => {
   await openCommune(page, {
     commune_code: '35238', commune_name: 'RENNES', department_code: '35',
     state: 'covered', sources: coverageSources(['DS-01', 'DS-02', 'DS-03', 'DS-04', 'DS-05']),
@@ -297,9 +249,8 @@ test('territoire couvert : une absence de candidat signifie bien aucun résultat
   })
 
   await expect(page.getByText(/territoire couvert/)).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText(/aucun bien ne correspond aux filtres/)).toBeVisible()
-  // La liste reste honnête sur la vraie raison de son vide : aucun score publié.
-  await expect(page.getByText('Aucun candidat publié')).toBeVisible()
+  await expect(page.getByText(/la base n’en connaît aucun/)).toBeVisible()
+  await expect(page.getByText(/C’est une absence, pas un rejet/)).toBeVisible()
 })
 
 test('l’état de couverture survit au partage d’URL', async ({ page }) => {

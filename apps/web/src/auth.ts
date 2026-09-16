@@ -1,6 +1,9 @@
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts'
 
 const disabled = import.meta.env.DEV || import.meta.env.VITE_AUTH_DISABLED === 'true'
+
+/** Faux en local : aucune session à fermer, donc aucun bouton de déconnexion à montrer. */
+export const authEnabled = !disabled
 const authority = import.meta.env.VITE_OIDC_AUTHORITY
   ?? `${window.location.origin}/auth/realms/immo`
 

@@ -129,6 +129,7 @@ dérivée du graphe de dépendances.
 | [C1](./C1-recherche-adresse-reelle.md) | Recherche adresse réelle FR-001 sur données BAN acceptées | v0.4 | B1 | M | Terminé | — |
 | [C2](./C2-zone-non-couverte.md) | Distinguer zone non couverte et zone sans résultat | v0.4 | C1 | S | Terminé | — |
 | [C3](./C3-capture-demo-adresse.md) | Capture de démonstration adresse 35 | v0.4 | C1, C2 | S | Terminé | — |
+| [C4](./C4-explorer-outil-de-verification.md) | L'Explorer devient l'outil local de vérification des données, sans bouton mort | transverse | — | M | Terminé | — |
 
 ### D — v0.5 Données métier 35
 
@@ -203,7 +204,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**52/85 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
+**53/86 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 

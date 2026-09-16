@@ -1,85 +1,69 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   Building2,
-  Bookmark,
-  Calculator,
   CheckCircle2,
-  ChevronDown,
-  CircleHelp,
-  Compass,
-  Database,
+  ClipboardCheck,
   Euro,
   ExternalLink,
-  FileText,
   Gauge,
-  Heart,
   Layers3,
   LoaderCircle,
+  LogOut,
   Map as MapIcon,
   MapPin,
-  Plus,
-  RefreshCw,
-  ClipboardCheck,
   Search,
-  Settings,
   TriangleAlert,
   X,
+  ZoomIn,
 } from 'lucide-react'
 import {
-  createCandidateNote,
-  createCandidateScenario,
-  createSavedSearch,
   loadEntity,
-  loadAdministration,
-  loadOpportunities,
-  loadOpportunity,
   loadSession,
-  publishBrittany,
   loadAddressContext,
   loadCaseContext,
   loadNextReviewCase,
+  loadParcelEnergyAssessments,
+  loadParcelTransactions,
   loadReviewProgress,
   loadReviewResults,
   submitReviewVerdict,
   loadCommuneCoverage,
   searchEntities,
-  updateCandidateStatus,
-  withdrawBrittany,
-  type Bbox,
-  type CandidateWorkspace,
-  type EntityDetail,
-  type EntityType,
-  type OpportunityDetail,
-  type OpportunitySummary,
-  type ScenarioRequest,
   type AddressContext,
   type BlindCase,
   type CaseContext,
   type CommuneCoverage,
-  type ReviewProgress,
-  type StratumResult,
+  type EntityDetail,
   type EntityMatch,
+  type EntityType,
+  type ParcelEnergyAssessment,
+  type ParcelTransaction,
+  type ReviewProgress,
   type SearchResult,
   type Session,
+  type StratumResult,
 } from './api'
-import { signOut } from './auth'
-import RealMap, { type MapView, type RealMapHandle } from './RealMap'
+import { authEnabled, signOut } from './auth'
+import RealMap, { PARCELS_MIN_ZOOM, type MapView, type RealMapHandle } from './RealMap'
 import ReviewMap from './ReviewMap'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+/**
+ * L'Explorer est l'outil local de vérification des données du 35 (ADR-018) : on y cherche une
+ * adresse ou une parcelle, on la voit sur la carte, et sa fiche montre ce que la base en dit.
+ * Rien de la plateforme gelée n'y est rendu — ni candidat, ni score, ni administration.
+ */
+
 const DEFAULT_VIEW: MapView = { longitude: -1.6778, latitude: 48.1173, zoom: 14 }
-const DEPARTMENT_VIEWS: Record<string, MapView> = {
-  '22': { longitude: -2.764, latitude: 48.514, zoom: 9 },
-  '29': { longitude: -4.094, latitude: 48.261, zoom: 9 },
-  '35': { longitude: -1.6778, latitude: 48.1173, zoom: 10 },
-  '56': { longitude: -2.759, latitude: 47.846, zoom: 9 },
-}
 
 type Selection = { type: EntityType; id: string }
-type ListState = 'idle' | 'loading' | 'ready' | 'error'
 
+/** Un paramètre absent ou vide retombe sur la valeur par défaut. `Number(null)` vaut 0 : sans
+ *  ce garde, une URL nue ouvrait la carte au large du golfe de Guinée. */
 function numericParam(params: URLSearchParams, key: string, fallback: number) {
-  const value = Number(params.get(key))
+  const raw = params.get(key)
+  if (raw === null || raw.trim() === '') return fallback
+  const value = Number(raw)
   return Number.isFinite(value) ? value : fallback
 }
 
@@ -102,14 +86,9 @@ function formatArea(value: number | null) {
   return value === null ? 'Non disponible' : `${Math.round(value).toLocaleString('fr-FR')} m²`
 }
 
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U'
-}
-
 function App() {
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const mapRef = useRef<RealMapHandle>(null)
-  const listRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const [view, setView] = useState<MapView>({
     longitude: numericParam(initialParams, 'lon', DEFAULT_VIEW.longitude),
@@ -117,7 +96,6 @@ function App() {
     zoom: numericParam(initialParams, 'z', DEFAULT_VIEW.zoom),
   })
   const [selection, setSelection] = useState<Selection | null>(() => initialSelection(initialParams))
-  const [opportunityId, setOpportunityId] = useState(initialParams.get('opportunity'))
   const [addressId, setAddressId] = useState<string | null>(() => initialAddressId(initialParams))
   const [addressContext, setAddressContext] = useState<AddressContext | null>(null)
   const [addressLoading, setAddressLoading] = useState(false)
@@ -130,31 +108,14 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [activeSearchIndex, setActiveSearchIndex] = useState(0)
   const [searchLoading, setSearchLoading] = useState(false)
-  const [listState, setListState] = useState<ListState>('idle')
-  const [opportunities, setOpportunities] = useState<OpportunitySummary[]>([])
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [strategy, setStrategy] = useState<OpportunitySummary['strategy'] | ''>(
-    initialParams.get('strategy') === 'renovation_resale' ? 'renovation_resale'
-      : initialParams.get('strategy') === 'division_extension' ? 'division_extension' : '',
-  )
-  const [minimumScore, setMinimumScore] = useState(numericParam(initialParams, 'score', 0))
-  const [confidence, setConfidence] = useState<OpportunitySummary['confidence_level'] | ''>(
-    (initialParams.get('confidence') as OpportunitySummary['confidence_level'] | null) ?? '',
-  )
-  const [department, setDepartment] = useState(
-    ['22', '29', '35', '56'].includes(initialParams.get('department') ?? '')
-      ? initialParams.get('department') ?? '35' : '35',
-  )
-  const [listError, setListError] = useState('')
+  const [searchError, setSearchError] = useState(false)
   const [mapError, setMapError] = useState(false)
+  // Remonter la carte est la seule façon de relancer le chargement d'une couche en échec.
+  const [mapKey, setMapKey] = useState(0)
   const [orthophoto, setOrthophoto] = useState(initialParams.get('base') === 'ortho')
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [saveSearchOpen, setSaveSearchOpen] = useState(false)
-  const [savedSearchName, setSavedSearchName] = useState('')
-  const [savedSearchMessage, setSavedSearchMessage] = useState('')
-  const [adminOpen, setAdminOpen] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
 
+  // La session ne sert qu'à signer les verdicts de revue ; en local elle est absente.
   useEffect(() => {
     const controller = new AbortController()
     loadSession(controller.signal).then(setSession).catch(() => undefined)
@@ -179,37 +140,35 @@ function App() {
     next.set('z', view.zoom.toFixed(2))
     if (query) next.set('q', query)
     if (orthophoto) next.set('base', 'ortho')
-    if (strategy) next.set('strategy', strategy)
-    if (minimumScore > 0) next.set('score', String(minimumScore))
-    if (confidence) next.set('confidence', confidence)
-    next.set('department', department)
-    if (opportunityId) next.set('opportunity', opportunityId)
     if (selection) {
       next.set('type', selection.type)
       next.set('id', selection.id)
     }
     if (addressId) next.set('address', addressId)
     window.history.replaceState(null, '', `${window.location.pathname}?${next}`)
-  }, [view, query, orthophoto, selection, strategy, minimumScore, confidence, department, opportunityId, addressId])
+  }, [view, query, orthophoto, selection, addressId])
 
   useEffect(() => {
     const normalized = query.trim()
     if (normalized.length < 3) {
       setSearchResults([])
       setSearchLoading(false)
+      setSearchError(false)
       return
     }
     const controller = new AbortController()
     const timeout = window.setTimeout(() => {
       setSearchLoading(true)
-      searchEntities(normalized, department, controller.signal)
+      searchEntities(normalized, controller.signal)
         .then((results) => {
           setSearchResults(results)
+          setSearchError(false)
           setActiveSearchIndex(0)
-          setSearchOpen(true)
         })
         .catch((error: unknown) => {
-          if ((error as Error).name !== 'AbortError') setSearchResults([])
+          if ((error as Error).name === 'AbortError') return
+          setSearchResults([])
+          setSearchError(true)
         })
         .finally(() => setSearchLoading(false))
     }, 220)
@@ -217,30 +176,7 @@ function App() {
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [query, department])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const timeout = window.setTimeout(() => {
-      setListState('loading')
-      setListError('')
-      loadOpportunities({ strategy, minimumScore, confidenceLevel: confidence, departmentCode: department }, controller.signal)
-        .then((result) => {
-          setOpportunities(result.items)
-          setNextCursor(result.nextCursor)
-          setListState('ready')
-        })
-        .catch((error: unknown) => {
-          if ((error as Error).name === 'AbortError') return
-          setListError((error as Error).message)
-          setListState('error')
-        })
-    }, 180)
-    return () => {
-      window.clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [strategy, minimumScore, confidence, department, refreshKey])
+  }, [query])
 
   useEffect(() => {
     if (!selection) {
@@ -293,15 +229,11 @@ function App() {
     return () => controller.abort()
   }, [observedCommune])
 
-  const handleViewport = useCallback((nextBbox: Bbox, nextView: MapView) => {
-    void nextBbox
-    setView(nextView)
-  }, [])
+  const handleViewport = useCallback((nextView: MapView) => setView(nextView), [])
 
   const chooseSearchResult = (result: SearchResult) => {
     setQuery(result.label)
     setSearchOpen(false)
-    setOpportunityId(null)
     // Une adresse sans position ne recentre pas la carte : la recentrer sur un point arbitraire
     // ferait passer une absence pour une localisation.
     if (result.bbox) mapRef.current?.fitBounds(result.bbox)
@@ -327,330 +259,90 @@ function App() {
     event.preventDefault()
   }
 
-  const handleListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-    const buttons = [...(listRef.current?.querySelectorAll<HTMLButtonElement>('.result-card') ?? [])]
-    const current = buttons.indexOf(document.activeElement as HTMLButtonElement)
-    const next = event.key === 'ArrowDown' ? Math.min(current + 1, buttons.length - 1) : Math.max(current - 1, 0)
-    buttons[next]?.focus()
-    event.preventDefault()
-  }
-
-  const changeDepartment = (code: string) => {
-    setDepartment(code)
+  const closeSheet = () => {
     setSelection(null)
-    setOpportunityId(null)
-    const target = DEPARTMENT_VIEWS[code]
-    if (target) mapRef.current?.flyTo(target.longitude, target.latitude, target.zoom)
+    setAddressId(null)
   }
 
   const selectedMapEntity = selection?.type === 'property_unit'
     ? { type: 'parcel' as const, id: `parcel:cadastre:${selection.id.split(':').at(-1)}` }
     : selection
 
-  const resultLabel = `${opportunities.length}${nextCursor ? '+' : ''} candidat${opportunities.length > 1 ? 's' : ''}`
-
-  const loadMore = () => {
-    if (!nextCursor) return
-    setListState('loading')
-    loadOpportunities({ strategy, minimumScore, confidenceLevel: confidence, departmentCode: department, cursor: nextCursor })
-      .then((result) => {
-        setOpportunities((current) => [...current, ...result.items])
-        setNextCursor(result.nextCursor)
-        setListState('ready')
-      })
-      .catch((error: unknown) => { setListError((error as Error).message); setListState('error') })
-  }
-
-  const saveSearch = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!savedSearchName.trim()) return
-    try {
-      await createSavedSearch(savedSearchName, {
-        strategy: strategy || null,
-        minimum_score: minimumScore || null,
-        confidence_level: confidence || null,
-      })
-      setSavedSearchMessage('Recherche sauvegardée')
-      setSaveSearchOpen(false)
-      setSavedSearchName('')
-    } catch (caught) { setSavedSearchMessage((caught as Error).message) }
-  }
+  const hasSheet = Boolean(selection || addressId)
+  const belowParcels = view.zoom < PARCELS_MIN_ZOOM
+  const searching = query.trim().length >= 3
 
   return (
-    <div className={`app-shell ${opportunityId || selection ? 'has-detail' : ''}`}>
+    <div className={`app-shell ${hasSheet ? 'has-detail' : ''}`}>
       <aside className="sidebar" aria-label="Navigation principale">
-        <div className="brand-mark" title="Immo">i<span>m</span></div>
-        <nav><button className="nav-item active"><Compass size={21} /><span>Explorer</span></button><button className="nav-item" onClick={() => setAdminOpen(true)}><Database size={20} /><span>Pilote</span></button><button className="nav-item" onClick={() => setReviewOpen(true)}><ClipboardCheck size={20} /><span>Revue</span></button></nav>
-        <div className="sidebar-bottom"><button className="nav-item"><CircleHelp size={20} /><span>Aide</span></button><button className="avatar" aria-label={`Compte de ${session?.display_name ?? 'l’utilisateur'}`}>{initials(session?.display_name ?? 'Utilisateur')}</button></div>
+        <div className="brand-mark" aria-hidden="true">i<span>m</span></div>
+        <nav>
+          <button className={`nav-item ${reviewOpen ? '' : 'active'}`} aria-current={reviewOpen ? undefined : 'page'} onClick={() => setReviewOpen(false)}><MapIcon size={20} /><span>Carte</span></button>
+          <button className={`nav-item ${reviewOpen ? 'active' : ''}`} aria-current={reviewOpen ? 'page' : undefined} onClick={() => setReviewOpen(true)}><ClipboardCheck size={20} /><span>Revue</span></button>
+        </nav>
+        {authEnabled && <div className="sidebar-bottom"><button className="nav-item" onClick={() => void signOut()} title={session ? `Déconnecter ${session.display_name}` : undefined}><LogOut size={19} /><span>Quitter</span></button></div>}
       </aside>
 
       <main className="workspace">
         <header className="topbar">
+          <div className="title-block"><h1>Vérification des données</h1><span>Ille-et-Vilaine · base locale</span></div>
           <div className="search-wrap">
-            <div className="searchbox" role="combobox" aria-expanded={searchOpen} aria-haspopup="listbox" aria-controls="global-search-results">
-              <Search size={18} />
-              <input ref={searchRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchOpen(true) }} onFocus={() => searchResults.length && setSearchOpen(true)} onKeyDown={handleSearchKeyDown} placeholder="Adresse, commune ou parcelle…" aria-label="Rechercher" aria-autocomplete="list" aria-activedescendant={searchOpen ? `search-${activeSearchIndex}` : undefined} />
-              {searchLoading ? <LoaderCircle className="spin" size={16} /> : query ? <button aria-label="Effacer la recherche" onClick={() => { setQuery(''); setSearchOpen(false) }}><X size={15} /></button> : <kbd>⌘ K</kbd>}
+            <div className="searchbox" role="combobox" aria-expanded={searchOpen && searching} aria-haspopup="listbox" aria-controls="global-search-results">
+              <Search size={17} />
+              <input ref={searchRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchOpen(true) }} onFocus={() => setSearchOpen(true)} onKeyDown={handleSearchKeyDown} placeholder="Adresse ou parcelle (ex. 35238000BE0253)" aria-label="Rechercher" aria-autocomplete="list" aria-activedescendant={searchOpen && searchResults.length ? `search-${activeSearchIndex}` : undefined} />
+              {searchLoading ? <LoaderCircle className="spin" size={16} aria-label="Recherche en cours" /> : query ? <button aria-label="Effacer la recherche" onClick={() => { setQuery(''); setSearchOpen(false); searchRef.current?.focus() }}><X size={15} /></button> : <kbd>⌘ K</kbd>}
             </div>
-            {searchOpen && query.trim().length >= 3 && (
+            {searchOpen && searching && (
               <div className="search-results" id="global-search-results" role="listbox">
-                {searchResults.length ? searchResults.map((result, index) => (
+                {searchResults.map((result, index) => (
                   <button id={`search-${index}`} role="option" aria-selected={index === activeSearchIndex} className={index === activeSearchIndex ? 'active' : ''} key={`${result.entity_type}:${result.id}`} onMouseEnter={() => setActiveSearchIndex(index)} onClick={() => chooseSearchResult(result)}>
                     {result.entity_type === 'parcel' ? <MapIcon size={16} /> : <MapPin size={16} />}<span><strong>{result.label}</strong><small>{result.secondary_label}</small></span>
                   </button>
-                )) : !searchLoading && <p>Aucun résultat actif dans le {department}.</p>}
+                ))}
+                {!searchLoading && searchError && <p className="inline-error">Recherche indisponible : le service local ne répond pas.</p>}
+                {!searchLoading && !searchError && searchResults.length === 0 && <p>Aucune adresse ni parcelle du 35 ne correspond.</p>}
               </div>
             )}
           </div>
-          <div className="top-actions"><span className="live-label"><i /> Données réelles</span><button className="icon-button" aria-label="Paramètres"><Settings size={18} /></button><button className="profile-button" onClick={() => void signOut()} title="Se déconnecter"><span>{initials(session?.display_name ?? 'Utilisateur')}</span><div><strong>{session?.display_name ?? 'Utilisateur connecté'}</strong><small>{session ? `${session.organization_name} · ${session.role}` : 'Session locale'}</small></div><ChevronDown size={14} /></button></div>
+          <div className="map-mode" role="group" aria-label="Fond cartographique"><button aria-pressed={!orthophoto} className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Plan</button><button aria-pressed={orthophoto} className={orthophoto ? 'active' : ''} onClick={() => setOrthophoto(true)}>Orthophoto IGN</button></div>
         </header>
-
-        <section className="explorer-toolbar">
-          <div><h1>Explorer</h1><span>Bretagne · département {department}</span></div>
-          <div className="candidate-filters" aria-label="Filtres candidats">
-            <label>Département<select aria-label="Département" value={department} onChange={(event) => changeDepartment(event.target.value)}><option value="22">22 · Côtes-d’Armor</option><option value="29">29 · Finistère</option><option value="35">35 · Ille-et-Vilaine</option><option value="56">56 · Morbihan</option></select></label>
-            <label>Stratégie<select aria-label="Stratégie" value={strategy} onChange={(event) => setStrategy(event.target.value as typeof strategy)}><option value="">Toutes</option><option value="division_extension">Division / extension</option><option value="renovation_resale">Rénovation / revente</option></select></label>
-            <label>Score min.<input aria-label="Score minimum" type="number" min="0" max="100" value={minimumScore} onChange={(event) => setMinimumScore(Math.min(100, Math.max(0, Number(event.target.value))))} /></label>
-            <label>Confiance<select aria-label="Confiance" value={confidence} onChange={(event) => setConfidence(event.target.value as typeof confidence)}><option value="">Toutes</option><option value="high">Haute</option><option value="medium">Moyenne</option><option value="low">Faible</option></select></label>
-            <button className="save-search-button" onClick={() => setSaveSearchOpen((open) => !open)}><Bookmark size={13} /> Sauvegarder</button>
-          </div>
-          <div className="map-mode" role="group" aria-label="Fond cartographique"><button className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Parcelles</button><button className={orthophoto ? 'active' : ''} onClick={() => setOrthophoto(true)}>Orthophoto IGN</button></div>
-        </section>
-        {saveSearchOpen && <form className="save-search-popover" onSubmit={saveSearch}><label>Nom de la recherche<input autoFocus value={savedSearchName} maxLength={160} onChange={(event) => setSavedSearchName(event.target.value)} /></label><button type="submit">Enregistrer</button></form>}
-        {savedSearchMessage && <div className="toast" role="status">{savedSearchMessage}<button aria-label="Fermer le message" onClick={() => setSavedSearchMessage('')}><X size={13} /></button></div>}
 
         {coverage && <CoverageBanner coverage={coverage} />}
 
         <section className="explorer-grid">
-          <section className="result-panel" aria-label="Candidats publiés">
-            <div className="results-heading"><div><strong>{listState === 'loading' && opportunities.length === 0 ? 'Actualisation…' : resultLabel}</strong><span>scores publiés · filtres actifs</span></div>{listState === 'loading' && <LoaderCircle className="spin" size={17} />}</div>
-            <div className="result-list" ref={listRef} onKeyDown={handleListKeyDown}>
-              {listState === 'loading' && opportunities.length === 0 && <State icon={<LoaderCircle className="spin" />} title="Chargement des candidats" text="La liste interroge les opportunités publiées, sans donnée simulée." />}
-              {listState === 'error' && <State icon={<TriangleAlert />} title="Liste indisponible" text={listError || 'Le service peut être relancé.'} action={<button onClick={() => setRefreshKey((key) => key + 1)}><RefreshCw size={14} /> Réessayer</button>} />}
-              {listState === 'ready' && opportunities.length === 0 && <State icon={<CheckCircle2 />} title="Aucun candidat publié" text="Les définitions de score doivent être validées avant qu’un candidat réel apparaisse ici. Les valeurs inconnues ne sont pas converties en zéro." />}
-              {opportunities.map((opportunity) => (
-                <button key={opportunity.id} className={`result-card ${opportunityId === opportunity.id ? 'selected' : ''}`} onClick={() => { setOpportunityId(opportunity.id); setSelection(null) }}>
-                  <div><span className="parcel-icon"><Compass size={18} /></span><span><strong>{opportunity.property_unit_id}</strong><small>{opportunity.strategy === 'division_extension' ? 'Division / extension' : 'Rénovation / revente'} · {opportunity.segment_code}</small></span></div>
-                  <dl><div><dt>Score</dt><dd>{opportunity.score === null || opportunity.score === undefined ? 'Inconnu' : `${opportunity.score.toFixed(1)} / 100`}</dd></div><div><dt>Confiance</dt><dd>{opportunity.confidence_level} · {opportunity.confidence_score.toFixed(0)}%</dd></div></dl>
-                </button>
-              ))}
-              {nextCursor && <button className="load-more" onClick={loadMore} disabled={listState === 'loading'}><Plus size={14} /> Charger la suite</button>}
-            </div>
-          </section>
-
-          <section className="map-panel" aria-label="Carte réelle des parcelles et bâtiments">
-            <RealMap ref={mapRef} initialView={view} orthophoto={orthophoto} selected={selectedMapEntity} selectedOpportunity={opportunityId} onViewport={handleViewport} onSelect={(type, id) => { setOpportunityId(null); setSelection({ type, id }) }} onOpportunitySelect={(id) => { setSelection(null); setOpportunityId(id) }} onError={() => setMapError(true)} />
-            <div className="layer-badge"><Layers3 size={15} /> Opportunités · Parcelles · Bâtiments</div>
-            {mapError && <div className="map-error"><TriangleAlert size={15} /><span>Une couche n’a pas chargé.</span><button onClick={() => { setMapError(false); setRefreshKey((key) => key + 1) }}>Réessayer</button></div>}
+          <section className="map-panel" aria-label="Carte des parcelles et bâtiments">
+            <RealMap key={mapKey} ref={mapRef} initialView={view} orthophoto={orthophoto} selected={selectedMapEntity} onViewport={handleViewport} onSelect={(type, id) => { setAddressId(null); setSelection({ type, id }) }} onError={() => setMapError(true)} />
+            <div className="layer-badge"><Layers3 size={15} /> Parcelles · Bâtiments</div>
+            {belowParcels && <div className="map-hint" role="status"><span>Les parcelles s’affichent à partir du zoom {PARCELS_MIN_ZOOM}.</span><button onClick={() => mapRef.current?.flyTo(view.longitude, view.latitude, 16)}><ZoomIn size={14} /> Zoomer ici</button></div>}
+            {mapError && <div className="map-error" role="alert"><TriangleAlert size={15} /><span>Une couche n’a pas chargé.</span><button onClick={() => { setMapError(false); setMapKey((key) => key + 1) }}>Recharger la carte</button></div>}
             <div className="source-attribution">Cadastre Etalab · DGFiP{orthophoto ? ' · Orthophoto © IGN' : ''}</div>
           </section>
 
           <aside className="detail-panel" aria-live="polite">
-            {!selection && !opportunityId && !addressId && <State icon={<MapPin />} title="Sélectionnez un candidat" text="Cliquez une opportunité dans la liste ou sur la carte pour examiner ses preuves." />}
-            {!opportunityId && addressId && addressLoading && !addressContext && <State icon={<LoaderCircle className="spin" />} title="Chargement de l’adresse" text="Récupération des entités liées et de leurs appariements." />}
-            {!opportunityId && addressId && !addressLoading && !addressContext && <State icon={<TriangleAlert />} title="Adresse indisponible" text="L’adresse est absente de la release active ou le service est indisponible." action={<button onClick={() => setAddressId(null)}>Fermer</button>} />}
-            {!opportunityId && addressContext && <AddressSheet context={addressContext} onClose={() => setAddressId(null)} onRelated={(type, id) => { setAddressId(null); setSelection({ type, id }) }} />}
-            {opportunityId && <OpportunitySheet id={opportunityId} onClose={() => setOpportunityId(null)} onProperty={(id) => { setOpportunityId(null); setSelection({ type: 'property_unit', id }) }} />}
-            {!opportunityId && selection && detailLoading && !detail && <State icon={<LoaderCircle className="spin" />} title="Chargement de la fiche" text="Récupération du détail exact par l’API." />}
-            {!opportunityId && selection && !detailLoading && !detail && <State icon={<TriangleAlert />} title="Fiche indisponible" text="L’entité est absente de la release active ou le service est indisponible." action={<button onClick={() => setSelection(null)}>Fermer</button>} />}
-            {!opportunityId && detail && <EntitySheet detail={detail} onClose={() => setSelection(null)} onRelated={(type, id) => setSelection({ type, id })} />}
+            {!hasSheet && <State icon={<MapPin />} title="Aucune fiche ouverte" text="Recherchez une adresse ou une parcelle, ou cliquez une parcelle ou un bâtiment sur la carte. La fiche montre ce que la base en contient, avec ses sources." />}
+            {addressId && addressLoading && !addressContext && <State icon={<LoaderCircle className="spin" />} title="Chargement de l’adresse" text="Récupération des entités liées et de leurs appariements." />}
+            {addressId && !addressLoading && !addressContext && <State icon={<TriangleAlert />} title="Adresse indisponible" text="L’adresse est absente de la release active ou le service est indisponible." action={<button onClick={closeSheet}>Fermer</button>} />}
+            {addressContext && <AddressSheet context={addressContext} onClose={closeSheet} onRelated={(type, id) => { setAddressId(null); setSelection({ type, id }) }} />}
+            {selection && detailLoading && !detail && <State icon={<LoaderCircle className="spin" />} title="Chargement de la fiche" text="Récupération du détail exact par l’API." />}
+            {selection && !detailLoading && !detail && <State icon={<TriangleAlert />} title="Fiche indisponible" text="L’entité est absente de la release active ou le service est indisponible." action={<button onClick={closeSheet}>Fermer</button>} />}
+            {selection && detail && <EntitySheet detail={detail} onClose={closeSheet} onRelated={(type, id) => setSelection({ type, id })} />}
           </aside>
         </section>
       </main>
-      {adminOpen && <AdminPanel session={session} onClose={() => setAdminOpen(false)} />}
       {reviewOpen && <ReviewPanel sampleId="b4-2026-09-08" reviewer={session?.display_name ?? 'relecteur'} onClose={() => setReviewOpen(false)} />}
     </div>
   )
-}
-
-function AdminPanel({ session, onClose }: { session: Session | null; onClose: () => void }) {
-  const [data, setData] = useState<Awaited<ReturnType<typeof loadAdministration>> | null>(null)
-  const [error, setError] = useState('')
-  const [reason, setReason] = useState('')
-  const [publishing, setPublishing] = useState(false)
-  const [message, setMessage] = useState('')
-  const reload = useCallback(() => {
-    const controller = new AbortController()
-    setError('')
-    loadAdministration(controller.signal).then(setData).catch((caught: unknown) => {
-      if ((caught as Error).name !== 'AbortError') setError((caught as Error).message)
-    })
-    return () => controller.abort()
-  }, [])
-  useEffect(() => reload(), [reload])
-
-  const submitPublication = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!reason.trim() || !data?.brittany.publishable) return
-    setPublishing(true)
-    setMessage('')
-    try {
-      const result = await publishBrittany(reason)
-      setMessage(`Bundle ${result.bundle_id} publié.`)
-      setReason('')
-      reload()
-    } catch (caught) { setMessage((caught as Error).message) }
-    finally { setPublishing(false) }
-  }
-
-  const withdraw = async () => {
-    if (!reason.trim() || !data?.brittany.active_bundle) return
-    setPublishing(true)
-    try {
-      await withdrawBrittany(reason)
-      setMessage('Publication Bretagne retirée.')
-      setReason('')
-      reload()
-    } catch (caught) { setMessage((caught as Error).message) }
-    finally { setPublishing(false) }
-  }
-
-  return <div className="admin-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-title"><section className="admin-panel"><header><div><span className="eyebrow">ADMINISTRATION</span><h2 id="admin-title">Pilote Bretagne</h2></div><button className="icon-button" aria-label="Fermer l’administration" onClick={onClose}><X size={17} /></button></header>{error ? <State icon={<TriangleAlert />} title="Accès indisponible" text={error} /> : !data ? <State icon={<LoaderCircle className="spin" />} title="Chargement" text="Lecture des releases, de la couverture et des contrôles qualité." /> : <div className="admin-content">
-    <section className="regional-readiness"><h3>Publication régionale</h3><div className={`regional-gate ${data.brittany.publishable ? 'ready' : 'blocked'}`}>{data.brittany.publishable ? <CheckCircle2 size={16} /> : <TriangleAlert size={16} />}<span><strong>{data.brittany.publishable ? 'Prête à publier' : 'Publication bloquée'}</strong><small>{data.brittany.blockers.length ? data.brittany.blockers.join(' · ') : 'Toutes les preuves requises sont présentes.'}</small></span></div><div className="territory-grid">{Object.entries(data.brittany.territories).map(([department, territory]) => <article key={department}><strong>Département {department}</strong><span>{territory.covered ? 'couvert' : 'non couvert'}</span><small>{territory.sources.filter((source) => source.ready).length}/9 sources acceptées</small></article>)}</div><p>Scores actifs : {data.brittany.active_score_count}/2 · segmentation v{data.brittany.segmentation.version} {data.brittany.segmentation.status}</p>{data.brittany.active_bundle && <p>Active : {data.brittany.active_bundle.bundle_id}</p>}<form className="publication-form" onSubmit={submitPublication}><label>Motif auditable<textarea value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} placeholder="Décision et preuves examinées…" /></label><div><button type="submit" disabled={publishing || !data.brittany.publishable || session?.role !== 'platform_admin' || reason.trim().length < 3}>Publier la Bretagne</button>{data.brittany.active_bundle && <button type="button" className="danger-button" disabled={publishing || session?.role !== 'platform_admin' || reason.trim().length < 3} onClick={() => void withdraw()}>Retirer</button>}</div></form>{session?.role !== 'platform_admin' && <p>Lecture seule : le rôle platform_admin est requis.</p>}{message && <p role="status">{message}</p>}</section>
-    <section><h3>Derniers imports</h3>{data.importRuns.length === 0 ? <p>Aucune exécution.</p> : data.importRuns.map((run, index) => <article key={String(run.id ?? index)}><strong>{displayValue(run.release_id)}</strong><span>{displayValue(run.status)}</span><small>{displayValue(run.territory_type)} {displayValue(run.territory_code)} · {displayValue(run.normalized_row_count)} lignes normalisées</small>{run.error_message ? <p>{displayValue(run.error_message)}</p> : null}</article>)}</section><section><h3>Qualité des données</h3>{data.dataQuality.length === 0 ? <p>Aucun contrôle.</p> : data.dataQuality.map((check, index) => <article key={`${displayValue(check.check_code)}:${index}`}><strong>{displayValue(check.check_code)}</strong><span>{displayValue(check.status)} · {displayValue(check.severity)}</span><small>{displayValue(check.scope_type)} {displayValue(check.scope_code)}{check.blocks_publication ? ' · publication bloquée' : ''}</small></article>)}</section></div>}</section></div>
 }
 
 function State({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) {
   return <div className="empty-state"><span>{icon}</span><strong>{title}</strong><p>{text}</p>{action}</div>
 }
 
-type OpportunityBundle = {
-  detail: OpportunityDetail
-  evidence: Record<string, unknown>[]
-  comparables: Record<string, unknown>[]
-  sources: Record<string, unknown>[]
-  workspace: CandidateWorkspace
-}
-
-const STATUS_LABELS: Record<CandidateWorkspace['state']['status'], string> = {
-  new: 'Nouveau', to_analyze: 'À analyser', retained: 'Retenu',
-  contact_to_prepare: 'Contact à préparer', contacted: 'Contacté', visit: 'Visite',
-  offer: 'Offre', acquired: 'Acquis', lost: 'Perdu', rejected: 'Rejeté', ignored: 'Ignoré',
-}
-
-function displayValue(value: unknown) {
-  if (value === null || value === undefined) return 'Inconnu'
-  if (typeof value === 'number') return value.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
-
-function OpportunitySheet({ id, onClose, onProperty }: { id: string; onClose: () => void; onProperty: (id: string) => void }) {
-  const [bundle, setBundle] = useState<OpportunityBundle | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [actionError, setActionError] = useState('')
-  const [note, setNote] = useState('')
-  const [statusDraft, setStatusDraft] = useState<CandidateWorkspace['state']['status']>('new')
-  const [rejectionReason, setRejectionReason] = useState<'land_false_positive' | 'adverse_planning' | 'no_access' | 'risk_too_high' | 'estimate_too_optimistic' | 'works_too_large' | 'already_known' | 'outside_strategy' | 'other'>('land_false_positive')
-  const [rejectionComment, setRejectionComment] = useState('')
-  const [scenario, setScenario] = useState<ScenarioRequest>({
-    purchase_price_eur: 0, works_cost_eur: 0, resale_price_eur: 0,
-    fees_eur: 0, finance_cost_eur: 0, holding_cost_eur: 0,
-  })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    setError('')
-    loadOpportunity(id, controller.signal)
-      .then((loaded) => { setBundle(loaded); setStatusDraft(loaded.workspace.state.status) })
-      .catch((caught: unknown) => {
-        if ((caught as Error).name !== 'AbortError') setError((caught as Error).message)
-      })
-      .finally(() => setLoading(false))
-    return () => controller.abort()
-  }, [id])
-
-  const changeStatus = async (
-    status: CandidateWorkspace['state']['status'],
-    favorite = bundle?.workspace.state.favorite ?? false,
-  ) => {
-    if (!bundle) return
-    setSaving(true)
-    setActionError('')
-    try {
-      const state = await updateCandidateStatus(id, {
-        status, favorite,
-        rejection_reasons: status === 'rejected' ? [rejectionReason] : [],
-        rejection_comment: status === 'rejected' ? rejectionComment : null,
-      })
-      setBundle({ ...bundle, workspace: { ...bundle.workspace, state } })
-      setStatusDraft(state.status)
-    } catch (caught) {
-      setActionError((caught as Error).message)
-      setStatusDraft(bundle.workspace.state.status)
-    } finally { setSaving(false) }
-  }
-
-  const submitNote = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!bundle || !note.trim()) return
-    setSaving(true)
-    setActionError('')
-    try {
-      const created = await createCandidateNote(id, note)
-      setBundle({ ...bundle, workspace: { ...bundle.workspace, notes: [created, ...bundle.workspace.notes] } })
-      setNote('')
-    } catch (caught) { setActionError((caught as Error).message) }
-    finally { setSaving(false) }
-  }
-
-  const submitScenario = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!bundle) return
-    setSaving(true)
-    setActionError('')
-    try {
-      const created = await createCandidateScenario(id, scenario)
-      setBundle({ ...bundle, workspace: { ...bundle.workspace, scenarios: [created, ...bundle.workspace.scenarios] } })
-    } catch (caught) { setActionError((caught as Error).message) }
-    finally { setSaving(false) }
-  }
-
-  if (loading) return <State icon={<LoaderCircle className="spin" />} title="Chargement du candidat" text="Score, preuves, comparables et espace privé sont chargés ensemble." />
-  if (error || !bundle) return <State icon={<TriangleAlert />} title="Fiche indisponible" text={error || 'Réponse incomplète'} action={<button onClick={onClose}>Fermer</button>} />
-
-  const { detail, workspace, evidence, comparables, sources } = bundle
-  const stale = Date.now() - new Date(detail.snapshot_at).getTime() > 180 * 24 * 60 * 60 * 1000
-  const latestScenario = workspace.scenarios[0]
-
-  return <>
-    <div className="detail-actions"><span className="eyebrow">CANDIDAT · {detail.strategy === 'division_extension' ? 'DIVISION' : 'RÉNOVATION'}</span><button className="icon-button" onClick={onClose} aria-label="Fermer la fiche"><X size={17} /></button></div>
-    <div className="detail-scroll candidate-sheet">
-      <header className="detail-header"><span className="entity-icon"><Compass size={24} /></span><div><h2>{detail.property_unit_id}</h2><p>Snapshot du {new Date(detail.snapshot_at).toLocaleDateString('fr-FR')} · segment {detail.segment_code}</p></div></header>
-      {stale && <div className="state-banner partial"><TriangleAlert size={14} />Snapshot ancien : contrôlez la fraîcheur des sources.</div>}
-      <section className="detail-section score-summary"><div><span>Score</span><strong>{detail.score === null || detail.score === undefined ? 'Inconnu' : detail.score.toFixed(1)}</strong></div><div><span>Confiance</span><strong>{detail.confidence_score.toFixed(0)}%</strong><small>{detail.confidence_level}</small></div></section>
-      <section className="detail-section"><h3>Qualification privée</h3><button className={`favorite-button ${workspace.state.favorite ? 'active' : ''}`} aria-pressed={workspace.state.favorite} onClick={() => void changeStatus(workspace.state.status, !workspace.state.favorite)}><Heart size={14} fill={workspace.state.favorite ? 'currentColor' : 'none'} /> {workspace.state.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><label className="field-label">Statut<select aria-label="Statut du candidat" disabled={saving} value={statusDraft} onChange={(event) => { const value = event.target.value as CandidateWorkspace['state']['status']; setStatusDraft(value); if (value !== 'rejected') void changeStatus(value) }}>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{statusDraft === 'rejected' && <div className="rejection-editor"><label className="field-label">Motif<select aria-label="Motif de rejet" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value as typeof rejectionReason)}><option value="land_false_positive">Faux positif foncier</option><option value="adverse_planning">Urbanisme défavorable</option><option value="no_access">Accès impossible</option><option value="risk_too_high">Risque trop élevé</option><option value="estimate_too_optimistic">Estimation trop optimiste</option><option value="works_too_large">Travaux trop importants</option><option value="already_known">Déjà connu</option><option value="outside_strategy">Hors stratégie</option><option value="other">Autre</option></select></label><label className="field-label">Commentaire<textarea aria-label="Commentaire de rejet" required={rejectionReason === 'other'} value={rejectionComment} onChange={(event) => setRejectionComment(event.target.value)} /></label><button disabled={saving || (rejectionReason === 'other' && !rejectionComment.trim())} onClick={() => void changeStatus('rejected')}>Confirmer le rejet</button></div>}{actionError && <p className="inline-error" role="alert">{actionError}</p>}</section>
-      <section className="detail-section"><h3>Raisons du classement</h3>{evidence.length === 0 ? <p className="unknown-value">Aucune preuve publiée.</p> : <div className="evidence-list">{evidence.map((item, index) => <article key={`${displayValue(item.feature_code)}:${index}`}><div><strong>{displayValue(item.feature_code)}</strong><span className={`impact ${Number(item.impact) < 0 ? 'negative' : 'positive'}`}>{Number(item.impact) > 0 ? '+' : ''}{displayValue(item.impact)}</span></div><p>{displayValue(item.explanation)}</p><small>{displayValue(item.quality)} · observé {displayValue(item.observed_at)}</small></article>)}</div>} {detail.missing_features.length > 0 && <p className="missing-value"><TriangleAlert size={13} /> Inconnues : {detail.missing_features.join(', ')}</p>}</section>
-      <section className="detail-section"><h3>Scénario financier</h3><form className="scenario-form" onSubmit={submitScenario}>{([['purchase_price_eur', 'Acquisition'], ['works_cost_eur', 'Travaux'], ['resale_price_eur', 'Revente'], ['fees_eur', 'Frais'], ['finance_cost_eur', 'Financement'], ['holding_cost_eur', 'Portage']] as const).map(([key, label]) => <label key={key}>{label}<input aria-label={label} required type="number" min="0" step="1000" value={scenario[key]} onChange={(event) => setScenario({ ...scenario, [key]: Number(event.target.value) })} /></label>)}<button disabled={saving} type="submit"><Calculator size={14} /> Recalculer et sauvegarder</button></form>{latestScenario && <dl className="scenario-results"><div><dt>Coût total</dt><dd>{displayValue(latestScenario.results.total_cost_eur)} €</dd></div><div><dt>Marge nette</dt><dd>{displayValue(latestScenario.results.net_margin_eur)} €</dd></div><div><dt>Rendement coût</dt><dd>{typeof latestScenario.results.return_on_cost === 'number' ? `${(latestScenario.results.return_on_cost * 100).toFixed(1)}%` : 'Inconnu'}</dd></div></dl>}<p className="method-note">Ces hypothèses privées créent un scénario séparé. Elles ne modifient jamais le snapshot ni ses sources.</p></section>
-      <section className="detail-section"><h3>Transactions comparables</h3>{comparables.length === 0 ? <p className="unknown-value">Aucun comparable disponible.</p> : comparables.map((item, index) => <div className="comparable-row" key={`${displayValue(item.transaction_id)}:${index}`}><span><strong>{displayValue(item.transaction_id)}</strong><small>{displayValue(item.reason)}</small></span><span>{displayValue(item.normalized_price_m2)} €/m²<br /><small>{item.included ? 'Inclus' : 'Exclu'}</small></span></div>)}</section>
-      <section className="detail-section"><h3>Sources et fraîcheur</h3>{sources.length === 0 ? <p className="unknown-value">Source indisponible — la provenance n’est pas masquée.</p> : sources.map((source, index) => <div className="source-row" key={`${displayValue(source.data_source_id)}:${index}`}><ExternalLink size={15} /><span><strong>{displayValue(source.name ?? source.data_source_id)}</strong><small>{displayValue(source.producer)} · {displayValue(source.release_id)}</small></span></div>)}</section>
-      <section className="detail-section"><h3>Notes et historique</h3><form className="note-form" onSubmit={submitNote}><label htmlFor="candidate-note">Nouvelle note</label><textarea id="candidate-note" value={note} maxLength={10000} onChange={(event) => setNote(event.target.value)} placeholder="Observation factuelle…" /><button disabled={saving || !note.trim()} type="submit"><FileText size={14} /> Ajouter la note</button></form>{workspace.notes.map((item) => <article className="note-row" key={item.id}><p>{item.body}</p><small>{item.author} · {new Date(item.created_at).toLocaleString('fr-FR')}</small></article>)}{workspace.history.map((item, index) => <div className="history-row" key={String(item.id ?? index)}><CheckCircle2 size={13} /><span>{STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] ?? displayValue(item.status)}<small>{displayValue(item.author)} · {item.occurred_at ? new Date(String(item.occurred_at)).toLocaleString('fr-FR') : 'date inconnue'}</small></span></div>)}</section>
-      <section className="detail-section"><button className="property-link" onClick={() => onProperty(detail.property_unit_id)}><MapIcon size={15} /> Ouvrir l’unité foncière</button></section>
-    </div>
-  </>
-}
-
-type ParcelTransaction = {
-  transaction_id: string
-  mutation_date: string | null
-  mutation_nature: string | null
-  property_type: string | null
-  surface_m2: number | null
-  allocated_price_eur: number | null
-  unallocated_reason: string | null
-  parcel_count: number | null
-  lot_count: number | null
-}
-
 /**
  * Les mutations DVF d'une parcelle — instrument de vérification D6a, pas fonctionnalité produit.
  *
- * Le produit classe des candidats ; il ne donne pas accès à l'historique des ventes. Ce bloc
- * existe pour qu'un humain vérifie que l'import et le rattachement tiennent, comme l'écran de
+ * Le produit ne donne pas accès à l'historique des ventes d'une adresse. Ce bloc existe pour
+ * qu'un humain vérifie que l'import et le rattachement tiennent, comme l'écran de
  * revue de B4 l'a fait pour les appariements — et B4 a produit trois défauts structurels qu'aucun
  * contrôle automatique n'avait vus.
  *
@@ -666,11 +358,12 @@ type ParcelTransaction = {
  */
 function ParcelTransactions({ parcelId }: { parcelId: string }) {
   const [rows, setRows] = useState<ParcelTransaction[] | null>(null)
+  const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    let cancelled = false
+    const controller = new AbortController()
     // Vider avant de recharger. Sans cela, passer d'une parcelle à sa voisine laissait les
     // mutations de la première à l'écran : la fiche est rendue à la même place, React réutilise
     // donc l'instance et son état survit au changement de parcelle. Le garde `rows !== null`,
@@ -679,21 +372,25 @@ function ParcelTransactions({ parcelId }: { parcelId: string }) {
     // Signalé sur 35024000AP0206, qui affichait les deux ventes de sa voisine AP0207 alors
     // qu'elle n'en porte qu'une. Un écran de vérification qui attribue une vente à la mauvaise
     // parcelle est pire qu'un écran absent.
+    //
+    // Une erreur n'est pas une absence : « aucune mutation » sur un 500 affirmerait un fait
+    // que la base n'a pas dit.
     setRows(null)
-    fetch(`/api/v1/parcels/${encodeURIComponent(parcelId)}/transactions`)
-      .then((response) => (response.ok ? response.json() : []))
-      .then((data) => { if (!cancelled) setRows(data as ParcelTransaction[]) })
-      .catch(() => { if (!cancelled) setRows([]) })
-    return () => { cancelled = true }
+    setFailed(false)
+    loadParcelTransactions(parcelId, controller.signal)
+      .then(setRows)
+      .catch((error: unknown) => { if ((error as Error).name !== 'AbortError') setFailed(true) })
+    return () => controller.abort()
   }, [open, parcelId])
 
   return <section className="detail-section">
     <h3>
-      <button className="property-link" onClick={() => setOpen(!open)}>
+      <button className="property-link" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Euro size={15} /> {open ? 'Masquer' : 'Voir'} les mutations DVF
       </button>
     </h3>
-    {open && rows === null && <p className="unknown-value">Chargement…</p>}
+    {open && failed && <p className="inline-error" role="alert">Mutations indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.</p>}
+    {open && !failed && rows === null && <p className="unknown-value">Chargement…</p>}
     {open && rows !== null && rows.length === 0 &&
       <p className="unknown-value">Aucune mutation rattachée à cette parcelle.</p>}
     {open && rows !== null && rows.length > 0 && <>
@@ -739,19 +436,6 @@ function ParcelTransactions({ parcelId }: { parcelId: string }) {
   </section>
 }
 
-type ParcelEnergyAssessment = {
-  dpe_number: string
-  assessment_date: string | null
-  energy_label: string | null
-  energy_consumption_kwh_m2_year: number | null
-  surface_habitable_m2: number | null
-  building_type: string | null
-  building_id: string | null
-  relation_status: string
-  identifier_provenance: string | null
-  address_label: string | null
-}
-
 /** Plafond d'affichage, annoncé à l'écran et jamais silencieux : une parcelle rennaise porte
  *  jusqu'à 526 diagnostics. Rendre les 526 noierait la vérification ; les couper sans le dire
  *  ferait croire à une couverture complète. Le compte total reste affiché. */
@@ -778,30 +462,32 @@ const countAmbiguousAttachments = (rows: ParcelEnergyAssessment[]) =>
  */
 function ParcelEnergyAssessments({ parcelId }: { parcelId: string }) {
   const [rows, setRows] = useState<ParcelEnergyAssessment[] | null>(null)
+  const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    let cancelled = false
+    const controller = new AbortController()
     // Même garde que pour les mutations : la fiche est rendue à la même place d'une parcelle à
     // l'autre, React réutilise l'instance, et sans ce vidage la parcelle voisine garderait les
     // diagnostics de la précédente. Attribuer un DPE à la mauvaise parcelle est exactement ce
     // qu'un écran de vérification ne doit pas faire.
     setRows(null)
-    fetch(`/api/v1/parcels/${encodeURIComponent(parcelId)}/energy-assessments`)
-      .then((response) => (response.ok ? response.json() : []))
-      .then((data) => { if (!cancelled) setRows(data as ParcelEnergyAssessment[]) })
-      .catch(() => { if (!cancelled) setRows([]) })
-    return () => { cancelled = true }
+    setFailed(false)
+    loadParcelEnergyAssessments(parcelId, controller.signal)
+      .then(setRows)
+      .catch((error: unknown) => { if ((error as Error).name !== 'AbortError') setFailed(true) })
+    return () => controller.abort()
   }, [open, parcelId])
 
   return <section className="detail-section">
     <h3>
-      <button className="property-link" onClick={() => setOpen(!open)}>
+      <button className="property-link" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Gauge size={15} /> {open ? 'Masquer' : 'Voir'} les diagnostics DPE
       </button>
     </h3>
-    {open && rows === null && <p className="unknown-value">Chargement…</p>}
+    {open && failed && <p className="inline-error" role="alert">Diagnostics indisponibles : le service local n’a pas répondu. Rien n’est affirmé sur cette parcelle.</p>}
+    {open && !failed && rows === null && <p className="unknown-value">Chargement…</p>}
     {open && rows !== null && rows.length === 0 &&
       <p className="unknown-value">Aucun diagnostic rattaché aux bâtiments de cette parcelle.</p>}
     {open && rows !== null && rows.length > 0 && <>
@@ -879,29 +565,28 @@ function EntitySheet({ detail, onClose, onRelated }: { detail: EntityDetail; onC
  *
  * La distinction que porte ce composant est une exigence produit, pas un détail d'affichage :
  * « territoire non couvert » et « aucun résultat » se ressemblent à l'écran et signifient le
- * contraire l'un de l'autre. Confondre les deux laisserait croire à un marchand de biens qu'un
- * territoire est sans intérêt alors qu'il n'a jamais été importé.
+ * contraire l'un de l'autre. Confondre les deux ferait lire une fiche vide comme un fait, alors
+ * que le territoire n'a jamais été importé.
  *
- * Placé au-dessus de la grille, il est partagé par la carte et la liste : leur état est donc
- * synchronisé par construction, et non par deux rendus qu'il faudrait garder d'accord.
+ * Placé au-dessus de la grille, il est partagé par la carte et la fiche.
  */
 function CoverageBanner({ coverage }: { coverage: CommuneCoverage }) {
   const territory = coverage.commune_name ?? coverage.commune_code
   if (coverage.state === 'covered') {
     return <div className="coverage-banner covered" role="status">
       <CheckCircle2 size={15} />
-      <span><strong>{territory} · territoire couvert</strong><small>Les cinq sources du référentiel spatial sont actives ici. Une absence de candidat signifie qu’aucun bien ne correspond aux filtres.</small></span>
+      <span><strong>{territory} · territoire couvert</strong><small>Les cinq sources du référentiel spatial sont actives ici. Une fiche sans rattachement signifie que la base n’en connaît aucun.</small></span>
     </div>
   }
   if (coverage.state === 'not_covered') {
     return <div className="coverage-banner not-covered" role="status">
       <TriangleAlert size={15} />
-      <span><strong>{territory} · territoire non couvert</strong><small>Aucune source active sur ce territoire. Une absence de candidat ne veut rien dire ici : la donnée n’a pas été importée.</small></span>
+      <span><strong>{territory} · territoire non couvert</strong><small>Aucune source active sur ce territoire. Une fiche vide ne veut rien dire ici : la donnée n’a pas été importée.</small></span>
     </div>
   }
   return <div className="coverage-banner partial" role="status">
     <TriangleAlert size={15} />
-    <span><strong>{territory} · données partielles</strong><small>Classement incomplet. Sources absentes : {coverage.missing_sources.join(', ')}.</small></span>
+    <span><strong>{territory} · données partielles</strong><small>Rattachements incomplets. Sources absentes : {coverage.missing_sources.join(', ')}.</small></span>
   </div>
 }
 
@@ -1117,11 +802,19 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
     ? `https://www.google.com/maps/@${current.latitude!.toFixed(6)},${current.longitude!.toFixed(6)},19z/data=!3m1!1e3`
     : null
 
-  return <div className="admin-overlay" role="dialog" aria-modal="true" aria-labelledby="review-title">
+  // `<dialog>` ouvert par `showModal()` : le navigateur retient le focus dans la revue, rend le
+  // reste inerte et ferme sur Échap — ce qu'aucun `div` ne faisait.
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (dialog && !dialog.open) dialog.showModal()
+  }, [])
+
+  return <dialog ref={dialogRef} className="review-dialog" aria-labelledby="review-title" onClose={onClose}>
     <section className="admin-panel">
       <header>
         <div><span className="eyebrow">REVUE MANUELLE</span><h2 id="review-title">Échantillon {sampleId}</h2></div>
-        <button className="icon-button" aria-label="Fermer la revue" onClick={onClose}><X size={17} /></button>
+        <button className="icon-button" aria-label="Fermer la revue" onClick={() => dialogRef.current?.close()}><X size={17} /></button>
       </header>
       <div className="admin-content">
         {error && <State icon={<TriangleAlert />} title="Enregistrement impossible" text={error} />}
@@ -1201,7 +894,7 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
             <p className="detail-note">Aucune n’est déclarée correspondre à cet objet. Elles servent à le situer, comme un nom de rue sur une carte.</p>
           </div>}
           <p className="detail-note review-links">
-            {mapHref && <a href={mapHref} target="_blank" rel="noreferrer">Explorer, zoom 18</a>}
+            {mapHref && <a href={mapHref} target="_blank" rel="noreferrer">Ouvrir sur la carte, zoom 18</a>}
             {aerialHref && <a href={aerialHref} target="_blank" rel="noreferrer">Vue aérienne</a>}
             {located && <span>{current.latitude!.toFixed(6)}, {current.longitude!.toFixed(6)}</span>}
           </p>
@@ -1237,7 +930,7 @@ function ReviewPanel({ sampleId, reviewer, onClose }: { sampleId: string; review
         </section>}
       </div>
     </section>
-  </div>
+  </dialog>
 }
 
 export default App

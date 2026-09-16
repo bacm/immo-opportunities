@@ -34,7 +34,7 @@ Ce tableau décrit ce qui est dans `uv.lock`, `pnpm-lock.yaml` et `compose.yaml`
 | Orchestrateur | Dagster 1.10, **un asset réel** (DS-01) ; les 25 autres cibles utilisent son image comme interpréteur | gelé de fait |
 | Stockage brut | MinIO en conteneur, 6 Go d'archives épinglées | actif, remplacement envisagé (§13) |
 | API | FastAPI 0.141, Pydantic 2, 45 routes dont 4 authentifiées | gelée |
-| Frontend | React 19, Vite 6, TypeScript strict, MapLibre 6 via `react-map-gl` 8, `oidc-client-ts`, CSS custom, client généré par `openapi-typescript` | gelé |
+| Frontend | React 19, Vite 6, TypeScript strict, MapLibre 6 via `react-map-gl` 8, `oidc-client-ts`, CSS custom, client généré par `openapi-typescript` | outil local de vérification (ADR-018) |
 | Tuiles | Martin 1.13, trois fonctions PostGIS | gelé |
 | Identité | Keycloak 26.7, OIDC Authorization Code + PKCE | gelé |
 | Reverse proxy | Caddy 2.11 | gelé |
@@ -196,35 +196,37 @@ immo-opportunities/
 
 ---
 
-## 6. Frontend — gelé
+## 6. Frontend — outil local de vérification
 
 ### 6.1 Ce qui existe
 
-Une SPA de 2 176 lignes écrites à la main, dont 1 243 dans `App.tsx` : recherche d'adresse et de
-parcelle, fiches adresse, parcelle et bâtiment, mutations DVF et diagnostics DPE par parcelle,
-bannière de couverture, panneau d'administration, dépouillement de la revue B4. État local par
-`useState`, filtres et sélection dans l'URL, chargements par `fetch` et `AbortController`. Aucune
-bibliothèque d'état, aucun routeur, aucune bibliothèque de composants.
+Depuis C4 ([ADR-018](docs/decisions/ADR-018-degel-restreint-explorer.md)), l'Explorer est l'outil
+local de vérification des données du 35 : recherche d'adresse et de parcelle, carte des parcelles
+et bâtiments avec orthophoto, fiches adresse, parcelle et bâtiment, mutations DVF et diagnostics
+DPE par parcelle, bannière de couverture, revue B4 dans un `<dialog>` modal. Deux colonnes, carte
+et fiche ; 936 lignes dans `App.tsx`. État local par `useState`, sélection et cadrage
+dans l'URL, chargements par le client `api.ts` et `AbortController`. Aucune bibliothèque d'état,
+aucun routeur, aucune bibliothèque de composants.
 
-### 6.2 Ce qui est vide
+### 6.2 Ce qui a été retiré
 
-Liste de candidats, fiche candidat, workflow de qualification, scénarios financiers, recherches
-sauvegardées : environ 700 lignes inatteignables faute de score publié
-(`docs/data/captures/01-explorer-initial.png`).
+Liste, filtres et fiche candidat, workflow de qualification, scénarios financiers, recherches
+sauvegardées, couche des opportunités, panneau d'administration régionale, sélecteur de
+département : environ 700 lignes inatteignables faute de score publié, retirées par C4. Les
+routes d'API correspondantes existent toujours ; le code front se récupère au commit de C4.
 
-### 6.3 Défauts connus, à corriger avant tout dégel
+### 6.3 Défauts connus
 
-Vue initiale à lon 0 / lat 0 (`Number(null) === 0`, `App.tsx:81-84`) ; carte vide au changement
-de département (zoom 9 sous `minzoom 13`) ; inconnu peint comme zéro sur la carte
-(`RealMap.tsx:125`) ; deux `fetch` bruts sans jeton qui affichent « aucune donnée » sur un 500 ;
-renouvellement OIDC silencieux bloqué par `X-Frame-Options: DENY` ; typographie à 8-9 px ; modales
-sans piège de focus. Détail : audit §9.
+Corrigés par C4 : vue initiale à lon 0 / lat 0, carte vide sans explication sous le zoom 13,
+inconnu peint comme zéro (la couche a disparu), `fetch` bruts qui affichaient « aucune donnée »
+sur un 500, typographie à 8-9 px, modale sans piège de focus. Reste : renouvellement OIDC
+silencieux bloqué par `X-Frame-Options: DENY`, hors du dégel. Détail d'origine : audit §9.
 
 ### 6.4 Règle
 
-Aucune ligne dans `apps/web/` tant que H3 n'a pas rendu son verdict. Si le gel est levé : rester
-sur `App.tsx` + CSS custom + MapLibre, ou décider par ADR une convergence vers une bibliothèque.
-Pas les deux.
+Aucune autre ligne dans `apps/web/` sans ADR, tant que H3 n'a pas rendu son verdict. Si le gel
+est levé : rester sur `App.tsx` + CSS custom + MapLibre, ou décider par ADR une convergence vers
+une bibliothèque. Pas les deux.
 
 ---
 
@@ -686,6 +688,7 @@ silence.
 | ADR-014 | SOPS + `age` pour les secrets versionnés | Acceptée | — |
 | ADR-015 | Boucle de développement : contrôle déterministe, recompte adversarial, verrou humain déclaré | Acceptée | [note](docs/decisions/ADR-015-boucle-autonome.md) |
 | ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
+| ADR-018 | Dégel restreint de l'Explorer, réduit à l'outil local de vérification des données | Acceptée | [note](docs/decisions/ADR-018-degel-restreint-explorer.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de

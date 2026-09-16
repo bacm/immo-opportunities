@@ -126,7 +126,8 @@ pourcentage ni aucune inférence statistique, et H3 le dit.
 
 La plateforme : Explorer carte/liste/fiche, moteur de score, workflow de qualification, scénarios
 financiers, administration régionale, multi-tenant OIDC/RLS, tuiles, déploiement VPS. Elle existe,
-elle est décrite en §11, et rien n'y est ajouté tant que H3 n'a pas rendu son verdict.
+elle est décrite en §11, et rien n'y est ajouté tant que H3 n'a pas rendu son verdict. Seule
+exception : l'Explorer, réduit à l'outil local de vérification des données (§11.3, ADR-018).
 
 ### 6.3 Différé, ouvert
 
@@ -303,6 +304,9 @@ Le gel se lève par une ADR, après H3, et seulement si :
   du moteur ;
 - les conditions techniques d'[`ARCHITECTURE.md`](./ARCHITECTURE.md) §25.2 sont remplies avant
   tout déploiement.
+
+Seule exception : l'Explorer réduit à l'outil local de vérification de §15, sans fonctionnalité
+nouvelle ni ligne hors `apps/web/` ([ADR-018](./docs/decisions/ADR-018-degel-restreint-explorer.md)).
 
 ---
 

@@ -51,9 +51,8 @@ test.describe('captures de démonstration sur données réelles', () => {
     await expect(page.getByRole('heading', { name: 'Appariements ambigus' })).toBeInViewport()
     await page.screenshot({ path: `${CAPTURES}/05-appariement-ambigu-visible.png` })
 
-    // La liste dit la vraie raison de son vide : aucun score publié, pas un territoire vide.
-    await expect(page.getByText('Aucun candidat publié')).toBeVisible()
-    await page.screenshot({ path: `${CAPTURES}/06-absence-motivee.png` })
+    // La capture 06 montrait la liste de candidats vide, retirée par C4 (ADR-018).
+    // invariant-ok: assertion-supprimee — l'écran capturé n'existe plus.
   })
 
   test('valeur absente avec son motif — FR-007', async ({ page }) => {
