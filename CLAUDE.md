@@ -14,7 +14,7 @@ l'historique : on y va pour une preuve. Sources de vérité, dans l'ordre : `SPE
 
 | Besoin | Charger |
 |---|---|
-| Implémenter un ticket | `docs/backlog/<ID>-*.md`, son bloc « Contexte à charger ». Rien d'autre. |
+| Implémenter un ticket | `docs/backlog/<ID>-*.md`, son bloc « Contexte à charger », et les sections de `SPEC.md` qu'il cite. Rien d'autre. |
 | Savoir quoi faire ensuite, état du projet, chemin critique | `docs/backlog/README.md` |
 | Pourquoi le produit a changé, ce qui est gelé et à quelles conditions | ADR-016 ; `SPEC.md` §6.2, §11 |
 | Périmètre et hors périmètre | `SPEC.md` §6, en particulier §6.4 |
@@ -54,6 +54,13 @@ sur les **chemins touchés**, jamais sur l'importance du changement. Combler un 
 n'ouvre pas de ticket : le commit porte l'identifiant du ticket honoré ; sinon c'est une décision,
 et elle s'écrit. `make ticket-check` : sujet du commit avec identifiant (`H1 — …`, `A7, H6 — …`)
 ou `ticket-ok: <raison>` dans le corps.
+
+**Tout ticket part de `SPEC.md`.** S'il touche au produit (données, mesures, sorties, comportement
+visible), son bloc « Contexte à charger » nomme les sections de `SPEC.md` qu'il honore, et
+l'agent les lit avant d'écrire : §6 périmètre, §7 baromètre, §8 radar, §13 données, §18
+confidentialité, selon le cas. Ce que `SPEC.md` ne tranche pas n'est pas une implémentation mais
+une décision : ADR ou amendement de `SPEC.md`, sous ticket, avant le code. Un ticket
+d'outillage (CI, scripts, `Makefile`) part de `ARCHITECTURE.md` ou d'ADR-015 de la même façon.
 
 ## Definition of Done
 

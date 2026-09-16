@@ -31,6 +31,11 @@ refuse.
   n'ouvre pas `SPEC.md` doit quand même les respecter : les chemins gelés, les règles de chiffres
   et de données, les interdits techniques, le recompte.
 
+- Ajouté après relecture : **tout ticket part de `SPEC.md`**. Un ticket qui touche au produit
+  cite dans « Contexte à charger » les sections de `SPEC.md` qu'il honore, et l'agent les lit
+  avant d'écrire ; ce que `SPEC.md` ne tranche pas est une décision, pas une implémentation. Les
+  tickets H1 à H5 ne citaient pas `SPEC.md` §7/§8 : la règle n'était écrite nulle part.
+
 ## Critères d'acceptation
 
 - `CLAUDE.md` ne contient ni date d'état, ni chiffre du 35, ni liste hors périmètre ;
