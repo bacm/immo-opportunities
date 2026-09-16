@@ -119,6 +119,7 @@ dérivée du graphe de dépendances.
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | Terminé | — |
 | [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
+| [BUG-17](./BUG-17-identifiants-a-deux-chiffres.md) | Un ticket numéroté au-delà de 9 est refusé par `ticket-check` et ignoré comme dépendance | dette transverse | — | S | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -199,7 +200,7 @@ dérivée du graphe de dépendances.
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
 
-**49/81 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
+**50/82 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
 
 ### Verrous humains
 

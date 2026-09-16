@@ -42,7 +42,8 @@ def test_identifiants_du_sujet(commit_ticket, sujet, attendu):
 def test_les_identifiants_connus_viennent_du_backlog(commit_ticket):
     known = commit_ticket.known_ids(ROOT)
     assert {"A5", "BUG-12", "D6a"} <= known
-    assert "A9" not in known
+    # Forme valide, aucun fichier ; ne pas choisir un numéro proche du prochain ticket (A9 l'a été).
+    assert "A99" not in known
 
 
 def test_docs_seul_ne_demande_pas_de_ticket(commit_ticket):
@@ -93,3 +94,9 @@ def test_la_serie_h_est_un_identifiant_de_sujet(commit_ticket):
     """ADR-016 ouvre la série H ; un `I1` reste refusé tant qu'aucune décision ne l'ouvre — A7."""
     assert commit_ticket.subject_ids("H1 — Baromètre du marché du 35") == {"H1"}
     assert commit_ticket.subject_ids("I1 — Série inconnue") == set()
+
+
+def test_un_numero_a_deux_chiffres_est_un_identifiant(commit_ticket):
+    """A10 a été refusé par `ticket-check` alors que `make backlog` le listait — BUG-17."""
+    assert commit_ticket.subject_ids("A10 — Règle de propriété de SPEC.md") == {"A10"}
+    assert commit_ticket.subject_ids("A10, BUG-17 — Deux tickets") == {"A10", "BUG-17"}

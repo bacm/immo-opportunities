@@ -117,3 +117,8 @@ def test_la_serie_h_est_reconnue_et_la_serie_i_ne_l_est_pas(backlog_status) -> N
     assert backlog_status.ID_RE.findall("H1, H5") == ["H1", "H5"]
     assert backlog_status.ID_RE.findall("I1") == []
     assert any(key == "H" for key, _, _ in backlog_status.SECTIONS)
+
+
+def test_un_numero_a_deux_chiffres_est_une_dependance(backlog_status):
+    """`Dépend de : A10` était ignoré sans bruit par une expression à un seul chiffre — BUG-17."""
+    assert backlog_status.ID_RE.findall("A10, BUG-17, H1, A1b") == ["A10", "BUG-17", "H1", "A1b"]
