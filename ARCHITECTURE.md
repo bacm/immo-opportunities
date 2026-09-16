@@ -204,7 +204,7 @@ immo-opportunities/
 Depuis C4 ([ADR-018](docs/decisions/ADR-018-degel-restreint-explorer.md)), l'Explorer est l'outil
 local de vérification des données du 35 : recherche d'adresse et de parcelle, carte des parcelles
 et bâtiments avec orthophoto, fiches adresse, parcelle et bâtiment, mutations DVF et diagnostics
-DPE par parcelle, bannière de couverture, revue B4 dans un `<dialog>` modal. Deux colonnes, carte
+DPE par parcelle, pastille de couverture avec infobulle, revue B4 dans un `<dialog>` modal. Deux colonnes, carte
 et fiche à onglets (Aperçu, Ventes DVF, Diagnostics DPE, Sources). Depuis C5, `App.tsx` (~200
 lignes) ne porte que la coquille et l'état de navigation ; `Search.tsx`, `sheets/`, `review/`,
 `ui.tsx` (composants de base) et `format.ts` portent le reste. Jetons de style dans `:root`,

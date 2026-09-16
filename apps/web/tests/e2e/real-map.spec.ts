@@ -224,6 +224,7 @@ test('territoire non couvert : jamais présenté comme un résultat vide', async
   })
 
   await expect(page.getByText(/territoire non couvert/)).toBeVisible({ timeout: 15_000 })
+  await page.getByText(/territoire non couvert/).hover()
   await expect(page.getByText(/ne veut rien dire ici/)).toBeVisible()
   // L'état « couvert » ne doit jamais accompagner un territoire non couvert.
   await expect(page.getByText(/territoire couvert/)).toHaveCount(0)
@@ -237,6 +238,9 @@ test('données partielles : les sources absentes sont nommées, pas comptées', 
   })
 
   await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
+  // L'infobulle s'ouvre au focus clavier comme au survol.
+  await page.getByRole('button', { name: /données partielles/ }).focus()
+  await expect(page.getByRole('tooltip')).toBeVisible()
   await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
   await expect(page.getByText(/Rattachements incomplets/)).toBeVisible()
 })
@@ -249,6 +253,7 @@ test('territoire couvert : une fiche sans rattachement signifie bien que la base
   })
 
   await expect(page.getByText(/territoire couvert/)).toBeVisible({ timeout: 15_000 })
+  await page.getByText(/territoire couvert/).hover()
   await expect(page.getByText(/la base n’en connaît aucun/)).toBeVisible()
   await expect(page.getByText(/C’est une absence, pas un rejet/)).toBeVisible()
 })
@@ -265,7 +270,29 @@ test('l’état de couverture survit au partage d’URL', async ({ page }) => {
   await page.reload()
   await expect(page).toHaveURL(shared)
   await expect(page.getByText(/données partielles/)).toBeVisible({ timeout: 15_000 })
+  await page.getByText(/données partielles/).hover()
   await expect(page.getByText(/DS-02 Référentiel National des Bâtiments/)).toBeVisible()
+})
+
+/**
+ * Pas de clignotement — C6. D'une parcelle à sa voisine dans la même commune, la pastille de
+ * couverture reste en place pendant le chargement de la nouvelle fiche.
+ */
+test('la pastille de couverture ne disparaît pas d’une parcelle à sa voisine', async ({ page }) => {
+  await page.goto('/?lon=-1.677&lat=48.118&z=18&type=parcel&id=parcel:cadastre:35238000AB0303')
+  const badge = page.locator('.coverage-badge')
+  await expect(badge).toContainText('RENNES', { timeout: 15_000 })
+  let vanished = false
+  await page.exposeFunction('coverageVanished', () => { vanished = true })
+  await page.evaluate(() => {
+    new MutationObserver(() => {
+      if (!document.querySelector('.coverage-badge')) (window as unknown as { coverageVanished: () => void }).coverageVanished()
+    }).observe(document.body, { childList: true, subtree: true })
+  })
+  await page.locator('.related-list button').first().click()
+  await expect(page.getByText('BÂTIMENT', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(badge).toContainText('RENNES')
+  expect(vanished).toBe(false)
 })
 
 

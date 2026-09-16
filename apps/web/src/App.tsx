@@ -13,7 +13,7 @@ import {
   type Session,
 } from './api'
 import { authEnabled, signOut } from './auth'
-import { CoverageBanner } from './CoverageBanner'
+import { CoverageBadge } from './CoverageBadge'
 import RealMap, { PARCELS_MIN_ZOOM, type MapView, type RealMapHandle } from './RealMap'
 import { ReviewPanel } from './review/ReviewPanel'
 import { Search } from './Search'
@@ -120,10 +120,17 @@ function App() {
     window.history.replaceState(null, '', `${window.location.pathname}?${next}`)
   }, [view, query, orthophoto, selection, addressId])
 
-  // La commune observée est celle de ce que l'utilisateur consulte. Sans sélection, aucune
+  // La commune observée est celle de ce que l'utilisateur consulte. Sans fiche ouverte, aucune
   // couverture n'est affirmée — annoncer un état sans savoir de quel territoire on parle serait
-  // pire que se taire.
-  const observedCommune = address.record?.address.commune_code ?? entity.record?.commune_code ?? null
+  // pire que se taire. Pendant le chargement d'une fiche, la commune précédente est gardée : la
+  // pastille la nomme, et elle ne clignote plus d'une parcelle à sa voisine (C6).
+  const loadedCommune = address.record?.address.commune_code ?? entity.record?.commune_code ?? null
+  const hasSheet = Boolean(selection || addressId)
+  const [observedCommune, setObservedCommune] = useState<string | null>(null)
+  useEffect(() => {
+    if (!hasSheet) setObservedCommune(null)
+    else if (loadedCommune) setObservedCommune(loadedCommune)
+  }, [hasSheet, loadedCommune])
   useEffect(() => {
     if (!observedCommune) { setCoverage(null); return }
     const controller = new AbortController()
@@ -150,7 +157,6 @@ function App() {
   const selectedOnMap = selection?.type === 'property_unit'
     ? { type: 'parcel' as const, id: `parcel:cadastre:${selection.id.split(':').at(-1)}` }
     : selection
-  const hasSheet = Boolean(selection || addressId)
 
   return (
     <div className={`app-shell ${hasSheet ? 'has-detail' : ''}`}>
@@ -167,13 +173,12 @@ function App() {
         <header className="topbar">
           <div className="title-block"><h1>Vérification des données</h1><span>Ille-et-Vilaine · base locale</span></div>
           <Search initialQuery={query} onQueryChange={setQuery} onChoose={choose} />
+          {coverage && <CoverageBadge coverage={coverage} />}
           <div className="map-mode" role="group" aria-label="Fond cartographique">
             <button aria-pressed={!orthophoto} className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Plan</button>
             <button aria-pressed={orthophoto} className={orthophoto ? 'active' : ''} onClick={() => setOrthophoto(true)}>Orthophoto IGN</button>
           </div>
         </header>
-
-        {coverage && <CoverageBanner coverage={coverage} />}
 
         <section className="explorer-grid">
           <section className="map-panel" aria-label="Carte des parcelles et bâtiments">

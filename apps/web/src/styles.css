@@ -70,13 +70,15 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 .map-mode button { border: 0; background: transparent; border-radius: 6px; height: 32px; padding: 0 12px; color: #5f6e67; font-size: 13px; font-weight: 600; cursor: pointer; }
 .map-mode button.active { background: white; color: var(--green); box-shadow: 0 1px 4px #1f372e1a; }
 
-.coverage-banner { flex: 0 0 auto; display: flex; align-items: flex-start; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
-.coverage-banner > span { display: flex; flex-direction: column; gap: 2px; }
-.coverage-banner strong { font-size: 13px; }
-.coverage-banner small { color: var(--muted); font-size: 12px; line-height: 1.5; }
-.coverage-banner.covered { background: color-mix(in srgb, #1f8a4c 8%, white); }
-.coverage-banner.partial { background: color-mix(in srgb, #b7791f 10%, white); }
-.coverage-banner.not-covered { background: color-mix(in srgb, #b23b3b 10%, white); }
+.coverage-badge { position: relative; margin-left: auto; flex: 0 1 auto; min-width: 0; }
+.coverage-badge + .map-mode { margin-left: 0; }
+.coverage-badge > button { display: flex; align-items: center; gap: 7px; max-width: 320px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid transparent; font-size: 13px; font-weight: 600; cursor: help; }
+.coverage-badge > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-badge.covered > button { background: var(--good-bg); color: var(--good-ink); }
+.coverage-badge.partial > button { background: var(--warn-bg); color: var(--warn-ink); }
+.coverage-badge.not-covered > button { background: var(--bad-bg); color: var(--bad-ink); }
+.coverage-tooltip { position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 300px; padding: 10px 12px; border-radius: var(--radius); background: var(--ink); color: white; font-size: 12px; line-height: 1.5; box-shadow: 0 12px 30px #1b2d2540; visibility: hidden; opacity: 0; transition: opacity .12s; }
+.coverage-badge:hover .coverage-tooltip, .coverage-badge:focus-within .coverage-tooltip { visibility: visible; opacity: 1; }
 
 /* Deux colonnes : la carte et la fiche de ce qu'on y a choisi. */
 .explorer-grid { min-height: 0; height: 0; flex: 1 1 0; overflow: hidden; display: grid; grid-template-columns: minmax(360px, 1fr) var(--details); grid-template-rows: minmax(0, 1fr); }
