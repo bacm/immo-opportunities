@@ -15,7 +15,7 @@ import type { Loaded } from './useLoad'
  *
  * **Aucun prix au m² n'est calculé ici.** Il n'existe pas en base, et le dériver à l'affichage
  * fabriquerait une valeur que rien ne justifie. Le motif de non-allocation est montré à la place :
- * 65,5 % des mutations n'ont aucun prix allouable, et ce motif est l'information.
+ * 55 % des mutations 2021-2025 n'ont aucun prix allouable (H7), et ce motif est l'information.
  */
 /** Un compte inconnu n'est pas « un seul » : il ne déclenche simplement aucune mention. */
 const several = (count: number | null) => count !== null && count > 1
@@ -69,7 +69,7 @@ export function ParcelSales({ loaded }: { loaded: Loaded<ParcelTransaction[]> })
     </ol>
     <p className="detail-note">
       {rows.length} lot{rows.length > 1 ? 's' : ''} sur cette parcelle. Aucun prix au m² n’est calculé ici : il n’existe pas en base. Un prix non allouable porte
-      son motif — c’est le cas de deux mutations sur trois, et c’est le résultat.
+      son motif — c’est le cas de plus d’une mutation sur deux, et c’est le résultat.
     </p>
   </>
 }

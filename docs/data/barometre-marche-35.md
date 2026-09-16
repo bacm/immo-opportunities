@@ -1,10 +1,10 @@
 # Baromètre du marché — département 35
 
-**Généré le :** 2026-09-16 · **Mesures :** BAR-001 à BAR-009 de [`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** [H1](../backlog/H1-barometre-marche-35-mesures.md)
+**Généré le :** 2026-09-16 · **Mesures :** BAR-001 à BAR-009 de [`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** [H1](../backlog/H1-barometre-marche-35-mesures.md) · **Prix DVF :** transformation version 5 ([H7](../backlog/H7-mutations-multi-parcelles.md), [`dvf-quality-35.md`](./dvf-quality-35.md))
 
-**Recompté le 2026-09-16** par `recompte-preuve` — trois passes en isolement du code, dont une complète de 44 chiffres, aucune divergence de valeur.
+**Recompté le 2026-09-16** par `recompte-preuve` — H7, transformation DVF version 5 : trois passes en isolement du code — mesures et CSV en entier, dix-neuf documents en entier, profil et qualité DVF — aucune divergence de valeur.
 
-Empreinte des mesures : `d08dba5d179c319e` — une attestation de recompte ne vaut que pour cette empreinte, consignée dans `barometre-marche-35/recompte.csv`.
+Empreinte des mesures : `9faf338138a6758e` — une attestation de recompte ne vaut que pour cette empreinte, consignée dans `barometre-marche-35/recompte.csv`. Elle est le SHA-256 des CSV `bar-*`, pris par ordre de nom, chacun sous la forme « nom, octet nul, contenu, octet nul ».
 
 Toutes les mesures sont agrégées. Aucune parcelle, aucune adresse, aucune mutation individuelle n'apparaît dans ce document ni dans les CSV qui l'accompagnent. Régénérer : `make market-barometer DEPARTMENT=35`.
 
@@ -27,15 +27,15 @@ Dernière mutation connue : **2025-12-31**. Dernier dépôt de DPE de l'extrait 
 
 | Cohorte | Filtre écrit | Effectif |
 |---|---|---|
-| Ventes exploitables | `mutation_nature = 'Vente'` · type Maison ou Appartement · `allocation_method = 'single_property_full_price'` · surface et prix > 0 · parcelle rattachée | 75 178 |
-| — dont maisons | idem, `property_type = 'Maison'` | 58 233 |
+| Ventes exploitables | `mutation_nature = 'Vente'` · type Maison ou Appartement · `allocation_method = 'single_property_full_price'` · surface et prix > 0 · parcelle rattachée · commune et année de la **mutation DVF**, pas de la parcelle | 101 358 |
+| — dont maisons | idem, `property_type = 'Maison'` | 83 960 |
 | Ventes écartées par leur nature | `mutation_nature <> 'Vente'` — vente en l'état futur d'achèvement, terrain à bâtir, échange, adjudication, expropriation | 39 365 |
 | DPE rattachés à une parcelle | relation bâtiment ↔ parcelle `certain` · DPE non annulé · commune lue sur la parcelle, jamais sur le diagnostic | 136 294 |
 | — DPE rattachés à un bâtiment mais à aucune parcelle `certain` | hors de toute mesure de cohorte, motif : leur bâtiment ne porte aucune relation à une parcelle — aucune n'est `ambiguous`, elles sont toutes absentes | 334 |
 | Premiers DPE par parcelle | le plus ancien dépôt de chaque parcelle, départagé par numéro de DPE | 46 695 |
 | Cohorte 2024 | premier DPE déposé dans l'année, hors DPE d'appartement généré depuis un DPE d'immeuble | 9 653 |
 | — exclusions DPE d'immeuble comptées | `numero_dpe_immeuble_associe` renseigné | 101 |
-| Paires de ventes successives | deux ventes de maison **consécutives** de la même parcelle, rang n → n+1, à plus de 180 jours d'écart. Cent cinq couples (parcelle, date) portent plusieurs ventes le même jour : elles sont **départagées par prix croissant, puis par surface croissante**, faute de quoi « la vente suivante » n'est pas déterminée. Compter toutes les combinaisons de deux ventes en donnerait 10 100 | 7 024 |
+| Paires de ventes successives | deux ventes de maison **consécutives** de la même parcelle, rang n → n+1, à plus de 180 jours d'écart. 142 couples (parcelle, date) portent plusieurs ventes le même jour : elles sont **départagées par prix croissant, puis par surface croissante**, faute de quoi « la vente suivante » n'est pas déterminée. Compter toutes les combinaisons de deux ventes de la même parcelle au même écart, consécutives ou non, en donnerait 13 219 | 9 854 |
 | Parcelles portant au moins une mutation, toutes dates | `mutation_nature LIKE 'Vente%'` — vente, VEFA et terrain à bâtir compris — quel que soit le type de lot : une parcelle qui change de main a muté. La vente doit être **strictement postérieure** au dépôt. C'est l'événement de BAR-005, BAR-006 et BAR-007 | 326 498 |
 
 
@@ -66,36 +66,36 @@ Aucun de ces nombres n'est un seuil de sens métier. Sous le support, la valeur 
 
 | Année | Ventes | Q1 €/m² | Médiane €/m² | Q3 €/m² | Motif |
 |---|---|---|---|---|---|
-| 2014 | 3 682 | 1 435 | **1 875** | 2 424 |  |
-| 2015 | 4 613 | 1 426 | **1 868** | 2 347 |  |
-| 2016 | 4 878 | 1 417 | **1 868** | 2 396 |  |
-| 2017 | 5 558 | 1 426 | **1 926** | 2 468 |  |
-| 2018 | 5 483 | 1 463 | **1 970** | 2 557 |  |
-| 2019 | 6 020 | 1 508 | **2 006** | 2 667 |  |
-| 2020 | 6 131 | 1 568 | **2 107** | 2 794 |  |
-| 2021 | 5 582 | 1 725 | **2 323** | 3 055 |  |
-| 2022 | 4 801 | 1 989 | **2 615** | 3 373 |  |
-| 2023 | 3 818 | 2 000 | **2 613** | 3 299 |  |
-| 2024 | 3 570 | 1 948 | **2 535** | 3 187 |  |
-| 2025 | 4 097 | 2 031 | **2 588** | 3 227 |  |
+| 2014 | 5 290 | 1 293 | **1 762** | 2 314 |  |
+| 2015 | 6 585 | 1 280 | **1 760** | 2 260 |  |
+| 2016 | 7 031 | 1 285 | **1 784** | 2 314 |  |
+| 2017 | 8 180 | 1 286 | **1 804** | 2 365 |  |
+| 2018 | 7 995 | 1 333 | **1 850** | 2 439 |  |
+| 2019 | 8 916 | 1 364 | **1 896** | 2 522 |  |
+| 2020 | 9 066 | 1 429 | **1 979** | 2 667 |  |
+| 2021 | 8 130 | 1 556 | **2 207** | 2 939 |  |
+| 2022 | 6 752 | 1 855 | **2 491** | 3 276 |  |
+| 2023 | 5 370 | 1 842 | **2 500** | 3 196 |  |
+| 2024 | 4 994 | 1 804 | **2 417** | 3 085 |  |
+| 2025 | 5 651 | 1 886 | **2 472** | 3 125 |  |
 
 
 ### Appartements, département 35
 
 | Année | Ventes | Q1 €/m² | Médiane €/m² | Q3 €/m² | Motif |
 |---|---|---|---|---|---|
-| 2014 | 1 395 | 1 552 | **2 105** | 2 853 |  |
-| 2015 | 1 557 | 1 580 | **2 226** | 2 871 |  |
-| 2016 | 1 755 | 1 562 | **2 208** | 2 955 |  |
-| 2017 | 2 024 | 1 702 | **2 344** | 3 038 |  |
-| 2018 | 1 984 | 1 717 | **2 500** | 3 337 |  |
-| 2019 | 2 108 | 1 844 | **2 674** | 3 558 |  |
-| 2020 | 1 893 | 2 080 | **3 050** | 4 068 |  |
-| 2021 | 1 278 | 2 345 | **3 418** | 4 680 |  |
-| 2022 | 875 | 2 941 | **4 110** | 5 134 |  |
-| 2023 | 705 | 2 703 | **3 848** | 5 071 |  |
-| 2024 | 659 | 2 603 | **3 958** | 5 125 |  |
-| 2025 | 712 | 2 728 | **3 998** | 5 129 |  |
+| 2014 | 1 437 | 1 549 | **2 103** | 2 826 |  |
+| 2015 | 1 603 | 1 574 | **2 222** | 2 866 |  |
+| 2016 | 1 806 | 1 561 | **2 208** | 2 953 |  |
+| 2017 | 2 078 | 1 701 | **2 345** | 3 027 |  |
+| 2018 | 2 046 | 1 711 | **2 493** | 3 333 |  |
+| 2019 | 2 162 | 1 840 | **2 668** | 3 548 |  |
+| 2020 | 1 947 | 2 077 | **3 039** | 4 056 |  |
+| 2021 | 1 305 | 2 329 | **3 407** | 4 675 |  |
+| 2022 | 892 | 2 941 | **4 100** | 5 117 |  |
+| 2023 | 720 | 2 690 | **3 834** | 5 047 |  |
+| 2024 | 676 | 2 570 | **3 943** | 5 111 |  |
+| 2025 | 726 | 2 706 | **3 990** | 5 123 |  |
 
 
 Le détail par EPCI et par commune est dans `bar-001-002-volumes-prix.csv`, une ligne par cellule, effectif toujours présent. Dans cette mesure, une cellule sans vente est **absente**, jamais mise à zéro.
@@ -108,35 +108,35 @@ Reventes de maison en 1 095 jours au plus, **surface inchangée**, ratio de prix
 
 | De la paire à la mesure | Paires |
 |---|---|
-| paires successives | 7 024 |
-| au-delà de la fenêtre | 4 604 |
-| surface modifiée entre les deux ventes | 283 |
-| sans médiane de référence des deux côtés | 632 |
-| retenues | 1 505 |
+| paires successives | 9 854 |
+| au-delà de la fenêtre | 6 354 |
+| surface modifiée entre les deux ventes | 347 |
+| sans médiane de référence des deux côtés | 743 |
+| retenues | 2 410 |
 
 
 | Prix d'entrée | Paires | Médiane | Q3 | Part > 1,20 | Motif |
 |---|---|---|---|---|---|
-| < 60 % de la médiane | 139 | **1,83** | 3,00 | 79,9 % |  |
-| 60 % à 80 % | 204 | **1,23** | 1,44 | 54,4 % |  |
-| 80 % à 100 % | 466 | **1,09** | 1,21 | 26,6 % |  |
-| 100 % et plus | 696 | **1,01** | 1,11 | 11,9 % |  |
+| < 60 % de la médiane | 260 | **1,92** | 2,96 | 76,5 % |  |
+| 60 % à 80 % | 312 | **1,24** | 1,48 | 54,2 % |  |
+| 80 % à 100 % | 676 | **1,08** | 1,21 | 25,6 % |  |
+| 100 % et plus | 1 162 | **1,00** | 1,10 | 13,4 % |  |
 
 Réserves, inchangées depuis `pistes-analyse-marche-35.md` §5.2 : biais du survivant — seules les reventes sont vues ; retour à la moyenne ; une surface erronée à l'achat gonfle mécaniquement le ratio.
 
 ## BAR-004 — décote ou surcote par étiquette
 
-Ventes de maison depuis 2022 portant un DPE de `type_batiment = 'maison'` déposé dans les 730 jours précédant l'acte — le dernier de la fenêtre. Prix au m² rapporté à la médiane commune × année, laquelle doit atteindre 15 ventes. Contrôle commune × année seulement : ni âge, ni surface, ni modèle hédonique.
+Ventes de maison depuis 2022 portant un DPE de `type_batiment = 'maison'` déposé dans les 730 jours précédant l'acte, le jour même compris — le dernier de la fenêtre. Prix au m² rapporté à la médiane commune × année, laquelle doit atteindre 15 ventes. Contrôle commune × année seulement : ni âge, ni surface, ni modèle hédonique.
 
 | Étiquette | Ventes | Q1 | Médiane | Q3 | Motif |
 |---|---|---|---|---|---|
-| A | 251 | 0,97 | **1,05** | 1,15 |  |
-| B | 387 | 0,95 | **1,06** | 1,18 |  |
-| C | 2 462 | 0,91 | **1,01** | 1,13 |  |
-| D | 2 203 | 0,88 | **1,00** | 1,14 |  |
-| E | 1 037 | 0,82 | **0,97** | 1,14 |  |
-| F | 524 | 0,81 | **0,97** | 1,13 |  |
-| G | 233 | 0,82 | **0,99** | 1,14 |  |
+| A | 370 | 0,98 | **1,07** | 1,17 |  |
+| B | 541 | 0,95 | **1,06** | 1,19 |  |
+| C | 3 123 | 0,91 | **1,02** | 1,13 |  |
+| D | 2 845 | 0,87 | **1,00** | 1,14 |  |
+| E | 1 371 | 0,81 | **0,98** | 1,13 |  |
+| F | 675 | 0,78 | **0,97** | 1,13 |  |
+| G | 331 | 0,78 | **0,98** | 1,13 |  |
 
 Les sept étiquettes paraissent pour chaque périmètre, **y compris à effectif nul** : qu'aucune vente de maison classée A n'ait été observée dans un EPCI est une information, alors qu'une cellule année × type sans aucune vente n'existe pas et reste absente de BAR-001/002. Les deux mesures ne traitent pas l'absence de la même façon, et c'est délibéré.
 
@@ -176,15 +176,15 @@ Paires de ventes successives de maison, **surface bâtie strictement en hausse**
 
 | Fenêtre | Paires | Ratio de prix médian | Ratio au m² médian | Motif |
 |---|---|---|---|---|
-| revente en 1095 jours au plus | 205 | 1,37 | **1,00** |  |
-| toutes durées au-delà de 180 jours | 743 | 1,63 | **1,17** |  |
+| revente en 1095 jours au plus | 260 | 1,38 | **1,01** |  |
+| toutes durées au-delà de 180 jours | 1 019 | 1,69 | **1,18** |  |
 
 
 ## BAR-009 — ce que le baromètre ne voit pas
 
 | Mesure | Total | Manquants | Part |
 |---|---|---|---|
-| Mutations sans prix allouable — toutes natures, tous millésimes | 312 639 | 178 072 | 57,0 % |
+| Mutations sans prix allouable — toutes natures, tous millésimes | 312 639 | 149 023 | 47,7 % |
 | DPE non rattachés à un bâtiment — extrait entier | 208 086 | 71 458 | 34,3 % |
 
 Commune par commune : `bar-009-couverture.csv`, 353 communes — contre 332 au référentiel cadastral. L'écart est le phénomène de communes fusionnées déjà mesuré dans `dvf-quality-35.md` : une commune que DVF ou l'ADEME connaît encore mais que le cadastre ne porte plus reste comptée ici, sans EPCI, plutôt que rattachée par défaut. Une part n'est jamais calculée sur un dénominateur nul : elle reste absente avec son motif.

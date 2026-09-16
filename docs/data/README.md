@@ -29,7 +29,7 @@ imposent au produit ; le chiffre à citer est celui du rapport, jamais celui de 
 | Bâtiment ↔ parcelle | 37 % d'erreur avant BUG-09 ; 400 706 relations sur 1,24 M à recouvrement < 10 % | idem |
 | Unité foncière | une par parcelle ; la contiguïté donne des grappes de 3 494 parcelles ; aucun signal autorisé ne réunit le cas 90, l'adresse commune est corroborée par les ventes à 92,8 % mais ne couvre que 3,1 % des parcelles | `property-unit-35.md` |
 | DPE rattaché au bâtiment | 59 % ; 10 % non rattachés | `dpe-matching-35.md` |
-| DVF sans prix allouable | 65,5 % des mutations | `dvf-quality-35.md` |
+| DVF sans prix allouable | 55,0 % des mutations 2021-2025, en version 5 (65,5 % publiés avant H7) | `dvf-quality-35.md` |
 | Zone inondable typée | aucune source sur le 35 | `georisques-coverage-35.md` |
 | Profils de règles d'urbanisme | zéro ; D2b estimé à quatre années-personne à l'échelle nationale | `gpu-coverage-35.md` |
 | Usage du bâti par morphologie seule | 2 candidats d'intérêt sur 10 | `docs/backlog/E8b` |

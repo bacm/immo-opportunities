@@ -410,7 +410,7 @@ Inchangés depuis la version 0.2 : licence enregistrée, ressource reproductible
 identifiable, schéma versionné, couverture mesurée par commune, champs documentés, distributions
 analysées, appariement évalué sur échantillon, règle de fraîcheur. Une source `display_only` peut
 alimenter le baromètre **si le baromètre écrit sa limite** (rattachement à 59 %, prix non allouable
-à 65 %) ; elle ne peut pas alimenter un score.
+à 55 %) ; elle ne peut pas alimenter un score.
 
 ### 13.9 Contrat de source et reproductibilité
 

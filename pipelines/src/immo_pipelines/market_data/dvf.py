@@ -21,7 +21,9 @@ from typing import Any
 import psycopg
 
 # 4 : un bien decrit plusieurs fois par la source ne compte plus pour plusieurs lots.
-DVF_TRANSFORMATION_VERSION = "4"
+# 5 : les lots chiffrables sont testes avant les parcelles ; une vente a un seul lot bati sur
+#     plusieurs parcelles garde son prix (H7, docs/data/dvf-multi-parcelles-35.md).
+DVF_TRANSFORMATION_VERSION = "5"
 
 # La version entre dans l'identifiant de chaque ligne, et pas seulement dans une constante. Sans
 # cela, `ON CONFLICT DO NOTHING` conserve les lignes de la version precedente et un correctif de
@@ -128,11 +130,17 @@ class Mutation:
         return float(values.pop())
 
     def complexity(self) -> str | None:
-        """Le motif rendant le prix non allouable, ou `None` si le prix l'est."""
+        """Le motif rendant le prix non allouable, ou `None` si le prix l'est.
+
+        **Le motif le plus précis gagne** (H7). Jusqu'à la version 4, le nombre de parcelles
+        était testé en premier : une maison sur deux parcelles, son jardin sur la seconde, était
+        écartée, alors qu'une maison sur une parcelle garde son prix quelle que soit la surface
+        de son terrain. Le profil a montré qu'à commune et année égales ces ventes sont au prix
+        de leur commune. Les lots chiffrables sont donc testés d'abord ; `multiple_parcels` ne
+        désigne plus qu'un lot de **terrain** unique réparti sur plusieurs parcelles.
+        """
         if self.price is None:
             return "price_missing"
-        if len(self.parcels) > 1:
-            return "multiple_parcels"
         lots = self.priced_lots()
         if len(lots) != 1:
             # Zero lot chiffrable : rien a quoi rapporter le prix. Plusieurs : le montant
@@ -142,6 +150,10 @@ class Mutation:
             return "no_priced_lot" if not lots else "multiple_priced_lots"
         if _surface(lots[0]) is None:
             return "surface_missing"
+        if len(self.parcels) > 1 and not lots[0]["type_local"]:
+            # Une vente de terrain sur plusieurs parcelles dont un seul lot porte une surface :
+            # le prix couvre des parcelles sans surface connue, il ne se rapporte pas au lot.
+            return "multiple_parcels"
         return None
 
 

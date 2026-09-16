@@ -255,6 +255,13 @@ matching-report: matching-refresh
 		-v $(PWD)/docs/data:/workspace/docs/data \
 		dagster-code python pipelines/scripts/spatial_matching_report.py --department $(DEPARTMENT)
 
+# H7 : les ventes DVF écartées pour plusieurs parcelles, lues depuis les archives. Mesure seule.
+dvf-multi-parcel-profile:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/dvf_multi_parcel_profile.py --department $(or $(DEPARTMENT),35)
+
 # BUG-11 : ce que chaque signal de regroupement ferait des parcelles. Mesure, aucun choix.
 property-unit-report:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \

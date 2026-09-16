@@ -2,7 +2,7 @@
 
 **Date :** 14 septembre 2026 · **Ticket :** [D1](../backlog/D1-import-dvf-ds06.md)
 **Releases :** `DS-06@2026-09-13` millésimes 2021-2025, `DS-06@2019-04-archive` millésimes
-2014-2020 · **Transformation :** version 4
+2014-2020 · **Transformation :** version 5 (H7, 16 septembre 2026)
 
 ## La source a changé, et le contrat dit pourquoi
 
@@ -167,7 +167,8 @@ et la note qui suit dit laquelle.
 
 | Mesure | Sur 5 millésimes | Sur 12 millésimes |
 |---|---:|---:|
-| Communes atteignant 30 ventes de maison exploitables | 185 sur 332 | **282 sur 332** |
+| Communes atteignant 30 ventes de maison exploitables, version 4 | 185 sur 332 | 282 sur 332 |
+| Communes atteignant 30 ventes de maison exploitables, **version 5** | **249 sur 332** | **315 sur 332** |
 | Parcelles du 35051 sans aucune mutation | 85,1 % | **70,8 %** |
 
 > **Correction consignée.** La première rédaction annonçait « 152 sur 332 » contre « 344 sur 353 »,
@@ -177,9 +178,11 @@ et la note qui suit dit laquelle.
 > transformation ; sous la version 4, qui déduplique les lots répétés, le même comptage sur cinq
 > ans donne 185. La comparaison honnête est donc **185 → 282**.
 
-Le premier chiffre fonde [E7](../backlog/E7-decision-valorisation.md) : les communes sans support
-passent de **147 à 50**. C'est trois fois moins, pas vingt fois moins — mais assez pour que
-**E7 soit rouvert**, son argumentaire reposant sur l'ampleur de cet écart.
+Le premier chiffre fonde [E7](../backlog/E7-decision-valorisation.md) : sous la version 4, les
+communes sans support passaient de **147 à 50** — trois fois moins, pas vingt fois moins ; sous la
+version 5, qui rend leur prix aux ventes d'un seul lot bâti sur plusieurs parcelles (H7), elles
+passent de **83 à 17**, près de cinq fois moins. C'est assez pour que **E7 soit rouvert**, son
+argumentaire reposant sur l'ampleur de cet écart.
 
 Le second ne doit pas être surinterprété : 70,8 % des parcelles restent sans mutation connue.
 L'absence gagne en pouvoir discriminant — elle désignait 85 % de la population, elle en désigne
@@ -229,7 +232,7 @@ nul.
 Les trois autres relèvent du même phénomène à moindre échelle : des parcelles divisées entre la
 vente et le millésime cadastral.
 
-## Mutations complexes — 65,5 % n'ont pas de prix allouable
+## Mutations complexes — 55,0 % n'ont pas de prix allouable
 
 C'est le résultat central, et le ticket le désignait comme « le point le plus sensible ».
 
@@ -237,14 +240,32 @@ C'est le résultat central, et le ticket le désignait comme « le point le plus
 n'alloue jamais le prix par bien. Diviser ce montant par la surface d'un lot fabriquerait un prix
 faux et parfaitement crédible.
 
-| Motif | Mutations | Part |
-|---|---:|---:|
-| `multiple_priced_lots` | **38 920** | 29,2 % |
-| `multiple_parcels` | **33 973** | 25,5 % |
-| `no_priced_lot` | 11 301 | 8,5 % |
-| `surface_missing` | 2 125 | 1,6 % |
-| `price_missing` | 800 | 0,6 % |
-| **Allouables** | **45 947** | **34,5 %** |
+Millésimes 2021-2025, `DS-06@2026-09-13`, 133 066 mutations. Les chiffres de la version 4 viennent
+de [`dvf-multi-parcelles-35.md`](./dvf-multi-parcelles-35.md), qui rejoue la règle de la version 4
+sur les mêmes archives ; ceux de la version 5 sont en base et au run d'import.
+
+| Motif | Version 4 | Version 5 | Part en version 5 |
+|---|---:|---:|---:|
+| `multiple_priced_lots` | 34 430 | **57 638** | 43,3 % |
+| `multiple_parcels` | 33 973 | **39** | 0,0 % |
+| `no_priced_lot` | 11 301 | 11 356 | 8,5 % |
+| `surface_missing` | 2 742 | 3 364 | 2,5 % |
+| `price_missing` | 800 | 800 | 0,6 % |
+| **Allouables** | 49 820 | **59 869** | **45,0 %** |
+
+**Version 5 (H7).** Le nombre de parcelles était testé avant les lots chiffrables : une maison
+sur deux parcelles, son jardin sur la seconde, perdait son prix, alors qu'une maison sur une
+parcelle le garde quelle que soit la surface de son terrain. Les lots sont désormais testés
+d'abord, et le motif le plus précis gagne : 10 049 ventes retrouvent un prix, 23 208 passent de
+`multiple_parcels` à `multiple_priced_lots`, qu'elles étaient aussi. Le profil qui fonde la règle —
+à commune et année égales, ces ventes sont au prix de leur commune — est dans
+[`dvf-multi-parcelles-35.md`](./dvf-multi-parcelles-35.md). Sur 2014-2020, 19 000 ventes
+retrouvent un prix (84 747 → 103 747 allouables sur 179 573).
+
+> **Correction consignée.** Ce tableau publiait jusqu'ici 45 947 allouables, 38 920
+> `multiple_priced_lots` et 33 973 `multiple_parcels`, avec un en-tête de version 4. Les deux
+> premiers chiffres dataient d'avant la déduplication des lots répétés (version 4), qui avait
+> déjà rendu leur prix à 3 873 ventes ; la base en version 4 portait 49 820 et 34 430.
 
 Chaque transaction est **conservée** : c'est son prix unitaire qui est inutilisable, avec sa
 raison. C'est la quarantaine par attribut de [BUG-03](../backlog/BUG-03-quarantaine-par-attribut.md),
@@ -286,17 +307,25 @@ libellé nouveau le fasse savoir.
 
 ## Distributions observées du prix au m²
 
-Sur les lots allouables, rattachés, et de nature marchande :
+Millésimes 2021-2025, version 5, sur les lots au prix alloué, rattachés à une parcelle, de nature
+marchande (vente, VEFA, vente de terrain à bâtir) :
 
 | Type de bien | Lots | Q1 | Médiane | Q3 |
 |---|---:|---:|---:|---:|
-| Maison | 19 246 | 1 981 € | **2 586 €** | 3 293 € |
-| Terrain | 18 478 | 1 € | **75 €** | 181 € |
-| Appartement | 4 229 | 2 605 € | **3 839 €** | 5 000 € |
-| Local industriel ou commercial | 2 566 | 750 € | **1 527 €** | 2 695 € |
-| Dépendance | 287 | 58 € | **177 €** | 653 € |
+| Maison | 30 921 | 1 769 € | **2 400 €** | 3 122 € |
+| Terrain | 19 775 | 1 € | **64 €** | 174 € |
+| Appartement | 4 343 | 2 596 € | **3 824 €** | 5 000 € |
+| Local industriel ou commercial | 3 283 | 600 € | **1 319 €** | 2 470 € |
 
-L'étendue du terrain — de 1 € à 181 € entre quartiles — n'est pas une anomalie : elle mêle terres
+La médiane maison passe de 2 526 € (version 4, même filtre, règle rejouée sur les archives) à
+2 400 € : les ventes rendues par la version 5 sont plus rurales, pas moins chères que leur commune
+là où cela se mesure (voir le contrôle par commune et année du profil). Le tableau publiait
+jusqu'ici 2 586 €, chiffre de la version 1 corrigée. Les dépendances l'ont quitté : sur ces
+millésimes, aucun des 74 269 lots de dépendance ne porte de surface bâtie ; les 65 qui en portent
+sont tous en 2014-2020, dont 3 alloués. Les 287 publiés jusqu'ici dataient de la surface empruntée
+au terrain, corrigée avant la version 4.
+
+L'étendue du terrain — de 1 € à 174 € entre quartiles — n'est pas une anomalie : elle mêle terres
 agricoles et terrains à bâtir. C'est précisément ce qu'un **segment** doit séparer, et les
 frontières de segment viennent du profiling de [E1](../backlog/E1-profiling-distributions.md),
 pas d'un découpage choisi ici.
@@ -304,22 +333,23 @@ pas d'un découpage choisi ici.
 ## Support statistique par commune
 
 Ventes de maison exploitables — allouables, rattachées, de nature marchande — recomptées sous la
-**version 4** de transformation, sur cinq millésimes et sur douze :
+**version 5** de transformation, sur cinq millésimes et sur douze, pour les 332 communes du
+référentiel cadastral :
 
 | Seuil | Sur 5 ans | Sur 12 ans |
 |---|---:|---:|
-| Au moins 5 ventes | 316 sur 332 | 328 sur 332 |
-| Au moins 10 ventes | 284 sur 332 | 320 sur 332 |
-| Au moins 30 ventes | **185 sur 332** | **282 sur 332** |
-| Aucune vente exploitable | 2 | **0** |
+| Au moins 5 ventes | 331 sur 332 | 332 sur 332 |
+| Au moins 10 ventes | 321 sur 332 | 332 sur 332 |
+| Au moins 30 ventes | **249 sur 332** | **315 sur 332** |
+| Aucune vente exploitable | 0 | **0** |
 
-Les valeurs sur cinq ans remplacent celles publiées sous la version 2 — 305, 267, 152 et 4 — que la
-déduplication des lots répétés a rendues caduques sans que le rapport le signale.
+Sous la version 4, ces valeurs étaient 316, 284, 185 et 2 sur cinq ans, 328, 320, 282 et 0 sur
+douze. Elles remplaçaient elles-mêmes celles de la version 2 — 305, 267, 152 et 4.
 
 Ces seuils sont donnés **à titre de lecture, pas de décision**. Le support minimal requis pour
 qu'une médiane soit exploitable vient du profiling de E1, jamais d'une valeur choisie ici. Le
 risque déclaré de la v0.5 — la fausse précision de prix — se lit dans ce tableau : si E1 retient
-un support de 30 ventes, **cinquante communes** resteront sans médiane maison sur douze ans.
+un support de 30 ventes, **dix-sept communes** resteront sans médiane maison sur douze ans.
 
 Une commune sans comparable exploitable est un résultat légitime. Elle doit produire une feature
 absente motivée et une confiance réduite, jamais un repli sur la moyenne départementale.

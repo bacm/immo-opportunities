@@ -202,7 +202,7 @@ def esc(text: object) -> str:
 def insufficient(effectif: int, minimum: str, unit: str) -> str:
     return (
         f'<p class="absent"><b>Support insuffisant</b> : {grouped(effectif)} {unit}, '
-        f"{minimum} requis. La valeur n'est pas publiée, et n'est pas remplacée par celle du "
+        f"{minimum} requises. La valeur n'est pas publiée, et n'est pas remplacée par celle du "
         "département.</p>"
     )
 
@@ -645,7 +645,9 @@ def margin_card(barometer: Barometer, territory: Territory) -> str:
             f'<p class="caption">gain médian au-delà du marché, maison achetée {esc(band)} du '
             "prix médian communal et revendue entre six mois et trois ans plus tard — "
             f"{grouped(count(first['pairs']))} reventes"
-            + (f", dont {percent(share, 0)} au-delà de +20{NBSP}%" if share is not None else "")
+            # La part se lit telle que le CSV la porte, à une décimale : l'arrondir ici serait
+            # un calcul du document, et l'arrondi au pair a déjà imprimé 76 % pour 76,5 (H7).
+            + (f", dont {percent(share)} au-delà de +20{NBSP}%" if share is not None else "")
             + "</p>"
         )
         partial = len(supported) < len(rows)

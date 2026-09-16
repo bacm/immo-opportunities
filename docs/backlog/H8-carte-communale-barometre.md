@@ -20,7 +20,7 @@ Le document de H2 est une feuille A4 recto-verso, et **le recto est plein** : le
 imprimées tiennent sur deux pages exactement, à quelques millimètres près. Une carte ne s'ajoute
 pas, elle **remplace** un graphique ou ajoute une page. Les graphiques sont déjà du SVG écrit à la
 main, sans bibliothèque ; la rampe séquentielle bleue de la compétence `dataviz` est celle qu'une
-choroplèthe prendrait. Dix-sept EPCI sur dix-huit n'ont pas de marge publiable : une carte
+choroplèthe prendrait. Dix-sept EPCI sur dix-huit n'avaient pas de marge publiable (cinq depuis H7, le 16 septembre 2026) : une carte
 communale de la marge serait presque entièrement « sans support ».
 
 ## Ce qui bloque

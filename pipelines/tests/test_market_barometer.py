@@ -153,6 +153,21 @@ def test_build_pairs_breaks_same_day_ties_by_price_then_surface() -> None:
     assert pairs[0].entry_price_eur == 300000
 
 
+def test_same_day_ties_and_all_combinations_are_counted_not_written() -> None:
+    """H7 : ces deux chiffres étaient écrits à la main et n'avaient pas suivi les données."""
+    parameters = MODULE.Parameters()
+    same_day = date(2020, 1, 1)
+    rows = [
+        sale("35001", same_day, 300000, 100, parcel_id="p1"),
+        sale("35001", same_day, 200000, 90, parcel_id="p1"),
+        sale("35001", date(2023, 1, 1), 400000, 100, parcel_id="p1"),
+        sale("35001", date(2021, 1, 1), 150000, 80, parcel_id="p2"),
+    ]
+    assert MODULE.same_day_ties(rows) == 1
+    # p1 : deux ventes du même jour avec celle de 2023, et aucune entre elles (zéro jour).
+    assert MODULE.all_combinations(rows, parameters) == 2
+
+
 def test_first_sale_after_is_strictly_posterior() -> None:
     dates = [date(2024, 1, 1), date(2024, 6, 1)]
     assert MODULE.first_sale_after(dates, date(2024, 1, 1)) == date(2024, 6, 1)

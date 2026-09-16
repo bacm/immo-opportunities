@@ -1,3 +1,3 @@
 scope_type,scope_code,window,pairs,median_price_ratio,median_price_per_m2_ratio,reason
-departement,35,revente en 1095 jours au plus,205,1.37,1.0,
-departement,35,toutes durées au-delà de 180 jours,743,1.63,1.17,
+departement,35,revente en 1095 jours au plus,260,1.38,1.01,
+departement,35,toutes durées au-delà de 180 jours,1019,1.69,1.18,

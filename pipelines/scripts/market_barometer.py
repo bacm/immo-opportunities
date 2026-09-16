@@ -37,11 +37,11 @@ import argparse
 import bisect
 import csv
 import hashlib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
-from itertools import pairwise
+from itertools import combinations, pairwise
 from pathlib import Path
 from typing import Any, cast
 
@@ -49,6 +49,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from immo_pipelines.cadastre.settings import CadastreSettings
+from immo_pipelines.market_data.dvf import DVF_TRANSFORMATION_VERSION
 from immo_pipelines.market_data.exploratory import write_csv
 
 CROSS = "\u00d7"  # « commune x année », rendu tel quel dans le rapport
@@ -243,9 +244,10 @@ def build_pairs(sales: Iterable[Sale], parameters: Parameters) -> list[Pair]:
         by_parcel[sale.parcel_id].append(sale)
     pairs: list[Pair] = []
     for parcel_id, rows in sorted(by_parcel.items()):
-        # Cent cinq couples (parcelle, date) portent plusieurs ventes de maison le même jour :
-        # sans règle de départage, « la vente suivante » n'est pas déterminée et les bandes de
-        # BAR-003 bougent. Prix croissant puis surface croissante, écrit dans le rapport.
+        # Des couples (parcelle, date) portent plusieurs ventes de maison le même jour — leur
+        # nombre est publié par `same_day_ties`. Sans règle de départage, « la vente suivante »
+        # n'est pas déterminée et les bandes de BAR-003 bougent. Prix croissant puis surface
+        # croissante, écrit dans le rapport.
         ordered = sorted(rows, key=lambda row: (row.mutation_date, row.price_eur, row.surface_m2))
         for entry, exit_ in pairwise(ordered):
             if (exit_.mutation_date - entry.mutation_date).days < parameters.repeat_min_days:
@@ -263,6 +265,29 @@ def build_pairs(sales: Iterable[Sale], parameters: Parameters) -> list[Pair]:
                 )
             )
     return pairs
+
+
+def same_day_ties(sales: Iterable[Sale]) -> int:
+    """Les couples (parcelle, date) qui portent plusieurs ventes, départagés par `build_pairs`."""
+    counts = Counter((sale.parcel_id, sale.mutation_date) for sale in sales)
+    return sum(1 for count in counts.values() if count > 1)
+
+
+def all_combinations(sales: Iterable[Sale], parameters: Parameters) -> int:
+    """Toutes les combinaisons de deux ventes d'une parcelle assez espacées, rang ou non.
+
+    Publié à côté des paires consécutives pour dire ce que le rang écarte : une parcelle vendue
+    trois fois donne deux paires consécutives, mais trois combinaisons.
+    """
+    by_parcel: dict[str, list[date]] = defaultdict(list)
+    for sale in sales:
+        by_parcel[sale.parcel_id].append(sale.mutation_date)
+    return sum(
+        1
+        for dates in by_parcel.values()
+        for first, second in combinations(sorted(dates), 2)
+        if (second - first).days >= parameters.repeat_min_days
+    )
 
 
 def reference_medians(
@@ -1023,7 +1048,10 @@ def render(context: dict[str, Any]) -> str:
     add(
         f"**Généré le :** {context['generated_on']} · **Mesures :** BAR-001 à BAR-009 de "
         "[`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** "
-        "[H1](../backlog/H1-barometre-marche-35-mesures.md)"
+        "[H1](../backlog/H1-barometre-marche-35-mesures.md) · **Prix DVF :** transformation "
+        f"version {DVF_TRANSFORMATION_VERSION} "
+        "([H7](../backlog/H7-mutations-multi-parcelles.md), "
+        "[`dvf-quality-35.md`](./dvf-quality-35.md))"
     )
     add("")
     add(recount_mention(context["attestation"]))
@@ -1031,7 +1059,8 @@ def render(context: dict[str, Any]) -> str:
     add(
         f"Empreinte des mesures : `{context['fingerprint'][:16]}` — une attestation de recompte ne "
         f"vaut que pour cette empreinte, consignée dans `barometre-marche-{department}/"
-        f"{ATTESTATION_FILE}`."
+        f"{ATTESTATION_FILE}`. Elle est le SHA-256 des CSV `bar-*`, pris par ordre de nom, "
+        "chacun sous la forme « nom, octet nul, contenu, octet nul »."
     )
     add("")
     add(
@@ -1078,7 +1107,8 @@ def render(context: dict[str, Any]) -> str:
                     "Ventes exploitables",
                     "`mutation_nature = 'Vente'` · type Maison ou Appartement · "
                     "`allocation_method = 'single_property_full_price'` · surface et prix > 0 · "
-                    "parcelle rattachée",
+                    "parcelle rattachée · commune et année de la **mutation DVF**, pas de la "
+                    "parcelle",
                     french(context["sales_count"]),
                 ],
                 [
@@ -1124,11 +1154,13 @@ def render(context: dict[str, Any]) -> str:
                 [
                     "Paires de ventes successives",
                     f"deux ventes de maison **consécutives** de la même parcelle, rang n → n+1, "
-                    f"à plus de {parameters.repeat_min_days - 1} jours d'écart. Cent cinq couples "
-                    "(parcelle, date) portent plusieurs ventes le même jour : elles sont "
-                    "**départagées par prix croissant, puis par surface croissante**, faute de "
-                    "quoi « la vente suivante » n'est pas déterminée. Compter toutes les "
-                    "combinaisons de deux ventes en donnerait 10 100",
+                    f"à plus de {parameters.repeat_min_days - 1} jours d'écart. "
+                    f"{french(context['same_day_ties'])} couples (parcelle, date) portent "
+                    "plusieurs ventes le même jour : elles sont **départagées par prix croissant, "
+                    "puis par surface croissante**, faute de quoi « la vente suivante » n'est pas "
+                    "déterminée. Compter toutes les combinaisons de deux ventes de la même "
+                    f"parcelle au même écart, consécutives ou non, en donnerait "
+                    f"{french(context['all_combinations'])}",
                     french(context["pairs_count"]),
                 ],
                 [
@@ -1297,7 +1329,8 @@ def render(context: dict[str, Any]) -> str:
     add(
         f"Ventes de maison depuis {parameters.label_from_year} portant un DPE de "
         f"`type_batiment = 'maison'` déposé dans les {parameters.label_lookback_days} jours "
-        "précédant l'acte — le dernier de la fenêtre. Prix au m² rapporté à la médiane commune "
+        "précédant l'acte, le jour même compris — le dernier de la fenêtre. Prix au m² "
+        "rapporté à la médiane commune "
         f"{CROSS} année, laquelle doit atteindre {parameters.sales_per_cell} ventes. Contrôle "
         f"commune {CROSS} année seulement : ni âge, ni surface, ni modèle hédonique."
     )
@@ -1650,6 +1683,8 @@ def collect(connection: psycopg.Connection[Any], department: str, parameters: Pa
         "attachment_gap": int(attachment_gap),
         "parcels_with_a_sale": len(sale_dates),
         "pairs_count": len(pairs),
+        "same_day_ties": same_day_ties(houses),
+        "all_combinations": all_combinations(houses, parameters),
         "margin_funnel": margin_funnel,
         "volumes": volumes_and_prices(sales, territories, department, parameters),
         "margin": margin,
