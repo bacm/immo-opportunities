@@ -440,6 +440,25 @@ de sa source produit une couverture qui ment.
 
 ---
 
+### 10.7 État des sources au 16 septembre 2026
+
+Le rôle de chaque source dans le produit est en `SPEC.md` §13.1 ; ici, son état d'import.
+
+| ID | Dataset | État |
+|---|---|---|
+| DS-01 | Cadastre | **acceptée**, publiée, 1 333 327 parcelles |
+| DS-02 | RNB | **acceptée**, 514 859 bâtiments physiques |
+| DS-03 | BDNB Open | `display_only`, sans rattachement RNB |
+| DS-04 | BD TOPO | `display_only` ; identité BD TOPO ↔ RNB acceptée 60/60 |
+| DS-05 | BAN | `display_only` ; adresse ↔ parcelle à 24 % d'erreur |
+| DS-06 | DVF 2014-2025 | `display_only`, 285 k mutations |
+| DS-07 | DPE | `display_only`, 208 k diagnostics, rattachés à 59 % |
+| DS-08 | GPU | `display_only`, 152 documents sur 184, sans checksum |
+| DS-09 | Géorisques | `display_only` |
+| DS-10 à DS-12 | Sitadel, MAJIC PM, BODACC/Sirene | réservés, aucun contrat |
+
+---
+
 ## 11. Tâches asynchrones applicatives
 
 Aucune. Celery n'a jamais été installé ; Redis tourne sans qu'aucun code s'y connecte. La règle

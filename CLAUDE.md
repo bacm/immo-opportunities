@@ -18,7 +18,7 @@ l'historique : on y va pour une preuve. Sources de vérité, dans l'ordre : `SPE
 | Savoir quoi faire ensuite, état du projet, chemin critique | `docs/backlog/README.md` |
 | Pourquoi le produit a changé, ce qui est gelé et à quelles conditions | ADR-016 ; `SPEC.md` §6.2, §11 |
 | Périmètre et hors périmètre | `SPEC.md` §6, en particulier §6.4 |
-| Ce que les données ont déjà établi sur le 35, à ne pas redécouvrir | `SPEC.md` §10, puis le rapport `docs/data/` cité |
+| Ce que les données ont déjà établi sur le 35, à ne pas redécouvrir | `docs/data/README.md`, puis le rapport cité ; ce que cela impose : `SPEC.md` §10 |
 | Mesures du baromètre `BAR-*`, radar | `SPEC.md` §7, §8 |
 | Règles de données, valeurs manquantes, imports, interdits de données | `SPEC.md` §13 |
 | Ce qui existe, ce qui est défectueux | `ARCHITECTURE.md`, la section concernée |

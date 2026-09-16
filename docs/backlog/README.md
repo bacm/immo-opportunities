@@ -50,6 +50,21 @@ BUG-11, BUG-13, D7, A6, G6, G7 restent dans le tableau avec leur disponibilité 
 aucun ne se prend avant le verdict de H3. E9 reste disponible pour être joint aux entretiens de
 H3, à condition de corriger son protocole (aveugle cassé sur la liste E8f, audit §3.4).
 
+## Questions ouvertes
+
+Elles n'empêchent ni H1 ni H2 ; elles conditionnent H5 et la suite. `SPEC.md` §25 renvoie ici.
+
+| Question | Répond |
+|---|---|
+| Que sait déjà un marchand de biens du 35 de sa marge et de ses délais ? (HB1) | H3 |
+| Le goulot du métier est-il trouver, acheter au bon prix, ou obtenir l'autorisation ? (HP) | H3 |
+| Combien de lignes par semaine un agent ou un marchand veut-il recevoir, et pour quel secteur ? | H3 |
+| Quel canal : courriel, PDF, CSV, page ? | H3 |
+| Le même radar est-il vendu à plusieurs professionnels d'un même secteur, ou exclusif ? | H3 |
+| Que vaut légalement l'adresse dans le radar ? | H4 |
+| Existe-t-il quelques centaines de cibles personnes morales sur le 35 ? | V3, à sonder par ADR |
+| Une DP de division suit-elle réellement les parcelles jugées divisibles ? | V1, Sitadel, par ADR |
+
 ## Tickets
 
 Ce tableau est **généré** par `make backlog` depuis l'en-tête de chaque ticket. Ne pas l'éditer à
@@ -63,6 +78,7 @@ dérivée du graphe de dépendances.
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
 | [A1](./A1-preuve-ci-github.md) | Exécuter le workflow CI sur GitHub et attacher la preuve | v0.1 | — | S | Terminé | — |
+| [A10](./A10-spec-sans-etat-ni-historique.md) | `SPEC.md` ne porte ni état réel, ni résultat mesuré, ni décision : une règle de propriété et son application | transverse | A9 | M | Terminé | — |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
@@ -183,7 +199,7 @@ dérivée du graphe de dépendances.
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
 
-**48/80 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
+**49/81 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
 
 ### Verrous humains
 

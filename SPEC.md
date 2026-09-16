@@ -4,6 +4,14 @@
 **Statut :** référence, réécrite le 15 septembre 2026 sur décision [ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md)
 **Remplace :** la version 0.2 du 3 août 2026, conservée dans l'historique git (`git show a32d439:SPEC.md`)
 **Zone :** Ille-et-Vilaine (35) ; les autres départements bretons ne sont pas en périmètre tant qu'un abonné du 35 n'existe pas
+**Révision :** ce document se réécrit, ne s'amende pas ; la prochaine réécriture suit le verdict de H3
+
+**Ce que ce document contient, et rien d'autre :** ce que le produit doit faire et ne pas faire.
+Un résultat mesuré vit dans `docs/data/`, un état du dépôt ou des données dans
+[`ARCHITECTURE.md`](./ARCHITECTURE.md), une décision dans [`docs/decisions/`](./docs/decisions/),
+une question ouverte ou un critère de ticket dans [`docs/backlog/`](./docs/backlog/). La spec n'en
+garde que la conclusion qui devient une exigence, en une ligne, avec le lien. La numérotation des
+sections est stable : une section déplacée garde son numéro et un renvoi.
 
 ---
 
@@ -258,35 +266,18 @@ et les alertes. Elles ne sont ni abandonnées ni actives : voir §11.
 
 ## 10. Ce que les données ont établi sur le 35
 
-Résultats mesurés, datés, à ne pas redécouvrir. Les rapports sont dans `docs/data/`.
+Les mesures elles-mêmes sont dans [`docs/data/README.md`](./docs/data/README.md), avec leur
+rapport, leur filtre et leur état de recompte. Ce qu'elles imposent au produit :
 
-### 10.1 Résultats positifs, non recomptés
-
-| Résultat | Mesure | Source |
-|---|---|---|
-| Dépôt DPE → mutation à 12 mois | 35,1 à 35,7 % contre 3,03 % ; lift × 11,8 ; 2023 : 34,2 % | `dpe-signal-vente-35.md`, `pistes-analyse-marche-35.md` §5.1 |
-| Délai dépôt → acte | médiane 169 jours, Q1 113, Q3 282 | idem |
-| Courbe de conversion | 2 % à 3 mois, 20 % à 6 mois, 35 % à 12 mois, 43 % à 24 mois | idem |
-| Par étiquette | courbe en U : F et G convertissent 40 % de plus que C et D | idem |
-| Plus-value nette par prix d'entrée | × 1,90 sous 60 % du marché, × 1,23 entre 60 et 80 %, × 1,01 au prix | §5.2 |
-| Décote énergétique, maisons | 3 à 4 % pour E et F, invisible pour G (202 ventes) | §5.2 |
-| Extension de surface | ratio prix total × 1,37, prix au m² × 1,00 (205 paires) | §5.2 |
-
-### 10.2 Résultats négatifs, établis
-
-| Résultat | Mesure | Source |
-|---|---|---|
-| Adresse ↔ parcelle | 24 % d'erreur, irréductible par containment, proximité ou distance | `spatial-matching-manual-review-35.md` |
-| Bâtiment ↔ parcelle | 37 % d'erreur avant BUG-09 ; 400 706 relations sur 1,24 M à recouvrement < 10 % | idem |
-| Unité foncière | une par parcelle ; la contiguïté donne des grappes de 3 494 parcelles | `docs/backlog/BUG-11` |
-| DPE rattaché au bâtiment | 59 % ; 10 % non rattachés | `dpe-matching-35.md` |
-| DVF sans prix allouable | 65,5 % des mutations | `dvf-quality-35.md` |
-| Zone inondable typée | aucune source sur le 35 | `georisques-coverage-35.md` |
-| Profils de règles d'urbanisme | zéro ; D2b estimé à quatre années-personne à l'échelle nationale | `gpu-coverage-35.md` |
-| Usage du bâti par morphologie seule | 2 candidats d'intérêt sur 10 | `docs/backlog/E8b` |
-
-Ces négatifs sont la raison du gel : ils rendent l'objet « bien » inconstructible avec les données
-autorisées, et la stratégie rénovation-revente infondée.
+- **Le dépôt d'un DPE est le signal de mise en vente** du radar (§8) : conversion à douze mois
+  d'un ordre de grandeur dix fois supérieur au fond de marché, non recompté.
+- **Le baromètre mesure la marge par prix d'entrée et la décote énergétique** (§7) ; la décote
+  mesurée ne soutient pas une stratégie rénovation-revente, qui sort du périmètre.
+- **L'objet « bien » est inconstructible** avec les données autorisées : l'adresse, le bâtiment
+  et l'unité foncière ne se rattachent pas à la parcelle de façon fiable. C'est la raison du gel
+  (§11) et de l'agrégation du baromètre à la commune et à l'EPCI (§13.11).
+- **Deux motifs de rejet terrain n'ont aucune source** (§13.2) ; aucune liste morphologique ne
+  les lèvera.
 
 ---
 
@@ -294,30 +285,24 @@ autorisées, et la stratégie rénovation-revente infondée.
 
 ### 11.1 Ce qui existe
 
-Un Explorer React/MapLibre (recherche d'adresse réelle, fiches parcelle et bâtiment, mutations DVF
-et diagnostics DPE par parcelle, bannière de couverture), une API FastAPI de 45 routes, un moteur
-de score reproductible à deux définitions, un workflow de qualification, des scénarios financiers,
-une administration régionale, une authentification OIDC Keycloak avec isolation par organisation
-en RLS, des tuiles vectorielles Martin, un déploiement Ansible jamais exécuté. Le détail est dans
-[`ARCHITECTURE.md`](./ARCHITECTURE.md) §11 et dans [l'audit](./docs/audit-critique-2026-09-15.md) §7 à §10.
+Ce que la plateforme contient, et ce qui y est vide ou défectueux, est décrit dans
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) §3.2, §6 à §8 et §12.
 
 ### 11.2 Pourquoi elle est gelée
 
-Aucun `OpportunitySnapshot` n'a jamais été publié et le moteur n'a aucun appelant ; les quatre
-écrans qui portent la promesse sont vides ; personne ne l'a vue ; et l'objet qu'elle score, une
-parcelle, n'est pas un bien. Construire davantage avant un verdict client serait spécifier une
-seconde fois sans client.
+L'objet qu'elle score, une parcelle, n'est pas un bien (§10), et personne ne l'a vue. Construire
+davantage avant un verdict client serait spécifier une seconde fois sans client. Le raisonnement
+complet est dans [ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md).
 
 ### 11.3 Conditions de dégel
 
-Le gel se lève par une ADR, après H3, et seulement si les conditions suivantes sont réunies :
+Le gel se lève par une ADR, après H3, et seulement si :
 
 - un professionnel a demandé une carte, une fiche ou un workflow, et l'a dit avec un prix ;
-- les défauts bloquants de l'audit sont corrigés avant tout déploiement : authentification sur
-  toutes les routes, rôle base de moindre privilège, `statement_timeout`, banc PostGIS en CI,
-  sauvegarde hors site ;
 - la définition de score à publier est fondée sur un profiling observé, pas sur les seuils en dur
-  du moteur.
+  du moteur ;
+- les conditions techniques d'[`ARCHITECTURE.md`](./ARCHITECTURE.md) §25.2 sont remplies avant
+  tout déploiement.
 
 ---
 
@@ -330,25 +315,25 @@ partenariat avec un ayant droit de LOVAC.
 
 ## 13. Données
 
-### 13.1 Sources et état réel
+### 13.1 Sources et rôle
 
-| ID | Dataset | Producteur | État au 15 septembre 2026 | Rôle |
+L'état d'import de chaque source (acceptée, `display_only`, effectifs) est tenu dans
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) §10.7.
+
+| ID | Dataset | Producteur | Statut | Rôle |
 |---|---|---|---|---|
-| DS-01 | Cadastre Etalab, PCI Vecteur | DGFiP / Etalab | **acceptée**, publiée, 1 333 327 parcelles | référentiel spatial |
-| DS-02 | Référentiel National des Bâtiments | RNB | **acceptée**, 514 859 bâtiments physiques | identité bâtiment |
-| DS-03 | BDNB Open | CSTB | `display_only` | attributs bâtiment, sans rattachement RNB |
-| DS-04 | BD TOPO bâti et routes | IGN | `display_only` | usage, hauteur, année ; identité BD TOPO ↔ RNB acceptée 60/60 |
-| DS-05 | Base Adresse Nationale | BAN / IGN | `display_only` | recherche ; adresse ↔ parcelle à 24 % d'erreur |
-| DS-06 | DVF géolocalisé Etalab 2021-2025 + archive DGFiP 2014-2020 | DGFiP / Etalab | `display_only`, 285 k mutations | **baromètre, radar** |
-| DS-07 | DPE logements existants, extrait API | ADEME | `display_only`, 208 k diagnostics, rattachés à 59 % | **baromètre, radar** |
-| DS-08 | Géoportail de l'urbanisme, CNIG | collectivités / GPU | `display_only`, 152 documents sur 184, sans checksum | contexte ; gelé |
-| DS-09 | Géorisques, dix familles | DGPR / BRGM | `display_only` | contexte ; gelé |
-| DS-10 | Sitadel, autorisations d'urbanisme | SDES | **réservé**, aucun contrat | vérité terrain ex post de V1 |
-| DS-11 | MAJIC personnes morales | DGFiP | **réservé**, aucun contrat | propriétaire personne morale, V3 |
-| DS-12 | BODACC et Sirene | DILA / INSEE | **réservé**, aucun contrat | procédures collectives, V3 |
-
-La version 0.2 attribuait DS-10 à OCS GE, DS-11 à BD ORTHO, DS-12 à `CandidateReview` et DS-13 à
-LOVAC. Ces quatre sont retirées ; l'identifiant DS-10 était attribué trois fois dans le dépôt.
+| DS-01 | Cadastre Etalab, PCI Vecteur | DGFiP / Etalab | en contrat | référentiel spatial |
+| DS-02 | Référentiel National des Bâtiments | RNB | en contrat | identité bâtiment |
+| DS-03 | BDNB Open | CSTB | en contrat | attributs bâtiment, sans rattachement RNB |
+| DS-04 | BD TOPO bâti et routes | IGN | en contrat | usage, hauteur, année |
+| DS-05 | Base Adresse Nationale | BAN / IGN | en contrat | recherche ; jamais un rattachement adresse ↔ parcelle |
+| DS-06 | DVF géolocalisé Etalab 2021-2025 + archive DGFiP 2014-2020 | DGFiP / Etalab | en contrat | **baromètre, radar** |
+| DS-07 | DPE logements existants, extrait API | ADEME | en contrat | **baromètre, radar** |
+| DS-08 | Géoportail de l'urbanisme, CNIG | collectivités / GPU | en contrat | contexte ; gelé |
+| DS-09 | Géorisques, dix familles | DGPR / BRGM | en contrat | contexte ; gelé |
+| DS-10 | Sitadel, autorisations d'urbanisme | SDES | réservé, aucun contrat | vérité terrain ex post de V1 |
+| DS-11 | MAJIC personnes morales | DGFiP | réservé, aucun contrat | propriétaire personne morale, V3 |
+| DS-12 | BODACC et Sirene | DILA / INSEE | réservé, aucun contrat | procédures collectives, V3 |
 
 ### 13.2 Ce qui n'a pas de source
 
@@ -434,10 +419,10 @@ Copie brute immuable, transformations versionnées, quarantaine par attribut (BU
 par commune, motifs de manquant, séparation absence / nullité / non-applicabilité / erreur. Un
 chiffre publié dans `docs/data/` passe par `recompte-preuve`.
 
-### 13.11 Résolution des entités, état réel
+### 13.11 Résolution des entités
 
 Adresse ↔ parcelle ↔ bâtiment ↔ transaction ↔ DPE. Les liens portent méthode, confiance et
-version. L'état mesuré (§10.2) fixe ce que le baromètre peut faire : rattacher un DPE à une
+version. Les taux d'erreur mesurés (§10) fixent ce que le baromètre peut faire : rattacher un DPE à une
 parcelle bâtie par `id_rnb` et relation certaine, jamais par adresse seule. Une chaîne
 adresse → parcelle → bâtiment → transaction porte une incertitude composée que le baromètre
 contourne en n'agrégeant qu'à la commune.
@@ -446,12 +431,8 @@ contourne en n'agrégeant qu'à la commune.
 
 ## 14. Modèle de données
 
-Neuf schémas PostgreSQL : `meta` (releases, imports, appariements, quarantaine), `reference`
-(zones, adresses, parcelles, bâtiments, unités), `observation` (transactions, DPE, urbanisme,
-risques), `feature`, `scoring`, `market`, `app`, `tiles`, `audit`. 85 tables, dont 30 vides au 15
-septembre : tout `app.*`, `scoring.*` et `market.*`, c'est-à-dire la plateforme gelée.
-
-Le baromètre n'ajoute aucune table : il lit `observation.transaction`,
+Les schémas, leur volume et ce qui y est vide sont décrits dans
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) §9. Ce que le produit exige : le baromètre n'ajoute aucune table : il lit `observation.transaction`,
 `observation.energy_assessment`, `reference.*` et écrit des fichiers. Le radar ajoutera une
 release DS-07 par semaine dans `meta.dataset_release` et rien d'autre.
 
@@ -555,11 +536,10 @@ supposait une plateforme et un classement.
 Celle d'[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) :
 
 ```text
-H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ─┬─► H5 radar (H4 avis juridique)
-                                                              └─► H6 documentation (ce ticket)
+H1 baromètre 35 → H2 document publiable → H3 cinq entretiens ──► H5 radar (H4 avis juridique)
 ```
 
-Après H3, une ADR tranche : poursuivre V5 et V2, bifurquer vers V9 (vision, abandon), ouvrir
+L'avancement est dans [`docs/backlog/README.md`](./docs/backlog/README.md). Après H3, une ADR tranche : poursuivre V5 et V2, bifurquer vers V9 (vision, abandon), ouvrir
 V1 ou V3, dégeler la plateforme, ou
 arrêter. Aucune extension géographique avant un abonné du 35.
 
@@ -602,51 +582,28 @@ pas avant.
 
 ## 24. Décisions prises
 
-- ADR-001 à ADR-015 restent valides pour la plateforme gelée ([`ARCHITECTURE.md`](./ARCHITECTURE.md) §23).
-- **ADR-016** : intelligence de marché d'abord, radar ensuite, plateforme gelée.
-- Le propriétaire personne physique reste hors périmètre ; la personne morale est réservée à V3.
-- La rénovation-revente sort du MVP : la décote énergétique mesurée ne la soutient pas.
-- Aucune combinaison de signaux en score sans profiling écrit.
-- `SPEC.md` est réécrit, pas amendé, et relu par H3.
+Les décisions vivent dans [`docs/decisions/`](./docs/decisions/), indexées dans
+[`ARCHITECTURE.md`](./ARCHITECTURE.md) §23. Cette version repose sur
+[ADR-016](./docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) ; ADR-001 à ADR-015
+restent valides pour la plateforme gelée. Ce qu'une décision impose au produit est écrit dans la
+section concernée (§6.3, §6.4, §10, §13.6), pas ici.
 
 ---
 
 ## 25. Questions encore ouvertes
 
-Elles n'empêchent pas H1 ni H2 ; elles conditionnent H5 et la suite.
-
-1. Que sait déjà un marchand de biens du 35 de sa marge et de ses délais ? (HB1)
-2. Le goulot du métier est-il trouver, acheter au bon prix, ou obtenir l'autorisation ? (HP)
-3. Combien de lignes par semaine un agent ou un marchand veut-il recevoir, et pour quel secteur ?
-4. Quel canal : courriel, PDF, CSV, page ?
-5. Le même radar est-il vendu à plusieurs professionnels d'un même secteur, ou exclusif ?
-6. Que vaut légalement l'adresse dans le radar ? (H4)
-7. Existe-t-il quelques centaines de cibles personnes morales sur le 35 ? (V3, à sonder)
-8. Une DP de division suit-elle réellement les parcelles jugées divisibles ? (V1, Sitadel)
+Elles sont tenues dans [`docs/backlog/README.md`](./docs/backlog/README.md), section
+« Questions ouvertes », avec le ticket qui doit y répondre. Elles n'empêchent pas H1 ni H2 ;
+elles conditionnent H5 et la suite.
 
 ---
 
 ## 26. Definition of Done
 
-### 26.1 Baromètre (V5)
-
-- H1 : mesures BAR-001 à BAR-009 régénérables à l'identique, filtres écrits, tests sur fixture,
-  recompte passé, écart 14 532 / 9 754 expliqué ou remplacé ;
-- H2 : un document par EPCI avec support, aucune parcelle ni adresse, lisible imprimé ;
-- H3 : cinq entretiens, méthode actuelle relevée avant présentation, prix déclarés, verbatims
-  conservés, conclusion explicite.
-
-### 26.2 Radar (V2)
-
-- H4 : avis écrit, cinq questions répondues en trois valeurs ;
-- H5 : deux semaines produites depuis deux releases distinctes sans doublon, colonnes autorisées
-  citées, taux et courbe issus du baromètre recompté ;
-- un abonné du 35, ou un refus explicite documenté.
-
-### 26.3 Dégel de la plateforme
-
-Voir §11.3. Aucun critère de la DoD de la version 0.2 (quatre départements, carte Bretagne, trois
-professionnels sur la plateforme) n'est repris tant que le gel n'est pas levé.
+La DoD générale d'une tâche est dans [`CLAUDE.md`](./CLAUDE.md) ; les critères d'acceptation du
+baromètre et du radar sont ceux des tickets [H1](./docs/backlog/H1-barometre-marche-35-mesures.md)
+à [H5](./docs/backlog/H5-radar-mise-en-vente.md) ; le radar n'est terminé qu'avec un abonné du 35
+ou un refus explicite documenté. Le dégel de la plateforme relève de §11.3.
 
 ---
 
