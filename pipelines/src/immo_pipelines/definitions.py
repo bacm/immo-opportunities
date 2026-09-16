@@ -8,6 +8,7 @@ from immo_pipelines.assets import (
     ds05_ban_release,
     foundation_diagnostic,
 )
+from immo_pipelines.assets.script_sources import SCRIPT_ASSETS
 
 defs = Definitions(
     assets=[
@@ -17,5 +18,6 @@ defs = Definitions(
         ds03_bdnb_release,
         ds04_bdtopo_release,
         ds05_ban_release,
+        *SCRIPT_ASSETS,
     ]
 )

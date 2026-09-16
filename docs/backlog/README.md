@@ -127,7 +127,7 @@ dérivée du graphe de dépendances.
 | [BUG-17](./BUG-17-identifiants-a-deux-chiffres.md) | Un ticket numéroté au-delà de 9 est refusé par `ticket-check` et ignoré comme dépendance | dette transverse | — | S | Terminé | — |
 | [BUG-18](./BUG-18-surface-des-terrains-multi-cultures.md) | Un terrain à plusieurs natures de culture est prié sur la surface d'une seule | dette transverse | H7 | S | Terminé | — |
 | [BUG-19](./BUG-19-imports-restants-hors-dagster.md) | BDNB et BD TOPO s'importent encore par script, hors du graphe d'assets | dette transverse | BUG-02 | M | Terminé | — |
-| [BUG-20](./BUG-20-imports-multi-assets-hors-dagster.md) | DVF, DPE, GPU, Géorisques et INSEE s'importent encore par script | dette transverse | BUG-19 | L | À faire | **prêt** |
+| [BUG-20](./BUG-20-imports-multi-assets-hors-dagster.md) | DVF, DPE, GPU, Géorisques et INSEE s'importent encore par script | dette transverse | BUG-19 | L | Terminé | — |
 
 ### C — v0.4 Carte réelle
 
@@ -215,7 +215,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**68/94 terminés.** Prêts à démarrer : A6, BUG-20, G6.
+**69/94 terminés.** Prêts à démarrer : A6, G6.
 
 ### Verrous humains
 
@@ -230,7 +230,7 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-20, G6
+1. A6, G6
 
 <!-- END:tickets -->
 
