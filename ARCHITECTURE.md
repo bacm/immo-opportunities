@@ -162,7 +162,7 @@ utilisateur de la plateforme sont courtes et positionnent le contexte RLS par `s
 
 ```text
 immo-opportunities/
-├── apps/web/                 # SPA React (outil de vérification) : src/App.tsx, RealMap.tsx, ReviewMap.tsx, api.ts, auth.ts
+├── apps/web/                 # SPA React (outil de vérification) : src/App.tsx, sheets/, review/, api.ts, auth.ts
 ├── backend/
 │   ├── src/immo/             # modules plats + api/routes/
 │   ├── migrations/versions/  # 24 révisions Alembic, 5 925 lignes de SQL
@@ -205,8 +205,11 @@ Depuis C4 ([ADR-018](docs/decisions/ADR-018-degel-restreint-explorer.md)), l'Exp
 local de vérification des données du 35 : recherche d'adresse et de parcelle, carte des parcelles
 et bâtiments avec orthophoto, fiches adresse, parcelle et bâtiment, mutations DVF et diagnostics
 DPE par parcelle, bannière de couverture, revue B4 dans un `<dialog>` modal. Deux colonnes, carte
-et fiche ; 936 lignes dans `App.tsx`. État local par `useState`, sélection et cadrage
-dans l'URL, chargements par le client `api.ts` et `AbortController`. Aucune bibliothèque d'état,
+et fiche à onglets (Aperçu, Ventes DVF, Diagnostics DPE, Sources). Depuis C5, `App.tsx` (~200
+lignes) ne porte que la coquille et l'état de navigation ; `Search.tsx`, `sheets/`, `review/`,
+`ui.tsx` (composants de base) et `format.ts` portent le reste. Jetons de style dans `:root`,
+plancher typographique à 12 px. État local par `useState`, sélection et cadrage dans l'URL,
+chargements par le client `api.ts` et `AbortController`. Aucune bibliothèque d'état,
 aucun routeur, aucune bibliothèque de composants.
 
 ### 6.2 Ce qui a été retiré

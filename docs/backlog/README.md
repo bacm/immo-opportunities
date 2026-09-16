@@ -134,6 +134,7 @@ dérivée du graphe de dépendances.
 | [C2](./C2-zone-non-couverte.md) | Distinguer zone non couverte et zone sans résultat | v0.4 | C1 | S | Terminé | — |
 | [C3](./C3-capture-demo-adresse.md) | Capture de démonstration adresse 35 | v0.4 | C1, C2 | S | Terminé | — |
 | [C4](./C4-explorer-outil-de-verification.md) | L'Explorer devient l'outil local de vérification des données, sans bouton mort | transverse | — | M | Terminé | — |
+| [C5](./C5-refonte-front-verification.md) | Refondre le front : un socle commun et des fiches de vérification lisibles | transverse | C4 | L | Terminé | — |
 
 ### D — v0.5 Données métier 35
 
@@ -208,7 +209,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**55/87 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
+**56/88 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 

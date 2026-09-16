@@ -88,10 +88,10 @@ test('un service en panne n’est jamais présenté comme une absence de mutatio
   await page.route('**/api/v1/parcels/*/transactions', (route) => route.fulfill({ status: 500, json: { detail: 'panne' } }))
   await page.route('**/api/v1/parcels/*/energy-assessments', (route) => route.fulfill({ status: 500, json: { detail: 'panne' } }))
   await page.goto('/?lon=-1.6&lat=48.1&z=18&type=parcel&id=parcel:cadastre:35024000AP0207')
-  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await page.getByRole('tab', { name: /Ventes DVF/ }).click()
   await expect(page.getByText(/Mutations indisponibles/)).toBeVisible()
   await expect(page.getByText('Aucune mutation rattachée à cette parcelle.')).toHaveCount(0)
-  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await page.getByRole('tab', { name: /Diagnostics DPE/ }).click()
   await expect(page.getByText(/Diagnostics indisponibles/)).toBeVisible()
   await expect(page.getByText(/Aucun diagnostic rattaché/)).toHaveCount(0)
 })
@@ -285,13 +285,13 @@ test('l’état de couverture survit au partage d’URL', async ({ page }) => {
 test('changer de parcelle recharge ses mutations, sans garder celles de la précédente', async ({ page }) => {
   await page.goto('/?lon=-1.6&lat=48.1&z=18&department=35&type=parcel&id=parcel:cadastre:35024000AP0207')
   await page.waitForTimeout(4000)
-  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await page.getByRole('tab', { name: /Ventes DVF/ }).click()
   await page.waitForTimeout(2000)
   expect(await page.locator('.transaction-row').count()).toBe(2)
 
   await page.goto('/?lon=-1.6&lat=48.1&z=18&department=35&type=parcel&id=parcel:cadastre:35024000AP0206')
   await page.waitForTimeout(4000)
-  await page.getByRole('button', { name: /mutations DVF/ }).click()
+  await page.getByRole('tab', { name: /Ventes DVF/ }).click()
   await page.waitForTimeout(2000)
   expect(await page.locator('.transaction-row').count()).toBe(1)
 })
@@ -312,14 +312,14 @@ test('changer de parcelle recharge ses mutations, sans garder celles de la préc
 test('changer de parcelle recharge ses diagnostics, et signale un rattachement ambigu', async ({ page }) => {
   await page.goto('/?lon=-1.685&lat=48.1168&z=18&department=35&type=parcel&id=parcel:cadastre:35238000AB0005')
   await page.waitForTimeout(4000)
-  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await page.getByRole('tab', { name: /Diagnostics DPE/ }).click()
   await page.waitForTimeout(2000)
   expect(await page.locator('.assessment-row').count()).toBe(1)
   await expect(page.getByText('Rattachement certain')).toBeVisible()
 
   await page.goto('/?lon=-1.685&lat=48.1168&z=18&department=35&type=parcel&id=parcel:cadastre:35238000AB0303')
   await page.waitForTimeout(4000)
-  await page.getByRole('button', { name: /diagnostics DPE/ }).click()
+  await page.getByRole('tab', { name: /Diagnostics DPE/ }).click()
   await page.waitForTimeout(2000)
   expect(await page.locator('.assessment-row').count()).toBe(4)
   expect(await page.getByText('Rattachement ambigu').count()).toBe(4)
@@ -336,4 +336,23 @@ test('une fiche parcelle dit qu’elle décrit une parcelle, pas un bien', async
   await page.goto('/?lon=-2.0&lat=48.65&z=18&type=parcel&id=parcel:cadastre:35288000DA0322')
   await expect(page.getByText('PARCELLE', { exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText(/Objet analysé : une parcelle cadastrale, pas un bien/)).toBeVisible()
+})
+
+/**
+ * Fiche parcelle lisible — C5. L'effectif des ventes et des diagnostics est connu sans clic, et
+ * aucun bâtiment lié ne s'affiche sous son empreinte de 64 caractères.
+ */
+test('une fiche parcelle annonce ses ventes et ses diagnostics, et nomme ses bâtiments lisiblement', async ({ page }) => {
+  await page.goto('/?lon=-1.677&lat=48.118&z=18&type=parcel&id=parcel:cadastre:35238000AB0303')
+  await expect(page.getByRole('heading', { name: 'Section AB · n° 303' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('tab', { name: /Diagnostics DPE\s*4/ })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('tab', { name: /Ventes DVF\s*\d+/ })).toBeVisible()
+  const related = await page.locator('.related-list button').allTextContents()
+  expect(related.length).toBeGreaterThan(0)
+  for (const label of related) expect(label).not.toMatch(/[0-9a-f]{64}/)
+
+  // Les flèches partent de l'onglet actif et bouclent : de « Aperçu », la gauche mène à « Sources ».
+  await page.getByRole('tab', { name: 'Aperçu' }).press('ArrowLeft')
+  await expect(page.getByRole('tab', { name: 'Sources' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Provenance' })).toBeVisible()
 })

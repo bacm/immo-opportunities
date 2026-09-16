@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 WEB_SOURCES = (
-    Path(__file__).resolve().parents[2] / "apps" / "web" / "src" / "ReviewMap.tsx",
+    Path(__file__).resolve().parents[2] / "apps" / "web" / "src" / "review" / "ReviewMap.tsx",
     Path(__file__).resolve().parents[2] / "apps" / "web" / "src" / "RealMap.tsx",
 )
 
