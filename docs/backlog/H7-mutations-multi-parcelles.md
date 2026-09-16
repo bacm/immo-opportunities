@@ -114,5 +114,5 @@ parcelle, quelle que soit la culture) n'est pas changée ; le recompte la signal
 **H3 n'a pas commencé** : les dix-neuf documents sont régénérés avant la première session, comme
 le ticket le prévoyait. Chacun tient sur deux pages A4.
 
-**Correction du 17 septembre** : la note portée sur H8 le 16 (« cinq EPCI sans marge depuis H7 »)
+**Correction du 16 septembre, en fin de journée** : la note portée plus tôt sur H8 (« cinq EPCI sans marge depuis H7 »)
 mêlait marge complète et marge partielle ; H8 donne désormais les deux comptes, tirés du CSV.

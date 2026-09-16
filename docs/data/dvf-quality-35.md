@@ -2,7 +2,7 @@
 
 **Date :** 14 septembre 2026 · **Ticket :** [D1](../backlog/D1-import-dvf-ds06.md)
 **Releases :** `DS-06@2026-09-13` millésimes 2021-2025, `DS-06@2019-04-archive` millésimes
-2014-2020 · **Transformation :** version 6 (H7 le 16 septembre 2026, BUG-18 le 17)
+2014-2020 · **Transformation :** version 6 (H7 puis BUG-18, le 16 septembre 2026)
 
 ## La source a changé, et le contrat dit pourquoi
 

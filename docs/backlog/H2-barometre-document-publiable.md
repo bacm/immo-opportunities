@@ -126,7 +126,7 @@ dix-neuf documents imprimés tiennent sur deux pages exactement.
 - relecture visuelle du PDF sur une page A4, chiffres lisibles à taille d'impression ;
 - `make check` vert.
 
-## Correction consignée — 17 septembre 2026
+## Correction consignée — 16 septembre 2026
 
 « Dix-sept EPCI sur dix-huit n'ont pas de marge publiable » ne valait que pour la marge
 **complète**, les quatre tranches de prix d'entrée. Au CSV de ce ticket, 1 EPCI les publiait

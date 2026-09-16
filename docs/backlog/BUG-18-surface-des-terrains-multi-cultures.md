@@ -48,7 +48,7 @@ features `MKT`.
 - la distribution des prix de terrain de `dvf-quality-35.md` est recalculée et recomptée ;
 - `make check` vert.
 
-## Résultat — 17 septembre 2026
+## Résultat — 16 septembre 2026
 
 - Transformation DVF **version 6** ; les deux releases DS-06 réimportées (133 066 actes 2021-2025,
   179 573 actes 2014-2020, toutes lignes `v6:`).

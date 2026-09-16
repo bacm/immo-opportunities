@@ -1,11 +1,11 @@
 # ADR-022 — Une release remplacée se retire sur décision explicite, tracée
 
-**Date :** 17 septembre 2026
+**Date :** 16 septembre 2026
 
 **Contexte.** Les contrats déclarent `observations: append-only by release` : une nouvelle release
 s'ajoute, la précédente reste. Rien ne permet de la retirer, sauf
 `meta.rollback_unpublished_dataset_release`, qui ne purge que les tables du cadastre (DS-01) et
-refuse toute release ayant été publiée. Au 17 septembre 2026, aucune release remplacée n'encombre
+refuse toute release ayant été publiée. Au 16 septembre 2026, aucune release remplacée n'encombre
 la base (29 Gio) ; mais le radar prévoit une release DS-07 par semaine, soit environ 208 000
 diagnostics et 40 000 écarts d'import par extrait, une dizaine de millions de lignes par an.
 

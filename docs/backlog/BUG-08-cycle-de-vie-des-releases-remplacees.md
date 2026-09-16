@@ -69,7 +69,7 @@ remplacée ?**
 Aucune n'est évidente, et la troisième ressemble le plus au reste du système — l'acceptation et la
 publication sont déjà des gestes explicites et tracés.
 
-## Choix retenus — 17 septembre 2026
+## Choix retenus — 16 septembre 2026
 
 - **Décision du porteur** : retrait sur décision explicite, tracée —
   [ADR-022](../decisions/ADR-022-retrait-des-releases-remplacees.md).
@@ -113,7 +113,7 @@ Une optimisation de taille. La base ne contient aucun déchet aujourd'hui, et la
 rien : le disque est la ressource la moins chère de la stack. Ce ticket porte sur un **trou dans
 le cycle de vie**, qui se manifestera au premier remplacement réel — v0.8 au plus tard.
 
-## Résultat — 17 septembre 2026
+## Résultat — 16 septembre 2026
 
 **Preuve :** [`release-volume-35.md`](../data/release-volume-35.md), recompté en isolement du code :
 21 releases et 70 lignes de détail, aucune divergence. Aucune release n'a été retirée.

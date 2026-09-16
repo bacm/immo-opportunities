@@ -1,8 +1,8 @@
 # ADR-017 — Pas de carte dans le baromètre avant H3
 
-**Date :** 17 septembre 2026
+**Date :** 16 septembre 2026
 **Décidé par :** l'agent, sur délégation du porteur du projet (« enchaîne en prenant les
-meilleures décisions »), le 17 septembre 2026. Révisable par le porteur.
+meilleures décisions »), le 16 septembre 2026. Révisable par le porteur.
 
 **Contexte.** La demande du 16 septembre (« heat maps de DPE, prix m², etc. ») a ouvert H8.
 `SPEC.md` §7.5 exclut toute carte du baromètre. Le gel de la plateforme est levé (ADR-019) : une
