@@ -123,7 +123,8 @@ tôt retarde le chemin critique ; le faire plus tard rend G1 ingérable.
 - Les métriques d'import passent par la même table (`meta.import_run`) et la même route
   d'administration (`GET /api/v1/admin/import-runs`) que le cadastre.
 - **Critères non encore tenus** : sept sources s'importent encore par script, suivies par
-  [BUG-19](./BUG-19-imports-restants-hors-dagster.md) ; la ligne « pipelines partitionnés » de la
+  [BUG-19](./BUG-19-imports-restants-hors-dagster.md) (BDNB, BD TOPO) puis
+  [BUG-20](./BUG-20-imports-multi-assets-hors-dagster.md) (les cinq autres) ; la ligne « pipelines partitionnés » de la
   traçabilité reste partielle jusqu'à sa clôture. La release, elle, est enregistrée avant la
   vérification du checksum, comme pour le cadastre : c'est l'entrée de catalogue, pas une donnée.
 

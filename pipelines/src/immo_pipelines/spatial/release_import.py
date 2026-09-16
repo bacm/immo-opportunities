@@ -1,4 +1,4 @@
-"""Importer une release départementale d'une source à une couche — BUG-02.
+"""Importer une release départementale d'une source à une couche — BUG-02, BUG-19.
 
 Ce que les scripts RNB et BAN faisaient chacun de leur côté : enregistrer la release, résoudre
 l'asset épinglé (archive en base, archive nommée par le manifeste, puis amont), importer, puis
@@ -16,6 +16,7 @@ from typing import Any, Protocol
 
 from psycopg import Connection
 
+from immo_pipelines.cadastre.archive import extract_seven_zip_member, extract_zip_member
 from immo_pipelines.cadastre.catalog import DatasetCatalog
 from immo_pipelines.cadastre.manifest import (
     AssetStore,
@@ -25,7 +26,15 @@ from immo_pipelines.cadastre.manifest import (
     resolve_asset,
 )
 from immo_pipelines.spatial.ban import BAN_TRANSFORMATION_VERSION
-from immo_pipelines.spatial.importer import BanImporter, RnbImporter, SpatialImportOutcome
+from immo_pipelines.spatial.bdnb import BDNB_TRANSFORMATION_VERSION
+from immo_pipelines.spatial.bdtopo import BDTOPO_TRANSFORMATION_VERSION
+from immo_pipelines.spatial.importer import (
+    BanImporter,
+    BdnbImporter,
+    BdtopoImporter,
+    RnbImporter,
+    SpatialImportOutcome,
+)
 
 # Version de la transformation RNB, incluse dans la cle d'idempotence.
 #
@@ -66,6 +75,8 @@ class SourceImport:
     importer: Callable[[Connection[Any]], DepartmentImporter]
     # La BAN coupe la connexion avant les en-tetes de reponse avec httpx.
     prefer_curl: bool = False
+    # Le membre que le manifeste epingle, extrait de l'archive ; l'archive est ensuite supprimee.
+    extract: Callable[[Path, str, Path], Path] | None = None
 
 
 RNB = SourceImport(
@@ -86,6 +97,26 @@ BAN = SourceImport(
     local_name="addresses.csv.gz",
     importer=BanImporter,
     prefer_curl=True,
+)
+BDNB = SourceImport(
+    data_source_id="DS-03",
+    layer="bdnb",
+    source_srid=2154,
+    run_prefix="bdnb",
+    transformation_version=BDNB_TRANSFORMATION_VERSION,
+    local_name="bdnb.zip",
+    importer=BdnbImporter,
+    extract=extract_zip_member,
+)
+BDTOPO = SourceImport(
+    data_source_id="DS-04",
+    layer="bdtopo",
+    source_srid=2154,
+    run_prefix="bdtopo",
+    transformation_version=BDTOPO_TRANSFORMATION_VERSION,
+    local_name="bdtopo.7z",
+    importer=BdtopoImporter,
+    extract=extract_seven_zip_member,
 )
 
 
@@ -148,6 +179,14 @@ def import_department_release(
             destination=local_path,
             prefer_curl=source.prefer_curl,
         )
+        source_path = local_path
+        if source.extract is not None:
+            if asset.member_path is None:
+                raise RuntimeError(f"{source.data_source_id} manifest must name the archive member")
+            source_path = source.extract(local_path, asset.member_path, Path(directory))
+            # L'archive n'a plus d'utilite une fois le membre extrait, et les deux ensemble
+            # saturent le disque du conteneur (BD TOPO : 529 Mo et 3,1 Go).
+            local_path.unlink(missing_ok=True)
         run_id, idempotency_key = run_keys(source, manifest, resolved.sha256)
         importer = source.importer(connection)
         outcome = importer.import_archive(
@@ -155,7 +194,7 @@ def import_department_release(
             release_id=manifest.release_id,
             department_code=manifest.department,
             raw_asset_id=resolved.raw_asset_id,
-            source_path=local_path,
+            source_path=source_path,
             idempotency_key=idempotency_key,
         )
         importer.refresh_match_metrics(manifest.release_id, manifest.department)

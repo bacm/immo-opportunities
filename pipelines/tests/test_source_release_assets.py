@@ -1,9 +1,10 @@
-"""RNB et BAN dans le graphe d'assets — BUG-02.
+"""RNB, BAN, BDNB et BD TOPO dans le graphe d'assets — BUG-02, BUG-19.
 
 La fonction commune est exercée sur un manifeste de fixture, avec un catalogue, un stockage et un
 importeur substitués : aucune base ni aucun réseau.
 """
 
+import dataclasses
 import hashlib
 import json
 from pathlib import Path
@@ -12,7 +13,13 @@ from typing import Any, ClassVar
 import pytest
 from dagster import AssetKey, DagsterInstance, MultiPartitionKey, materialize
 
-from immo_pipelines.assets import ds02_rnb_release, ds05_ban_release, spatial_sources
+from immo_pipelines.assets import (
+    ds02_rnb_release,
+    ds03_bdnb_release,
+    ds04_bdtopo_release,
+    ds05_ban_release,
+    spatial_sources,
+)
 from immo_pipelines.cadastre.catalog import RawAssetRecord
 from immo_pipelines.cadastre.contract import ChecksumMismatchError
 from immo_pipelines.definitions import defs
@@ -20,6 +27,8 @@ from immo_pipelines.spatial import release_import
 from immo_pipelines.spatial.importer import SpatialImportOutcome
 from immo_pipelines.spatial.release_import import (
     BAN,
+    BDNB,
+    BDTOPO,
     RNB,
     DepartmentReleaseImport,
     SourceImport,
@@ -199,11 +208,61 @@ def test_les_cles_sont_celles_des_scripts_d_avant() -> None:
     )
 
 
+def test_bdnb_et_bdtopo_gardent_leurs_cles_et_extraient_leur_membre() -> None:
+    assert (BDNB.run_prefix, BDNB.layer, BDNB.source_srid) == ("bdnb", "bdnb", 2154)
+    assert (BDTOPO.run_prefix, BDTOPO.layer, BDTOPO.source_srid) == ("bdtopo", "bdtopo", 2154)
+    assert BDNB.extract is not None and BDNB.extract.__name__ == "extract_zip_member"
+    assert BDTOPO.extract is not None and BDTOPO.extract.__name__ == "extract_seven_zip_member"
+
+
+def test_le_membre_extrait_est_importe_et_l_archive_supprimee(
+    tmp_path: Path, fakes: SourceImport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = fixture_root(tmp_path)
+    manifest = root / "contracts" / "datasets" / "DS-02" / "releases" / "2026-09-05-35.json"
+    document = json.loads(manifest.read_text(encoding="utf-8"))
+    document["assets"][0]["member_path"] = "data/membre.gpkg"
+    manifest.write_text(json.dumps(document), encoding="utf-8")
+    seen: dict[str, Any] = {}
+
+    def extract(archive: Path, member: str, directory: Path) -> Path:
+        seen["archive"] = archive
+        seen["member"] = member
+        target = directory / "membre.gpkg"
+        target.write_bytes(PAYLOAD)
+        return target
+
+    class Importer(FakeImporter):
+        def import_archive(self, **kwargs: Any) -> SpatialImportOutcome:
+            seen["source_path"] = kwargs["source_path"]
+            seen["archive_left"] = seen["archive"].exists()
+            return super().import_archive(**kwargs)
+
+    source = dataclasses.replace(fakes, importer=Importer, extract=extract)
+    import_department_release(
+        source,
+        "2026-09-05",
+        "35",
+        connection=object(),
+        object_store=FakeStore(PAYLOAD),
+        root=root,  # type: ignore[arg-type]
+    )
+    assert seen["member"] == "data/membre.gpkg"
+    assert seen["source_path"].name == "membre.gpkg"
+    assert seen["archive_left"] is False
+
+
 def test_les_assets_sont_dans_les_definitions_et_partitionnes_par_departement() -> None:
     assert defs.assets is not None
     keys = {key for definition in defs.assets for key in definition.keys}  # type: ignore[union-attr]
-    assert {AssetKey("ds02_rnb_release"), AssetKey("ds05_ban_release")} <= keys
-    for definition in (ds02_rnb_release, ds05_ban_release):
+    # invariant-ok: assertion-supprimee — étendue à BDNB et BD TOPO (BUG-19).
+    assert {
+        AssetKey("ds02_rnb_release"),
+        AssetKey("ds03_bdnb_release"),
+        AssetKey("ds04_bdtopo_release"),
+        AssetKey("ds05_ban_release"),
+    } <= keys
+    for definition in (ds02_rnb_release, ds03_bdnb_release, ds04_bdtopo_release, ds05_ban_release):
         partitions = definition.partitions_def
         assert partitions is not None
         dimensions = {d.name: d.partitions_def for d in partitions.partitions_defs}  # type: ignore[attr-defined]

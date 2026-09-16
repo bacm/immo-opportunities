@@ -1,4 +1,6 @@
-"""RNB et BAN dans le graphe d'assets, partitionnés release x département — BUG-02.
+"""RNB, BAN, BDNB et BD TOPO dans le graphe d'assets — BUG-02, BUG-19.
+
+Partitionnés release x département.
 
 Même partition que le cadastre ; une dimension release dynamique par source, puisque chaque
 source publie ses propres releases.
@@ -23,6 +25,8 @@ from immo_pipelines.cadastre.archive import MinioObjectStore
 from immo_pipelines.cadastre.settings import CadastreSettings
 from immo_pipelines.spatial.release_import import (
     BAN,
+    BDNB,
+    BDTOPO,
     RNB,
     SourceImport,
     import_department_release,
@@ -107,3 +111,5 @@ def source_release_asset(name: str, source: SourceImport) -> AssetsDefinition:
 
 ds02_rnb_release = source_release_asset("ds02_rnb_release", RNB)
 ds05_ban_release = source_release_asset("ds05_ban_release", BAN)
+ds03_bdnb_release = source_release_asset("ds03_bdnb_release", BDNB)
+ds04_bdtopo_release = source_release_asset("ds04_bdtopo_release", BDTOPO)

@@ -2,6 +2,7 @@
 import hashlib
 import shutil
 import subprocess
+import zipfile
 from collections.abc import Mapping
 from importlib import import_module
 from pathlib import Path
@@ -143,6 +144,18 @@ def download_asset(
         return _download_asset_httpx(source_url, destination, expected_sha256)
     except (httpx.TransportError, httpx.HTTPStatusError):
         return _download_asset_curl(source_url, destination, expected_sha256)
+
+
+def extract_zip_member(archive_path: Path, member_path: str, destination_dir: Path) -> Path:
+    """Extraire un membre nomme d'une archive `zip` (DS-03) et renvoyer son chemin."""
+    with zipfile.ZipFile(archive_path) as archive:
+        if member_path not in archive.namelist():
+            raise SchemaChangeError(f"Archive {archive_path.name} has no member {member_path}")
+        archive.extract(member_path, path=destination_dir)
+    extracted = destination_dir / member_path
+    if not extracted.is_file():
+        raise RuntimeError(f"Extraction produced no file at {extracted}")
+    return extracted
 
 
 def extract_seven_zip_member(archive_path: Path, member_path: str, destination_dir: Path) -> Path:
