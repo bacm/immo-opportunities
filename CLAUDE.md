@@ -58,9 +58,15 @@ ou `ticket-ok: <raison>` dans le corps.
 **Tout ticket part de `SPEC.md`.** S'il touche au produit (données, mesures, sorties, comportement
 visible), son bloc « Contexte à charger » nomme les sections de `SPEC.md` qu'il honore, et
 l'agent les lit avant d'écrire : §6 périmètre, §7 baromètre, §8 radar, §13 données, §18
-confidentialité, selon le cas. Ce que `SPEC.md` ne tranche pas n'est pas une implémentation mais
-une décision : ADR ou amendement de `SPEC.md`, sous ticket, avant le code. Un ticket
-d'outillage (CI, scripts, `Makefile`) part de `ARCHITECTURE.md` ou d'ADR-015 de la même façon.
+confidentialité, selon le cas. Un ticket d'outillage (CI, scripts, `Makefile`) part de
+`ARCHITECTURE.md` ou d'ADR-015 de la même façon.
+
+**Décision ou implémentation.** Un choix est une **décision** — ADR ou amendement de `SPEC.md`,
+sous ticket, avant le code — s'il change ce qui est publié (définition d'une mesure, filtre,
+seuil, source, unité), touche un interdit de §13 ou §18 ou le périmètre gelé, ajoute une
+dépendance, une table ou un service, ou est coûteux à défaire (schéma, contrat publié, donnée
+importée). Tout le reste est un **choix d'implémentation** : l'agent le tranche, l'écrit dans
+« Choix retenus » du ticket, et continue.
 
 ## Definition of Done
 
@@ -81,7 +87,7 @@ contrôle les interdits sur les lignes ajoutées ; ligne légitime signalée : `
 
 **La boucle s'arrête**, explicitement, sur : un ticket de nature humaine (annoncé **verrou
 humain**, jamais « prêt ») ; deux échecs consécutifs du même gate sur le même ticket ; une
-décision que `SPEC.md` ne tranche pas ; une source externe indisponible ou un quota atteint
+décision non écrite, au sens ci-dessus ; une source externe indisponible ou un quota atteint
 (temporiser, jamais une fixture) ; une contradiction entre deux sources de vérité.
 
 ## Backlog et sous-agents

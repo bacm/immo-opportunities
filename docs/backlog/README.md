@@ -79,6 +79,7 @@ dérivée du graphe de dépendances.
 |---|---|---|---|---|---|---|
 | [A1](./A1-preuve-ci-github.md) | Exécuter le workflow CI sur GitHub et attacher la preuve | v0.1 | — | S | Terminé | — |
 | [A10](./A10-spec-sans-etat-ni-historique.md) | `SPEC.md` ne porte ni état réel, ni résultat mesuré, ni décision : une règle de propriété et son application | transverse | A9 | M | Terminé | — |
+| [A11](./A11-decision-selon-ce-que-le-choix-engage.md) | Une décision se reconnaît à ce que le choix engage, pas au silence de `SPEC.md` | transverse | A10 | S | Terminé | — |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
@@ -202,7 +203,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**51/84 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
+**52/85 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 
