@@ -115,7 +115,7 @@ dérivée du graphe de dépendances.
 | [BUG-05](./BUG-05-ds02-rnb-non-reproductible.md) | DS-02 RNB n'est pas reproductible : l'URL épinglée est un alias mouvant | v0.3 | — | M | Terminé | — |
 | [BUG-06](./BUG-06-reglage-postgresql.md) | PostgreSQL tourne avec le `postgresql.conf` d'initdb | dette transverse | — | S | Terminé | — |
 | [BUG-07](./BUG-07-tuiles-vides-et-recherche-adresse.md) | L'Explorer ne montre rien : carte vide et recherche d'adresse en erreur | v0.4 | — | M | Terminé | — |
-| [BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md) | Une release remplacée n'est jamais retirée | dette transverse | — | M | À faire | **prêt** |
+| [BUG-08](./BUG-08-cycle-de-vie-des-releases-remplacees.md) | Une release remplacée n'est jamais retirée | dette transverse | — | M | Terminé | — |
 | [BUG-09](./BUG-09-recouvrement-batiment-parcelle.md) | Un tiers des relations bâtiment ↔ parcelle sont des contacts marginaux déclarés certains | v0.3 | — | M | Terminé | — |
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
 | [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | Terminé | — |
@@ -212,7 +212,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**60/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7.
+**61/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, D7, G6, G7.
 
 ### Verrous humains
 
@@ -228,8 +228,8 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-08, D7, G6
-2. BUG-13, G7
+1. A6, BUG-02, BUG-13, D7, G6
+2. G7
 
 <!-- END:tickets -->
 

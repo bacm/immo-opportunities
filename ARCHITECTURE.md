@@ -383,7 +383,9 @@ conséquence non écrite jusqu'à l'audit).
 Une release est importée non publiée ; l'acceptation est un jugement écrit dans
 `meta.dataset_release` ; la publication déplace un pointeur et reconstruit référentiel et tables
 de rendu dans une transaction (2 min 11 s pour DS-01 sur le 35). Le rollback réactive la release
-précédente sans réimport. Tenu.
+précédente sans réimport. Tenu. Une release remplacée se retire par un geste tracé,
+`make release-retire`, qui purge toutes ses tables et garde son archive (ADR-022) ;
+`make release-volume` dit ce qu'un retrait supprimerait.
 
 ### 10.5 Qualité
 
@@ -696,6 +698,7 @@ silence.
 | ADR-019 | Le gel de la plateforme est levé ; déploiement, publication de score et fiches DVF restent bornés | Acceptée | [note](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) |
 | ADR-020 | L'unité analysée reste la parcelle, sans regroupement, en attendant E1 | Acceptée | [note](docs/decisions/ADR-020-unite-analysee-parcelle.md) |
 | ADR-021 | Les DPE de logements neufs entrent comme source distincte DS-13, hors de toute mesure | Acceptée | [note](docs/decisions/ADR-021-dpe-logements-neufs.md) |
+| ADR-022 | Une release remplacée se retire sur décision explicite, tracée ; la purge couvre toutes ses tables | Acceptée | [note](docs/decisions/ADR-022-retrait-des-releases-remplacees.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de

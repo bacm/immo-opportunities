@@ -1,8 +1,10 @@
 # BUG-08 — Une release remplacée n'est jamais retirée
 
-**Version :** dette transverse · **Taille :** M · **État :** À faire
+**Version :** dette transverse · **Taille :** M · **État :** Terminé
 **Dépend de :** — · **Bloque :** —
-**Touche :** backend/migrations/versions/, pipelines/src/immo_pipelines/cadastre/catalog.py
+**Touche :** backend/migrations/versions/, backend/tests/, pipelines/src/immo_pipelines/cadastre/catalog.py, pipelines/scripts/cadastre_release.py, pipelines/scripts/release_volume_report.py, pipelines/tests/, Makefile, docs/decisions/ADR-022-retrait-des-releases-remplacees.md
+**Nature :** implémentation
+**DoD :** preuve dans `docs/data/release-volume-35.md`, recomptée
 **Découvert par :** question de dimensionnement, 8 septembre 2026
 
 ## Contexte à charger
@@ -67,6 +69,23 @@ remplacée ?**
 Aucune n'est évidente, et la troisième ressemble le plus au reste du système — l'acceptation et la
 publication sont déjà des gestes explicites et tracés.
 
+## Choix retenus — 17 septembre 2026
+
+- **Décision du porteur** : retrait sur décision explicite, tracée —
+  [ADR-022](../decisions/ADR-022-retrait-des-releases-remplacees.md).
+- **État mesuré** : 21 releases, aucune remplacée porteuse de données ; `DS-02@2026-08-01`, seule
+  release remplacée, n'a jamais été importée. Les deux releases DS-06 se complètent. Rien n'est
+  retiré par ce ticket.
+- **Migration** : une fonction interne `meta.purge_dataset_release_rows` (non exposée) compte et
+  supprime les lignes de toutes les tables filles ; `rollback_unpublished_dataset_release` la
+  réutilise ; `retire_replaced_dataset_release` porte les garde-fous d'ADR-022. La trace va dans
+  `dataset_release.notes`, sans modifier la contrainte de `publication_event`.
+- **Outil** : `DatasetCatalog.retire_replaced`, sous-commande `retire` de `cadastre_release.py`,
+  cibles `make release-retire` et `make release-volume`.
+- **Tests** : sur le texte de la migration (tables purgées, garde-fous), faute de banc PostgreSQL
+  dans `make check` ; exécution réelle sur la base locale dans une transaction annulée, consignée
+  ci-dessous.
+
 ## Travail à réaliser
 
 1. Trancher la question ci-dessus.
@@ -93,3 +112,27 @@ publication sont déjà des gestes explicites et tracés.
 Une optimisation de taille. La base ne contient aucun déchet aujourd'hui, et la réduire n'apporte
 rien : le disque est la ressource la moins chère de la stack. Ce ticket porte sur un **trou dans
 le cycle de vie**, qui se manifestera au premier remplacement réel — v0.8 au plus tard.
+
+## Résultat — 17 septembre 2026
+
+**Preuve :** [`release-volume-35.md`](../data/release-volume-35.md), recompté en isolement du code :
+21 releases et 70 lignes de détail, aucune divergence. Aucune release n'a été retirée.
+
+**Exécution réelle sur la base du 35**, dans des transactions annulées :
+
+- refusés avec leur motif : motif vide, remplaçante identique, remplaçante d'une autre source,
+  remplaçante non importée sur le 35, release active (DS-01), release déjà retirée ;
+- retrait de `DS-13@2026-09-16-extract`, simulée publiée, par une remplaçante importée : 18 671
+  diagnostics, 25 740 écarts, 317 métriques, 6 contrôles et 1 run retirés ; fichier brut gardé ;
+  DS-07 et le cadastre actif intacts ; note « Retired on … by …, replaced by …: … » écrite ;
+- retrait de `DS-02@2026-09-05` : 741 379 observations en 10 s ; 741 379 bâtiments canoniques et
+  2 060 794 identifiants de source gardés ;
+- rollback d'une release non publiée (`DS-02@2026-08-01`) par la purge étendue.
+
+**Ce que le recompte a fait préciser** : « publiée » veut dire « a un événement de publication »,
+la taille est en unités binaires, les enfants en cascade ne sont pas comptés, et les valeurs
+dérivées (features, métriques, appariements, scores) gardent la référence d'une release retirée
+mais plus ses données — conséquence écrite dans ADR-022.
+
+**Point de vigilance** : `DS-02@2026-09-05`, référentiel bâtiment accepté et lu, n'est pas marqué
+actif ; seules la couverture de la remplaçante et le motif écrit le protègent d'un retrait.

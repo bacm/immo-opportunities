@@ -471,6 +471,25 @@ class DatasetCatalog:
         self.connection.execute("RESET ROLE")
         self.connection.commit()
 
+    def retire_replaced(
+        self, release_id: str, *, replacement_id: str, actor: str, reason: str
+    ) -> dict[str, int]:
+        """Retirer une release remplacée, publiée ou non — ADR-022.
+
+        La base vérifie la forme (même source, remplaçante importée sur les mêmes territoires,
+        release ni active ni membre d'un bundle) ; le motif écrit porte le jugement. Rend le
+        nombre de lignes retirées par table.
+        """
+        self.connection.execute("SET LOCAL ROLE pipeline_rw")
+        row = self.connection.execute(
+            "SELECT meta.retire_replaced_dataset_release(%s, %s, %s, %s)",
+            (release_id, replacement_id, actor, reason),
+        ).fetchone()
+        self.connection.execute("RESET ROLE")
+        self.connection.commit()
+        assert row is not None
+        return {str(table): int(count) for table, count in dict(row[0]).items()}
+
     def quality_report(self, release_id: str) -> dict[str, Any]:
         with self.connection.cursor(row_factory=dict_row) as cursor:
             release = cursor.execute(

@@ -37,6 +37,12 @@ def _parser() -> argparse.ArgumentParser:
     publish.add_argument("--reason", required=True)
     publish.add_argument("--action", choices=("publish", "rollback"), default="publish")
 
+    retire = subparsers.add_parser("retire", help="retirer une release remplacée (ADR-022)")
+    retire.add_argument("release_id")
+    retire.add_argument("--replaced-by", required=True)
+    retire.add_argument("--actor", required=True)
+    retire.add_argument("--reason", required=True)
+
     rollback = subparsers.add_parser("rollback-unpublished")
     rollback.add_argument("release_id")
     rollback.add_argument("--actor", required=True)
@@ -63,6 +69,17 @@ def main() -> None:
         elif arguments.command == "accept":
             catalog.set_acceptance(arguments.release_id, arguments.mode)
             result = {"release_id": arguments.release_id, "acceptance": arguments.mode}
+        elif arguments.command == "retire":
+            result = {
+                "release_id": arguments.release_id,
+                "replaced_by": arguments.replaced_by,
+                "removed": catalog.retire_replaced(
+                    arguments.release_id,
+                    replacement_id=arguments.replaced_by,
+                    actor=arguments.actor,
+                    reason=arguments.reason,
+                ),
+            }
         elif arguments.command == "publish":
             counts = catalog.publish(
                 arguments.release_id,

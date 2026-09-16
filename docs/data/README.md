@@ -46,6 +46,8 @@ imposent au produit ; le chiffre à citer est celui du rapport, jamais celui de 
 
 ## Référentiel spatial
 
+- [Volume par release](./release-volume-35.md) — ce qu'un retrait supprimerait, ADR-022
+
 - [DS-01 — Cadastre](./DS-01-acceptance.md)
 - [Audit DS-02 à DS-05](./spatial-sources-audit.md)
 - [Revue manuelle des appariements](./spatial-matching-manual-review-35.md) — 24 % et 37 % d'erreur, résultats négatifs

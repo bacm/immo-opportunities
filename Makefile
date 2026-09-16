@@ -255,6 +255,21 @@ matching-report: matching-refresh
 		-v $(PWD)/docs/data:/workspace/docs/data \
 		dagster-code python pipelines/scripts/spatial_matching_report.py --department $(DEPARTMENT)
 
+# BUG-08, ADR-022 : volume par release, et retrait tracé d'une release remplacée.
+release-volume:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/release_volume_report.py
+
+release-retire:
+	@test -n "$(RELEASE)" -a -n "$(REPLACED_BY)" -a -n "$(REASON)" || \
+		{ echo "Usage : make release-retire RELEASE=<id> REPLACED_BY=<id> REASON=\"...\""; exit 2; }
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		dagster-code python pipelines/scripts/cadastre_release.py retire "$(RELEASE)" \
+		--replaced-by "$(REPLACED_BY)" --actor "$(or $(ACTOR),$(USER))" --reason "$(REASON)"
+
 # H7 : les ventes DVF écartées pour plusieurs parcelles, lues depuis les archives. Mesure seule.
 dvf-multi-parcel-profile:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
