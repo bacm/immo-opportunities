@@ -146,7 +146,7 @@ La valeur 1,0 n'est pas un seuil choisi : c'est la convention que `meta.entity_m
 
 ## Ce que ce rapport ne dit pas
 
-- **`REN-001..008` ne sont pas matérialisées.** `feature.feature_value.building_id` réfère `reference.building`, donc les enregistrements RNB, alors que BUG-12 a établi que le sujet est le bâtiment physique. Les écrire aujourd'hui graverait le sujet que BUG-12 vient d'invalider — B5 a refusé la même chose pour `BLD-001..003`. Les distributions ci-dessus sont ce dont E1 a besoin ; la matérialisation attend le changement de schéma.
+- **`REN-001..008` ne portent aucune valeur.** Elles sont écrites sur le bâtiment physique, absentes avec le motif `source_not_accepted` : les DPE sont `display_only` ([BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md), [`building-features-35.md`](./building-features-35.md)). Les distributions ci-dessus sont ce dont E1 a besoin.
 - **Aucune estimation d'état du bâti.** Une classe F ou G est l'observation d'un diagnostic, pas une preuve de dégradation.
 - **Aucun signal tiré d'une absence.** Un bâtiment sans diagnostic n'est pas suspect : il est sans diagnostic. L'absence ne pèse sur aucune composante de score, elle ne réduit que la confiance — vérifié par test.
 

@@ -45,6 +45,7 @@ help:
 	@echo "make ban-census ARCHIVE=path      Recount a pinned DS-05 archive, no database"
 	@echo "make mvt-benchmark                Measure cold/hot p95 for local MVT routes"
 	@echo "make property-unit-report DEPARTMENT=35  Measure parcel grouping signals (BUG-11)"
+	@echo "make building-features DEPARTMENT=35  Write BLD/REN features on physical buildings (BUG-13)"
 	@echo "make e2e                          Run the local real-map Playwright flow"
 	@echo "make inventory ENV=production     Render inventory from VPS_* variables"
 	@echo "make bootstrap ENV=production     Bootstrap a clean VPS"
@@ -247,6 +248,13 @@ morphology-features:
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
 		dagster-code python pipelines/scripts/compute_morphology_features.py \
 		--department $(DEPARTMENT) $(if $(COMMUNE),--commune $(COMMUNE),)
+
+building-features:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/compute_building_features.py \
+		--department $(or $(DEPARTMENT),35)
 
 physical-buildings:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \

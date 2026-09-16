@@ -581,12 +581,11 @@ def render(data: dict[str, Any], department: str, generated_on: str, source: str
     add("## Ce que ce rapport ne dit pas")
     add("")
     add(
-        "- **`REN-001..008` ne sont pas matérialisées.** `feature.feature_value.building_id` "
-        "réfère `reference.building`, donc les enregistrements RNB, alors que BUG-12 a établi "
-        "que le sujet est le bâtiment physique. Les écrire aujourd'hui graverait le sujet que "
-        "BUG-12 vient d'invalider — B5 a refusé la même chose pour `BLD-001..003`. Les "
-        "distributions ci-dessus sont ce dont E1 a besoin ; la matérialisation attend le "
-        "changement de schéma."
+        "- **`REN-001..008` ne portent aucune valeur.** Elles sont écrites sur le bâtiment "
+        "physique, absentes avec le motif `source_not_accepted` : les DPE sont `display_only` "
+        "([BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md), "
+        "[`building-features-35.md`](./building-features-35.md)). Les distributions ci-dessus "
+        "sont ce dont E1 a besoin."
     )
     add(
         "- **Aucune estimation d'état du bâti.** Une classe F ou G est l'observation d'un "

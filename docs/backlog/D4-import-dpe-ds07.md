@@ -128,6 +128,11 @@ invalidé ; [B5](./B5-features-morphologiques.md) avait refusé la même chose p
 Les distributions dont [E1](./E1-profiling-distributions.md) a besoin sont au rapport. Le
 changement de schéma est [BUG-13](./BUG-13-sujet-des-features-batiment.md).
 
+**Relu le 16 septembre 2026 ([BUG-13](./BUG-13-sujet-des-features-batiment.md),
+[ADR-024](../decisions/ADR-024-sujet-des-features-batiment.md)).** Le schéma porte désormais le bâtiment
+physique ; `REN-001..008` y sont écrites absentes, `source_not_accepted`, tant que DS-07 reste
+`display_only`.
+
 `accepted` attend la revue manuelle stratifiée de [D6](./D6-revue-manuelle-metier.md). 9 423
 adresses portent plusieurs diagnostics sans rattachement bâtiment : c'est la population qu'une
 revue humaine doit trancher, et B4 a montré ce que cette étape trouve.

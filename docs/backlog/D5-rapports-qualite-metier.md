@@ -119,3 +119,8 @@ source.
 qualité produits » : **partiellement** — les rapports existent, deux imports sur quatre ne sont
 pas traçables. « Features candidates profilées » : **partiellement** — `LAND-*` et `URB-*` le
 sont, les familles de bâtiment attendent BUG-13.
+
+**Relu le 16 septembre 2026 ([BUG-13](./BUG-13-sujet-des-features-batiment.md),
+[ADR-024](../decisions/ADR-024-sujet-des-features-batiment.md)).** Le sujet est exprimable : `BLD-*` et
+`REN-*` sont écrites absentes par bâtiment physique ; elles attendent désormais l'acceptation de
+leurs sources, non plus le schéma.

@@ -101,5 +101,10 @@ débloque une feature entière.
 bâtiment physique. Matérialiser ces features aujourd'hui graverait dans le stockage le sujet que
 BUG-12 vient d'invalider.
 
+**Relu le 16 septembre 2026 ([BUG-13](./BUG-13-sujet-des-features-batiment.md),
+[ADR-024](../decisions/ADR-024-sujet-des-features-batiment.md)).** Le constat sur `BLD-001..003` n'a plus
+d'objet : `feature.feature_value` porte le bâtiment physique, et les trois features y sont
+écrites absentes, `source_not_accepted` (BDNB et BD TOPO restent `display_only`).
+
 Ces deux points ne bloquent pas la clôture de v0.3 : les features concernées sont explicitement
 absentes avec leur motif, ce que les critères d'acceptation demandent.

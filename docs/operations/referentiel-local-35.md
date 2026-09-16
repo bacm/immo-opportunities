@@ -88,8 +88,8 @@ make matching-refresh                                   # relations et métrique
 make morphology-features DEPARTMENT=35                  # LAND-001..007, LAND-009 sur 1 333 327 unités
 ```
 
-Attendu : ~20 M de valeurs dans `feature.feature_value` ; `LAND-008`, `LAND-010`, `BLD-001..003`
-absentes avec motif. Rapports : `make matching-report`.
+Attendu : ~20 M de valeurs d'unité foncière dans `feature.feature_value` ; `LAND-008`,
+`LAND-010` absentes avec motif. `BLD-*` et `REN-*` s'écrivent à l'étape 6. Rapports : `make matching-report`.
 
 ## 5. DS-06 DVF — douze millésimes
 
@@ -112,7 +112,12 @@ release, avec des volumes différents.
 ```bash
 make dpe-import DEPARTMENT=35   # DS-07@2026-09-14-extract : 231 416 lignes, 208 086 diagnostics
 make dpe-report DEPARTMENT=35   # docs/data/dpe-matching-35.md : 59,04 % rattachés au bâtiment
+make building-features DEPARTMENT=35   # BLD-001..003, REN-001..008 absentes par bâtiment physique
 ```
+
+`make building-features` vient après les releases BDNB, BD TOPO, BAN et DPE, qu'il cite, et après
+`make physical-buildings` : reconstruire les bâtiments physiques supprime leurs features en
+cascade. Attendu : 5 663 449 lignes, 514 859 bâtiments RNB × 11 features (BUG-13).
 
 ## 7. DS-08 GPU
 

@@ -136,7 +136,8 @@ def persist(connection: psycopg.Connection[Any], rows: list[tuple[Any, ...]]) ->
             json_value, missing_reason, source_observation_ids, source_release_ids, formula,
             transformation_version
         ) VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, %s::jsonb, %s, %s)
-        ON CONFLICT (property_unit_id, building_id, feature_code, feature_version)
+        ON CONFLICT (property_unit_id, building_id, physical_building_id, feature_code,
+                     feature_version)
         DO UPDATE SET numeric_value = excluded.numeric_value,
                       text_value = excluded.text_value,
                       json_value = excluded.json_value,

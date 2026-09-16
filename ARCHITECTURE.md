@@ -702,6 +702,7 @@ silence.
 | ADR-021 | Les DPE de logements neufs entrent comme source distincte DS-13, hors de toute mesure | Acceptée | [note](docs/decisions/ADR-021-dpe-logements-neufs.md) |
 | ADR-022 | Une release remplacée se retire sur décision explicite, tracée ; la purge couvre toutes ses tables | Acceptée | [note](docs/decisions/ADR-022-retrait-des-releases-remplacees.md) |
 | ADR-023 | Trois sources communales de l'INSEE (DS-14 à DS-16) pour segmenter les marchés, table d'observations dédiée ; pôle = commune-centre de l'aire | Acceptée | [note](docs/decisions/ADR-023-sources-territoriales.md) |
+| ADR-024 | Une feature de bâtiment porte sur le bâtiment physique (regroupement RNB), troisième colonne de sujet de `feature.feature_value` | Acceptée | [note](docs/decisions/ADR-024-sujet-des-features-batiment.md) |
 
 Ce tableau est l'état courant. Le raisonnement vit dans [`docs/decisions/`](docs/decisions/), un
 fichier daté par décision. ADR-001 à ADR-014 ont été écrites le 3 août 2026 sans fichier de

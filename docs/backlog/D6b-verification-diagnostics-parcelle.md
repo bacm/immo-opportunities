@@ -127,3 +127,7 @@ mieux rattaché.
 **Ce que ce ticket n'a pas changé :** DS-07 reste `display_only`, `REN-001..008` reste non
 matérialisé en attendant [BUG-13](./BUG-13-sujet-des-features-batiment.md), et aucune étiquette
 n'atteint la carte ni le score.
+
+**Relu le 16 septembre 2026 ([BUG-13](./BUG-13-sujet-des-features-batiment.md),
+[ADR-024](../decisions/ADR-024-sujet-des-features-batiment.md)).** `REN-001..008` sont désormais écrites sur
+le bâtiment physique, absentes, `source_not_accepted`.

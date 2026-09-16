@@ -120,7 +120,7 @@ dérivée du graphe de dépendances.
 | [BUG-10](./BUG-10-aucun-compte-utilisateur.md) | Personne ne peut se connecter : ni compte, ni inscription, ni administrateur | v0.7 | — | M | Terminé | — |
 | [BUG-11](./BUG-11-unite-fonciere-degeneree.md) | L'unité analysée par le moteur est une parcelle isolée, et la contiguïté ne peut pas y suppléer | v0.6 | D1 | L | Terminé | — |
 | [BUG-12](./BUG-12-deduplication-batiments-physiques.md) | Compter des enregistrements n'est pas compter des bâtiments | v0.3 | — | M | Terminé | — |
-| [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | En cours | en cours |
+| [BUG-13](./BUG-13-sujet-des-features-batiment.md) | Une feature de bâtiment ne peut se poser que sur un enregistrement, pas sur un bâtiment | dette transverse | — | M | Terminé | — |
 | [BUG-14](./BUG-14-import-gpu-sans-trace.md) | Deux imports métier ne laissent aucune trace, et le calcul URB ne vérifie aucun verdict | v0.5 | — | M | Terminé | — |
 | [BUG-15](./BUG-15-collision-identifiants-tickets.md) | Deux fichiers pour un identifiant : un ticket disparaît du tableau sans bruit | dette transverse | — | S | Terminé | — |
 | [BUG-16](./BUG-16-suffixes-de-tickets-limites.md) | Un ticket suffixé au-delà de `b` est invisible des contrôles, sans bruit | dette transverse | — | S | Terminé | — |
@@ -196,7 +196,7 @@ dérivée du graphe de dépendances.
 | [G4](./G4-couverture-documentee.md) | Couverture documentée département / EPCI / commune | v0.8 | G2 | M | À faire | attend G2 |
 | [G5](./G5-administration-bundle.md) | Administration : import-runs, qualité, publication et rollback régional | v0.8 | G2 | M | À faire | attend G2 |
 | [G6](./G6-exploitation-restauration.md) | Backup, réplication et restauration chronométrée sur VPS vierge | v0.8 | — | L | À faire | **prêt** |
-| [G7](./G7-observabilite-minimale.md) | Observabilité minimale mesurable | v0.8 | — | M | À faire | **prêt** |
+| [G7](./G7-observabilite-minimale.md) | Observabilité minimale mesurable | v0.8 | — | M | En cours | en cours |
 | [G8](./G8-pilote-trois-professionnels.md) | Trois professionnels sur cas réels, dataset `CandidateReview`, H1–H5 | v0.8 | G3, G4 | XL | À faire | attend G3, G4 |
 | [G9](./G9-decision-finale.md) | Décision documentée : poursuivre / pivoter / arrêter | v0.8 | G8 | S | À faire | attend G8 |
 
@@ -213,7 +213,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**64/92 terminés.** Prêts à démarrer : A6, BUG-02, G6, G7.
+**65/92 terminés.** Prêts à démarrer : A6, BUG-02, G6.
 
 ### Verrous humains
 
@@ -228,14 +228,15 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Ces tickets occupent leurs chemins : ne pas y lancer un second travail. L'état vit dans la ligne `**État :**` de chaque fichier, source unique.
 
-- **BUG-13** — backend/migrations/versions/, backend/tests/, pipelines/scripts/compute_morphology_features.py, pipelines/scripts/compute_building_features.py, pipelines/tests/, Makefile, docs/data/building-features-35.md
+- **G7** — config/grafana/, config/prometheus/, config/alloy/, config/caddy/, backend/src/immo/api/middleware.py, backend/tests/, apps/web/src/api.ts, apps/web/src/format.ts, scripts/export-pilot-metrics, scripts/tests/, Makefile, docs/operations/observabilite.md, docs/data/pilot-operations-v0.8-report.md, docs/data/mvp-dod-traceability.md, docs/data/captures/
+
+Prêts mais **retenus par un travail en cours** : G6.
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, G6
-2. G7
+1. A6, BUG-02
 
 <!-- END:tickets -->
 

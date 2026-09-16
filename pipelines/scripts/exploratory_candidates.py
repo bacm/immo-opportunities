@@ -555,7 +555,8 @@ def render(data: dict[str, Any], today: str) -> str:
         "BDNB porte la même information mieux : `ffo_bat_annee_construction`, renseignée à "
         "**68,9 %** et distribuée sur toutes les périodes. Elle est hors de portée faute de "
         "rattachement — aucun identifiant RNB, seul un appariement géométrique y mènerait. "
-        "Entrée de plus pour [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md)."
+        "[BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md) a rendu le bâtiment "
+        "physique exprimable, pas cet appariement."
     )
     add("")
     add("## L'usage du bâti, et la source d'où il vient")

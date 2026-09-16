@@ -119,9 +119,9 @@ L'écart est donc publié tel quel. Le combler demande la table de correspondanc
 | Famille | État | Obstacle |
 |---|---|---|
 | `MKT-001..005`, `MKT-101..105` | non matérialisées | calculées au moment du score, à partir des comparables ; les segments de marché relèvent de [E1](../backlog/E1-profiling-distributions.md) |
-| `REN-001..008` | non matérialisées | sujet invalidé — [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md). Distributions d'observations dans [`dpe-matching-35.md`](./dpe-matching-35.md) |
-| `RISK-001..004`, `RISK-101` | non matérialisées | même sujet, et DS-09 `display_only`. Distributions dans [`georisques-coverage-35.md`](./georisques-coverage-35.md) |
-| `BLD-001..003` | non matérialisées | [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md) |
+| `REN-001..008` | absentes, `source_not_accepted`, par bâtiment physique | DS-07, DS-03, DS-04 `display_only` — [`building-features-35.md`](./building-features-35.md). Distributions d'observations dans [`dpe-matching-35.md`](./dpe-matching-35.md) |
+| `RISK-001..004`, `RISK-101` | non matérialisées | DS-09 `display_only` ; `RISK-101` porte sur le bâtiment physique, sujet désormais exprimable (BUG-13). Distributions dans [`georisques-coverage-35.md`](./georisques-coverage-35.md) |
+| `BLD-001..003` | absentes, `source_not_accepted`, par bâtiment physique | DS-03, DS-04 `display_only` — [`building-features-35.md`](./building-features-35.md) |
 
-Les distributions d'observations existent pour toutes ces familles, dans les rapports par source. Ce qui manque est leur matérialisation par unité, et deux obstacles la tiennent : le sujet des features de bâtiment, et le verdict de DS-08.
+Les distributions d'observations existent pour toutes ces familles, dans les rapports par source. Ce qui manque est leur matérialisation par unité, et deux obstacles la tiennent : l'acceptation des sources de bâtiment, et le verdict de DS-08.
 

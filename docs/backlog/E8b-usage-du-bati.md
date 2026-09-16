@@ -112,3 +112,7 @@ usage inconnu — restent distinctes, et le rapport publie leurs volumes.
 
 `docs/data/exploratory-candidates-35051.md`, régénéré : entonnoir enrichi, volumes par population
 d'usage, usage affiché par candidat.
+
+**Relu le 16 septembre 2026 ([BUG-13](./BUG-13-sujet-des-features-batiment.md)).** BUG-13 a
+donné aux features de bâtiment leur sujet, le bâtiment physique RNB. Il n'a pas rattaché BDNB au
+RNB : cet appariement géométrique reste à ouvrir sous son propre ticket.

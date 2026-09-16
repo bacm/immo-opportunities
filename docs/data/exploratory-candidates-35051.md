@@ -29,7 +29,7 @@ Une maison de 1950 plantée au milieu de son terrain intéresse davantage un mar
 
 La source est `date_d_apparition` de BD TOPO, **renseignée sur 44,6 %** des bâtiments et **approximative pour l'ancien** : les valeurs se concentrent sur 1800, 1850, 1870, 1880 et 1900, signature d'une datation historique arrondie. C'est une période, pas une date d'acte, et une unité sans année reste classée sur les autres signaux.
 
-BDNB porte la même information mieux : `ffo_bat_annee_construction`, renseignée à **68,9 %** et distribuée sur toutes les périodes. Elle est hors de portée faute de rattachement — aucun identifiant RNB, seul un appariement géométrique y mènerait. Entrée de plus pour [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md).
+BDNB porte la même information mieux : `ffo_bat_annee_construction`, renseignée à **68,9 %** et distribuée sur toutes les périodes. Elle est hors de portée faute de rattachement — aucun identifiant RNB, seul un appariement géométrique y mènerait. [BUG-13](../backlog/BUG-13-sujet-des-features-batiment.md) a rendu le bâtiment physique exprimable, pas cet appariement.
 
 ## L'usage du bâti, et la source d'où il vient
 

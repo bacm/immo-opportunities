@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Matérialiser LAND-001..010 et BLD-001..003 sur les releases acceptées — B5.
+"""Matérialiser LAND-001..010 sur les releases acceptées — B5.
 
 Le moteur pur est livré et testé depuis v0.3 ; ce qui manquait, c'est le calcul sur données
 réelles **acceptées**, avec provenance intacte.
@@ -8,14 +8,14 @@ réelles **acceptées**, avec provenance intacte.
 
 Une seule release est acceptée sur le 35 : le **cadastre Etalab**. Le RNB est `pending`, la BD
 TOPO, la BDNB et la BAN sont `display_only`. Les features qui en dépendent sortent donc
-**absentes avec motif**, jamais à zéro et jamais imputées :
+**absentes avec motif**, jamais à zéro et jamais imputées. `BLD-001..003` portent sur le bâtiment
+physique et s'écrivent par `compute_building_features.py` (BUG-13, ADR-024).
 
 | Feature | Source | Sort |
 |---|---|---|
 | LAND-001..007, 009 | cadastre, accepté | calculées |
 | LAND-008 | BD TOPO, `display_only` | `source_not_accepted` |
 | LAND-010 | cadastre, champ `type` sans table de valeurs au contrat | `source_value_missing` |
-| BLD-001..003 | BDNB et BD TOPO, `display_only` | `source_not_accepted` |
 
 `LAND-010` mérite une explication : le cadastre distingue bien deux types de bâti, et 27,1 % des
 enregistrements portent le code `02`. Mais le contrat `DS-01/v1.json` déclare `type` comme
@@ -56,14 +56,6 @@ UNSUPPORTED_LAND = {
         "length(intersection(boundary(unit), buffer(public roads, threshold)))",
     ),
     "LAND-010": ("source_value_missing", "area(union(light buildings)) / LAND-002"),
-}
-UNSUPPORTED_BUILDING = {
-    "BLD-001": ("source_not_accepted", "highest-priority observed use without prediction"),
-    "BLD-002": ("source_not_accepted", "highest-priority observed height without imputation"),
-    "BLD-003": (
-        "source_not_accepted",
-        "highest-priority observed dwelling count without imputation",
-    ),
 }
 
 
@@ -179,7 +171,8 @@ def persist(
             missing_reason, source_observation_ids, source_release_ids, formula,
             transformation_version
         ) VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
-        ON CONFLICT (property_unit_id, building_id, feature_code, feature_version)
+        ON CONFLICT (property_unit_id, building_id, physical_building_id, feature_code,
+                     feature_version)
         DO UPDATE SET numeric_value = excluded.numeric_value,
                       text_value = excluded.text_value,
                       missing_reason = excluded.missing_reason,
@@ -203,22 +196,6 @@ class Absent:
         self.source_ids: tuple[str, ...] = ()
         self.formula = formula
         self.transformation_version = "morphology@1"
-
-
-# `BLD-001..003` ne sont pas materialisees dans cette passe, et c'est un constat, pas un oubli.
-#
-# Les trois features decrivent un batiment — usage, hauteur, nombre de logements — et leurs
-# sources, BDNB et BD TOPO, sont `display_only`. Elles sortiraient donc toutes trois en
-# `source_not_accepted`, ce qui serait sans interet mais sans danger.
-#
-# Le vrai obstacle est ailleurs : `feature.feature_value.building_id` refere
-# `reference.building`, c'est-a-dire les **enregistrements RNB**. Or BUG-12 a etabli que le sujet
-# du contrat est le **batiment physique**, et que compter des enregistrements surestime de 44 %.
-# Ecrire ces lignes sur des enregistrements RNB reviendrait a graver dans le stockage le sujet
-# que le ticket precedent vient d'invalider — et sur une source qui n'est meme pas acceptee.
-#
-# La correction est un changement de schema, hors du perimetre de B5. Le rapport le dit, et les
-# trois features y figurent comme indisponibles pour le departement entier, avec ce motif.
 
 
 def main() -> int:
