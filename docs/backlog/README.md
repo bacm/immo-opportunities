@@ -136,6 +136,7 @@ dérivée du graphe de dépendances.
 | [C4](./C4-explorer-outil-de-verification.md) | L'Explorer devient l'outil local de vérification des données, sans bouton mort | transverse | — | M | Terminé | — |
 | [C5](./C5-refonte-front-verification.md) | Refondre le front : un socle commun et des fiches de vérification lisibles | transverse | C4 | L | Terminé | — |
 | [C6](./C6-couverture-en-pastille.md) | La couverture du territoire devient une pastille dans la barre, sans clignotement | transverse | C5 | S | Terminé | — |
+| [C7](./C7-recherche-dpe-par-numero.md) | Retrouver un DPE par son numéro, y compris écarté, avec son motif | transverse | D9 | S | Terminé | — |
 
 ### D — v0.5 Données métier 35
 
@@ -211,7 +212,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**58/90 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
+**59/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 

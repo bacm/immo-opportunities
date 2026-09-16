@@ -1,12 +1,13 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 
 from immo.explorer import (
     EntityDetail,
     find_building,
+    find_energy_assessment,
     find_parcel,
     find_property_unit,
     list_areas,
@@ -232,6 +233,58 @@ def parcel_energy_assessments(parcel_id: str) -> list[ParcelEnergyAssessmentResp
     except (OSError, SQLAlchemyError) as exc:
         raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
     return [ParcelEnergyAssessmentResponse.model_validate(record) for record in records]
+
+
+class AssessmentParcelResponse(BaseModel):
+    parcel_id: str
+    relation_status: str
+
+
+class StoredAssessmentResponse(BaseModel):
+    release_id: str
+    data_source_id: Literal["DS-07", "DS-13"]
+    assessment_date: str | None
+    energy_label: str | None
+    building_id: str | None
+    address_id: str | None
+    address_label: str | None
+    match_method: str | None
+    parcels: list[AssessmentParcelResponse]
+
+
+class RejectedAssessmentResponse(BaseModel):
+    release_id: str
+    data_source_id: Literal["DS-07", "DS-13"]
+    attribute: str
+    reason_code: str
+    reason_detail: str
+    declared: dict[str, str | None]
+
+
+class EnergyAssessmentLookupResponse(BaseModel):
+    """Un DPE par son numéro — C7. `stored` et `rejected` peuvent coexister : un diagnostic
+    conservé peut avoir un attribut écarté, comme une confiance absente avec son motif."""
+
+    dpe_number: str
+    stored: list[StoredAssessmentResponse]
+    rejected: list[RejectedAssessmentResponse]
+
+
+@router.get(
+    "/energy-assessments/{dpe_number}",
+    response_model=EnergyAssessmentLookupResponse,
+)
+def energy_assessment(
+    dpe_number: str = Path(pattern=r"^[0-9A-Z]{13}$"),
+) -> EnergyAssessmentLookupResponse:
+    """Vérification C7 : ce que la base sait d'un numéro de DPE, écarts compris."""
+    try:
+        record = find_energy_assessment(dpe_number)
+    except (OSError, SQLAlchemyError) as exc:
+        raise HTTPException(status_code=503, detail="Spatial reference is unavailable") from exc
+    if record is None:
+        raise HTTPException(status_code=404, detail="Energy assessment not found")
+    return EnergyAssessmentLookupResponse.model_validate(record)
 
 
 @router.get("/property-units/{property_unit_id}", response_model=EntityDetailResponse)

@@ -594,6 +594,87 @@ def list_parcel_energy_assessments(parcel_id: str) -> list[dict[str, Any]]:
     ]
 
 
+def find_energy_assessment(dpe_number: str) -> dict[str, Any] | None:
+    """Un DPE par son numéro, qu'il soit conservé ou écarté à l'import — C7.
+
+    Un diagnostic écarté n'est pas perdu : son numéro, son motif et les identifiants que la
+    source déclarait sont dans `meta.attribute_quarantine`. Les montrer répond à la question
+    « pourquoi mon DPE n'est-il pas sur ma parcelle ? » sans rien deviner à sa place.
+    """
+    stored = text(
+        """
+        SELECT assessment.dpe_number, assessment.release_id, release.data_source_id,
+               assessment.assessment_date, assessment.energy_label,
+               assessment.building_id, assessment.address_id,
+               assessment.properties->>'adresse_ban' AS address_label,
+               assessment.properties->>'match_method' AS match_method,
+               coalesce(
+                   (SELECT jsonb_agg(jsonb_build_object(
+                               'parcel_id', relation.parcel_id,
+                               'relation_status', relation.relation_status)
+                           ORDER BY relation.relation_status, relation.parcel_id)
+                      FROM reference.building_parcel AS relation
+                     WHERE relation.building_id = assessment.building_id),
+                   '[]'::jsonb) AS parcels
+          FROM observation.energy_assessment AS assessment
+          JOIN meta.dataset_release AS release ON release.id = assessment.release_id
+         WHERE assessment.dpe_number = :dpe_number
+         ORDER BY release.data_source_id, assessment.release_id
+        """
+    )
+    # L'identifiant d'un écart finit par le numéro : `energy-assessment:dpe:<release>:v<n>:<num>`.
+    rejected = text(
+        """
+        SELECT quarantine.release_id, release.data_source_id, quarantine.attribute,
+               quarantine.reason_code, quarantine.reason_detail, quarantine.evidence
+          FROM meta.attribute_quarantine AS quarantine
+          JOIN meta.dataset_release AS release ON release.id = quarantine.release_id
+         WHERE quarantine.entity_type = 'energy_assessment'
+           AND quarantine.entity_id LIKE :suffix
+         ORDER BY release.data_source_id, quarantine.release_id, quarantine.attribute
+        """
+    )
+    with get_engine().connect() as connection:
+        records = connection.execute(stored, {"dpe_number": dpe_number}).mappings().all()
+        rejections = connection.execute(rejected, {"suffix": f"%:{dpe_number}"}).mappings().all()
+    if not records and not rejections:
+        return None
+    return {
+        "dpe_number": dpe_number,
+        "stored": [
+            {
+                "release_id": row["release_id"],
+                "data_source_id": row["data_source_id"],
+                "assessment_date": (
+                    row["assessment_date"].isoformat() if row["assessment_date"] else None
+                ),
+                "energy_label": row["energy_label"],
+                "building_id": row["building_id"],
+                "address_id": row["address_id"],
+                "address_label": row["address_label"],
+                "match_method": row["match_method"],
+                "parcels": row["parcels"],
+            }
+            for row in records
+        ],
+        "rejected": [
+            {
+                "release_id": row["release_id"],
+                "data_source_id": row["data_source_id"],
+                "attribute": row["attribute"],
+                "reason_code": row["reason_code"],
+                "reason_detail": row["reason_detail"],
+                "declared": {
+                    key: value
+                    for key, value in cast(dict[str, object], row["evidence"] or {}).items()
+                    if isinstance(value, str) or value is None
+                },
+            }
+            for row in rejections
+        ],
+    }
+
+
 def find_property_unit(property_unit_id: str) -> EntityDetail | None:
     parcel_id = property_unit_id.removeprefix("property-unit:parcel:")
     if not parcel_id.startswith("parcel:cadastre:"):

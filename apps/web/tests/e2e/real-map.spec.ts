@@ -395,3 +395,41 @@ test('un DPE de logement neuf s’affiche et se distingue d’un DPE existant', 
   await expect(page.locator('.assessment-row .chip', { hasText: /^Neuf$/ }).first()).toBeVisible()
   await expect(page.getByText(/de logement neuf, établis? à la réception de la construction/)).toBeVisible()
 })
+
+/**
+ * Un DPE par son numéro — C7. Un diagnostic écarté à l'import se retrouve avec son motif ; un
+ * diagnostic conservé mène à sa parcelle ; un numéro inconnu est dit inconnu, pas en panne.
+ * Numéros sans lien avec le porteur du projet.
+ */
+test('un DPE écarté se retrouve par son numéro, avec son motif et ses identifiants déclarés', async ({ page }) => {
+  await page.goto('/')
+  const search = page.getByRole('textbox', { name: 'Rechercher' })
+  await search.fill('2135n0105211h')
+  await expect(page.getByRole('option', { name: /Diagnostic DPE 2135N0105211H/ })).toBeVisible()
+  await search.press('Enter')
+  await expect(page.getByText('DIAGNOSTIC DPE', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/dpe=2135N0105211H/)
+  await expect(page.getByText('Écarté', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText(/n’a pas de sujet où se poser/)).toBeVisible()
+  await expect(page.getByText('unresolved_source_identifier')).toBeVisible()
+  await expect(page.getByText('35095_0991')).toBeVisible()
+  await expect(page.getByText(/une voie entière, sans numéro/)).toBeVisible()
+  await expect(page.getByText('Non déclaré')).toBeVisible()
+})
+
+test('un DPE conservé mène à sa parcelle', async ({ page }) => {
+  await page.goto('/?dpe=2135E0000072D')
+  await expect(page.getByText('Conservé', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('button', { name: /Section KO · n° 295/ }).click()
+  await expect(page.getByRole('heading', { name: 'Section KO · n° 295' })).toBeVisible({ timeout: 15_000 })
+  await expect(page).not.toHaveURL(/dpe=/)
+})
+
+test('un numéro de DPE inconnu est dit inconnu, et une panne reste une panne', async ({ page }) => {
+  await page.goto('/?dpe=2135N0000000X')
+  await expect(page.getByText('Diagnostic inconnu')).toBeVisible({ timeout: 15_000 })
+  await page.route('**/api/v1/energy-assessments/*', (route) => route.fulfill({ status: 500, json: { detail: 'panne' } }))
+  await page.reload()
+  await expect(page.getByText(/Recherche indisponible : le service local n’a pas répondu/)).toBeVisible()
+  await expect(page.getByText('Diagnostic inconnu')).toHaveCount(0)
+})

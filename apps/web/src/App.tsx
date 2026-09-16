@@ -18,8 +18,10 @@ import RealMap, { PARCELS_MIN_ZOOM, type MapView, type RealMapHandle } from './R
 import { ReviewPanel } from './review/ReviewPanel'
 import { Search } from './Search'
 import { AddressSheet } from './sheets/AddressSheet'
+import { DpeSheet } from './sheets/DpeSheet'
 import { EntitySheet } from './sheets/EntitySheet'
 import { State } from './ui'
+import { asDpeNumber } from './format'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 /**
@@ -89,6 +91,7 @@ function App() {
   })
   const [selection, setSelection] = useState<Selection | null>(() => initialSelection(params))
   const [addressId, setAddressId] = useState<string | null>(() => initialAddressId(params))
+  const [dpeNumber, setDpeNumber] = useState<string | null>(() => asDpeNumber(params.get('dpe') ?? ''))
   const [query, setQuery] = useState(params.get('q') ?? '')
   const [orthophoto, setOrthophoto] = useState(params.get('base') === 'ortho')
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -117,15 +120,16 @@ function App() {
     if (orthophoto) next.set('base', 'ortho')
     if (selection) { next.set('type', selection.type); next.set('id', selection.id) }
     if (addressId) next.set('address', addressId)
+    if (dpeNumber) next.set('dpe', dpeNumber)
     window.history.replaceState(null, '', `${window.location.pathname}?${next}`)
-  }, [view, query, orthophoto, selection, addressId])
+  }, [view, query, orthophoto, selection, addressId, dpeNumber])
 
   // La commune observée est celle de ce que l'utilisateur consulte. Sans fiche ouverte, aucune
   // couverture n'est affirmée — annoncer un état sans savoir de quel territoire on parle serait
   // pire que se taire. Pendant le chargement d'une fiche, la commune précédente est gardée : la
   // pastille la nomme, et elle ne clignote plus d'une parcelle à sa voisine (C6).
   const loadedCommune = address.record?.address.commune_code ?? entity.record?.commune_code ?? null
-  const hasSheet = Boolean(selection || addressId)
+  const hasSheet = Boolean(selection || addressId || dpeNumber)
   const [observedCommune, setObservedCommune] = useState<string | null>(null)
   useEffect(() => {
     if (!hasSheet) setObservedCommune(null)
@@ -142,13 +146,15 @@ function App() {
 
   const handleViewport = useCallback((next: MapView) => setView(next), [])
 
-  const openEntity = useCallback((type: EntityType, id: string) => { setAddressId(null); setSelection({ type, id }) }, [])
-  const closeSheet = () => { setSelection(null); setAddressId(null) }
+  const openEntity = useCallback((type: EntityType, id: string) => { setAddressId(null); setDpeNumber(null); setSelection({ type, id }) }, [])
+  const openDpe = useCallback((number: string) => { setSelection(null); setAddressId(null); setDpeNumber(number) }, [])
+  const closeSheet = () => { setSelection(null); setAddressId(null); setDpeNumber(null) }
 
   const choose = useCallback((result: SearchResult) => {
     // Une adresse sans position ne recentre pas la carte : la recentrer sur un point arbitraire
     // ferait passer une absence pour une localisation.
     if (result.bbox) mapRef.current?.fitBounds(result.bbox)
+    setDpeNumber(null)
     if (result.entity_type === 'address') { setSelection(null); setAddressId(result.id) }
     else if (result.entity_type === 'parcel') openEntity('parcel', result.id)
     else { setSelection(null); setAddressId(null) }
@@ -172,7 +178,7 @@ function App() {
       <main className="workspace">
         <header className="topbar">
           <div className="title-block"><h1>Vérification des données</h1><span>Ille-et-Vilaine · base locale</span></div>
-          <Search initialQuery={query} onQueryChange={setQuery} onChoose={choose} />
+          <Search initialQuery={query} onQueryChange={setQuery} onChoose={choose} onChooseDpe={openDpe} />
           {coverage && <CoverageBadge coverage={coverage} />}
           <div className="map-mode" role="group" aria-label="Fond cartographique">
             <button aria-pressed={!orthophoto} className={!orthophoto ? 'active' : ''} onClick={() => setOrthophoto(false)}>Plan</button>
@@ -196,6 +202,7 @@ function App() {
             {address.record && <AddressSheet context={address.record} onClose={closeSheet} onRelated={openEntity} />}
             {selection && entity.loading && <State icon={<LoaderCircle className="spin" />} title="Chargement de la fiche" text="Récupération du détail exact par l’API." />}
             {selection && !entity.loading && !entity.record && <State icon={<TriangleAlert />} title="Fiche indisponible" text="L’entité est absente de la release active ou le service est indisponible." action={<button onClick={closeSheet}>Fermer</button>} />}
+            {dpeNumber && <DpeSheet key={dpeNumber} dpeNumber={dpeNumber} onClose={closeSheet} onRelated={openEntity} />}
             {entity.record && <EntitySheet key={entity.record.id} detail={entity.record} onClose={closeSheet} onRelated={openEntity} />}
           </aside>
         </section>

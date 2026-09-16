@@ -203,3 +203,41 @@ def test_parcel_energy_assessments_name_their_source(monkeypatch: Any) -> None:
 
     assert response.status_code == 200
     assert [row["data_source_id"] for row in response.json()] == ["DS-07", "DS-13"]
+
+
+def test_energy_assessment_lookup_shows_a_rejected_dpe_with_its_reason(monkeypatch: Any) -> None:
+    """Un DPE écarté à l'import se retrouve par son numéro, avec son motif — C7."""
+    monkeypatch.setattr(
+        "immo.api.routes.explorer.find_energy_assessment",
+        lambda number: {
+            "dpe_number": number,
+            "stored": [],
+            "rejected": [
+                {
+                    "release_id": "DS-13@2026-09-16-extract",
+                    "data_source_id": "DS-13",
+                    "attribute": "target",
+                    "reason_code": "unresolved_source_identifier",
+                    "reason_detail": "aucun identifiant déclaré ne se résout dans le référentiel",
+                    "declared": {"id_rnb": None, "identifiant_ban": "35095_0001"},
+                }
+            ],
+        },
+    )
+
+    response = TestClient(app).get("/api/v1/energy-assessments/2135N0105211H")
+
+    assert response.status_code == 200
+    rejected = response.json()["rejected"][0]
+    assert rejected["reason_code"] == "unresolved_source_identifier"
+    # Un identifiant absent reste absent, il ne devient pas une chaîne vide.
+    assert rejected["declared"]["id_rnb"] is None
+
+
+def test_energy_assessment_lookup_says_unknown(monkeypatch: Any) -> None:
+    monkeypatch.setattr("immo.api.routes.explorer.find_energy_assessment", lambda _: None)
+    assert TestClient(app).get("/api/v1/energy-assessments/2135N0000000X").status_code == 404
+
+
+def test_energy_assessment_lookup_rejects_a_malformed_number() -> None:
+    assert TestClient(app).get("/api/v1/energy-assessments/abc").status_code == 422

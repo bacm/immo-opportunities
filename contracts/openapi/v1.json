@@ -132,6 +132,24 @@
         "title": "AreaResponse",
         "type": "object"
       },
+      "AssessmentParcelResponse": {
+        "properties": {
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "relation_status": {
+            "title": "Relation Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "relation_status"
+        ],
+        "title": "AssessmentParcelResponse",
+        "type": "object"
+      },
       "BlindCaseResponse": {
         "description": "Un cas à juger, **sans** la décision du moteur.\n\nAucun champ de ce modèle ne porte la décision, la confiance ou la justification. Les\nexposer ferait mesurer à la revue l'accord avec le moteur au lieu de l'exactitude, ce que\nle protocole de B4 interdit explicitement.",
         "properties": {
@@ -719,6 +737,36 @@
           "postgis_version"
         ],
         "title": "DatabaseMetadata",
+        "type": "object"
+      },
+      "EnergyAssessmentLookupResponse": {
+        "description": "Un DPE par son numéro — C7. `stored` et `rejected` peuvent coexister : un diagnostic\nconservé peut avoir un attribut écarté, comme une confiance absente avec son motif.",
+        "properties": {
+          "dpe_number": {
+            "title": "Dpe Number",
+            "type": "string"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedAssessmentResponse"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "stored": {
+            "items": {
+              "$ref": "#/components/schemas/StoredAssessmentResponse"
+            },
+            "title": "Stored",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dpe_number",
+          "stored",
+          "rejected"
+        ],
+        "title": "EnergyAssessmentLookupResponse",
         "type": "object"
       },
       "EntityDetailResponse": {
@@ -1842,6 +1890,58 @@
         "title": "PublicationRequest",
         "type": "object"
       },
+      "RejectedAssessmentResponse": {
+        "properties": {
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "data_source_id": {
+            "enum": [
+              "DS-07",
+              "DS-13"
+            ],
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "declared": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Declared",
+            "type": "object"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_detail": {
+            "title": "Reason Detail",
+            "type": "string"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "release_id",
+          "data_source_id",
+          "attribute",
+          "reason_code",
+          "reason_detail",
+          "declared"
+        ],
+        "title": "RejectedAssessmentResponse",
+        "type": "object"
+      },
       "RelatedParcelResponse": {
         "properties": {
           "area_m2": {
@@ -2908,6 +3008,108 @@
         "title": "StatusRequest",
         "type": "object"
       },
+      "StoredAssessmentResponse": {
+        "properties": {
+          "address_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "assessment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Date"
+          },
+          "building_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Id"
+          },
+          "data_source_id": {
+            "enum": [
+              "DS-07",
+              "DS-13"
+            ],
+            "title": "Data Source Id",
+            "type": "string"
+          },
+          "energy_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Label"
+          },
+          "match_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Method"
+          },
+          "parcels": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentParcelResponse"
+            },
+            "title": "Parcels",
+            "type": "array"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "release_id",
+          "data_source_id",
+          "assessment_date",
+          "energy_label",
+          "building_id",
+          "address_id",
+          "address_label",
+          "match_method",
+          "parcels"
+        ],
+        "title": "StoredAssessmentResponse",
+        "type": "object"
+      },
       "StratumResultResponse": {
         "properties": {
           "abandoned": {
@@ -3675,6 +3877,50 @@
         "summary": "Cadastral Parcel",
         "tags": [
           "cadastre"
+        ]
+      }
+    },
+    "/api/v1/energy-assessments/{dpe_number}": {
+      "get": {
+        "description": "Vérification C7 : ce que la base sait d'un numéro de DPE, écarts compris.",
+        "operationId": "energy_assessment_api_v1_energy_assessments__dpe_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dpe_number",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9A-Z]{13}$",
+              "title": "Dpe Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnergyAssessmentLookupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Energy Assessment",
+        "tags": [
+          "real-map"
         ]
       }
     },

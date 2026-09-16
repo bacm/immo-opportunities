@@ -16,6 +16,7 @@ export type StratumResult = components['schemas']['StratumResultResponse']
 export type CaseContext = components['schemas']['CaseContextResponse']
 export type ParcelTransaction = components['schemas']['ParcelTransactionResponse']
 export type ParcelEnergyAssessment = components['schemas']['ParcelEnergyAssessmentResponse']
+export type EnergyAssessmentLookup = components['schemas']['EnergyAssessmentLookupResponse']
 
 export type SearchResult = Omit<GeneratedSearchResult, 'center' | 'bbox'> & {
   center: Center
@@ -36,6 +37,13 @@ export type EntityDetail = Omit<GeneratedEntityDetail, 'area_m2' | 'center' | 'b
 
 type ErrorPayload = { detail?: string; error?: { message?: string } }
 
+/** Une réponse en erreur garde son statut : un 404 (inconnu) n'est pas une panne. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+  }
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -55,7 +63,7 @@ async function request<T>(
     } catch {
       // Preserve the HTTP fallback message when the proxy returns a non-JSON error.
     }
-    throw new Error(message)
+    throw new ApiError(message, response.status)
   }
   return response.json() as Promise<T>
 }
@@ -132,4 +140,14 @@ export function loadParcelEnergyAssessments(parcelId: string, signal?: AbortSign
 
 export function loadSession(signal?: AbortSignal) {
   return request<Session>('/api/v1/session', { signal })
+}
+
+/** `null` quand la base ne connaît pas ce numéro, ni conservé ni écarté. */
+export async function loadEnergyAssessment(dpeNumber: string, signal?: AbortSignal) {
+  try {
+    return await request<EnergyAssessmentLookup>(`/api/v1/energy-assessments/${encodeURIComponent(dpeNumber)}`, { signal })
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
 }

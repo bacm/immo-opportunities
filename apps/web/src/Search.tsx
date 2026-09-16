@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { LoaderCircle, Map as MapIcon, MapPin, Search as SearchIcon, X } from 'lucide-react'
+import { Gauge, LoaderCircle, Map as MapIcon, MapPin, Search as SearchIcon, X } from 'lucide-react'
 import { searchEntities, type SearchResult } from './api'
+import { asDpeNumber } from './format'
+
+type Option = { kind: 'dpe'; number: string } | { kind: 'entity'; result: SearchResult }
 
 /**
- * Recherche d'adresse ou de parcelle, au clavier comme à la souris. Plusieurs résultats
- * plausibles donnent une liste, jamais une sélection implicite du premier.
+ * Recherche d'adresse, de parcelle ou de numéro de DPE, au clavier comme à la souris. Plusieurs
+ * résultats plausibles donnent une liste, jamais une sélection implicite du premier.
  */
-export function Search({ initialQuery, onQueryChange, onChoose }: {
+
+export function Search({ initialQuery, onQueryChange, onChoose, onChooseDpe }: {
   initialQuery: string
   onQueryChange: (query: string) => void
   onChoose: (result: SearchResult) => void
+  onChooseDpe: (dpeNumber: string) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState(initialQuery)
@@ -19,6 +24,12 @@ export function Search({ initialQuery, onQueryChange, onChoose }: {
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const searching = query.trim().length >= 3
+  // Un numéro de DPE ne se cherche pas dans le référentiel : il ouvre directement sa fiche (C7).
+  const dpeNumber = asDpeNumber(query)
+  const options: Option[] = [
+    ...(dpeNumber ? [{ kind: 'dpe', number: dpeNumber } as const] : []),
+    ...results.map((result) => ({ kind: 'entity', result }) as const),
+  ]
 
   useEffect(() => onQueryChange(query), [query, onQueryChange])
 
@@ -56,17 +67,22 @@ export function Search({ initialQuery, onQueryChange, onChoose }: {
     return () => { window.clearTimeout(timeout); controller.abort() }
   }, [query])
 
-  const choose = (result: SearchResult) => {
-    setQuery(result.label)
+  const choose = (option: Option) => {
     setOpen(false)
-    onChoose(result)
+    if (option.kind === 'dpe') {
+      setQuery(option.number)
+      onChooseDpe(option.number)
+      return
+    }
+    setQuery(option.result.label)
+    onChoose(option.result)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!open && event.key === 'ArrowDown' && results.length) setOpen(true)
-    else if (event.key === 'ArrowDown') setActive((index) => Math.min(index + 1, results.length - 1))
+    if (!open && event.key === 'ArrowDown' && options.length) setOpen(true)
+    else if (event.key === 'ArrowDown') setActive((index) => Math.min(index + 1, options.length - 1))
     else if (event.key === 'ArrowUp') setActive((index) => Math.max(index - 1, 0))
-    else if (event.key === 'Enter' && results[active]) choose(results[active])
+    else if (event.key === 'Enter' && options[active]) choose(options[active])
     else if (event.key === 'Escape') setOpen(false)
     else return
     event.preventDefault()
@@ -82,10 +98,10 @@ export function Search({ initialQuery, onQueryChange, onChoose }: {
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
         onKeyDown={onKeyDown}
-        placeholder="Adresse ou parcelle (ex. 35238000BE0253)"
+        placeholder="Adresse, parcelle ou numéro de DPE"
         aria-label="Rechercher"
         aria-autocomplete="list"
-        aria-activedescendant={open && results.length ? `search-${active}` : undefined}
+        aria-activedescendant={open && options.length ? `search-${active}` : undefined}
       />
       {loading
         ? <LoaderCircle className="spin" size={16} aria-label="Recherche en cours" />
@@ -94,21 +110,28 @@ export function Search({ initialQuery, onQueryChange, onChoose }: {
           : <kbd>⌘ K</kbd>}
     </div>
     {open && searching && <div className="search-results" id="global-search-results" role="listbox">
-      {results.map((result, index) => <button
+      {options.map((option, index) => <button
         id={`search-${index}`}
         role="option"
         aria-selected={index === active}
         className={index === active ? 'active' : ''}
-        key={`${result.entity_type}:${result.id}`}
+        key={option.kind === 'dpe' ? `dpe:${option.number}` : `${option.result.entity_type}:${option.result.id}`}
         onMouseEnter={() => setActive(index)}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => choose(result)}
+        onClick={() => choose(option)}
       >
-        <span className="result-icon">{result.entity_type === 'parcel' ? <MapIcon size={15} /> : <MapPin size={15} />}</span>
-        <span><strong>{result.label}</strong><small>{result.secondary_label}</small></span>
+        {option.kind === 'dpe'
+          ? <>
+              <span className="result-icon"><Gauge size={15} /></span>
+              <span><strong>Diagnostic DPE {option.number}</strong><small>Conservé ou écarté à l’import, avec son motif</small></span>
+            </>
+          : <>
+              <span className="result-icon">{option.result.entity_type === 'parcel' ? <MapIcon size={15} /> : <MapPin size={15} />}</span>
+              <span><strong>{option.result.label}</strong><small>{option.result.secondary_label}</small></span>
+            </>}
       </button>)}
       {!loading && failed && <p className="inline-error">Recherche indisponible : le service local ne répond pas.</p>}
-      {!loading && !failed && results.length === 0 && <p>Aucune adresse ni parcelle du 35 ne correspond.</p>}
+      {!loading && !failed && options.length === 0 && <p>Aucune adresse, parcelle ni numéro de DPE du 35 ne correspond.</p>}
     </div>}
   </div>
 }

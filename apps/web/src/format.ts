@@ -90,3 +90,20 @@ export const METHOD_LABELS: Record<string, string> = {
   spatial_containment: 'contenance géométrique',
   spatial_overlap: 'recouvrement géométrique',
 }
+
+/** Un numéro de DPE : 13 caractères, chiffres et lettres capitales (ex. 2135E0000072D). */
+export function asDpeNumber(query: string) {
+  const candidate = query.trim().toUpperCase()
+  return /^\d{4}[A-Z]\d{7}[A-Z]$/.test(candidate) ? candidate : null
+}
+
+export const QUARANTINE_REASONS: Record<string, string> = {
+  unresolved_source_identifier: 'Ni l’identifiant de bâtiment (RNB) ni l’identifiant d’adresse (BAN) déclarés par la source ne correspondent à un objet du référentiel : le diagnostic n’a pas de sujet où se poser.',
+  contradictory_geocoding_status: 'La source déclare l’adresse non géocodée tout en fournissant un identifiant qui se résout : l’adresse est gardée, la confiance est retirée.',
+  unknown_assessment_model: 'Le modèle de diagnostic déclaré n’est pas dans la liste fermée des modèles admis pour cette source.',
+  not_deposited: 'Le diagnostic n’a pas de date de réception : il n’est pas déposé.',
+  after_snapshot: 'Le diagnostic est postérieur à la date de l’extrait.',
+  assessment_date_missing: 'La date d’établissement est illisible.',
+  commune_missing: 'La commune n’est pas déclarée.',
+  identifier_missing: 'Le numéro du diagnostic est absent.',
+}

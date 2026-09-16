@@ -174,6 +174,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/energy-assessments/{dpe_number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Energy Assessment
+         * @description Vérification C7 : ce que la base sait d'un numéro de DPE, écarts compris.
+         */
+        get: operations["energy_assessment_api_v1_energy_assessments__dpe_number__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/market-data/coverage": {
         parameters: {
             query?: never;
@@ -793,6 +813,13 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** AssessmentParcelResponse */
+        AssessmentParcelResponse: {
+            /** Parcel Id */
+            parcel_id: string;
+            /** Relation Status */
+            relation_status: string;
+        };
         /**
          * BlindCaseResponse
          * @description Un cas à juger, **sans** la décision du moteur.
@@ -951,6 +978,19 @@ export interface components {
             postgres_version: string;
             /** Status */
             status: string;
+        };
+        /**
+         * EnergyAssessmentLookupResponse
+         * @description Un DPE par son numéro — C7. `stored` et `rejected` peuvent coexister : un diagnostic
+         *     conservé peut avoir un attribut écarté, comme une confiance absente avec son motif.
+         */
+        EnergyAssessmentLookupResponse: {
+            /** Dpe Number */
+            dpe_number: string;
+            /** Rejected */
+            rejected: components["schemas"]["RejectedAssessmentResponse"][];
+            /** Stored */
+            stored: components["schemas"]["StoredAssessmentResponse"][];
         };
         /** EntityDetailResponse */
         EntityDetailResponse: {
@@ -1329,6 +1369,26 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** RejectedAssessmentResponse */
+        RejectedAssessmentResponse: {
+            /** Attribute */
+            attribute: string;
+            /**
+             * Data Source Id
+             * @enum {string}
+             */
+            data_source_id: "DS-07" | "DS-13";
+            /** Declared */
+            declared: {
+                [key: string]: string | null;
+            };
+            /** Reason Code */
+            reason_code: string;
+            /** Reason Detail */
+            reason_detail: string;
+            /** Release Id */
+            release_id: string;
+        };
         /** RelatedParcelResponse */
         RelatedParcelResponse: {
             /** Area M2 */
@@ -1663,6 +1723,30 @@ export interface components {
              * @enum {string}
              */
             status: "new" | "to_analyze" | "retained" | "contact_to_prepare" | "contacted" | "visit" | "offer" | "acquired" | "lost" | "rejected" | "ignored";
+        };
+        /** StoredAssessmentResponse */
+        StoredAssessmentResponse: {
+            /** Address Id */
+            address_id: string | null;
+            /** Address Label */
+            address_label: string | null;
+            /** Assessment Date */
+            assessment_date: string | null;
+            /** Building Id */
+            building_id: string | null;
+            /**
+             * Data Source Id
+             * @enum {string}
+             */
+            data_source_id: "DS-07" | "DS-13";
+            /** Energy Label */
+            energy_label: string | null;
+            /** Match Method */
+            match_method: string | null;
+            /** Parcels */
+            parcels: components["schemas"]["AssessmentParcelResponse"][];
+            /** Release Id */
+            release_id: string;
         };
         /** StratumResultResponse */
         StratumResultResponse: {
@@ -2081,6 +2165,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CadastralParcelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    energy_assessment_api_v1_energy_assessments__dpe_number__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dpe_number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnergyAssessmentLookupResponse"];
                 };
             };
             /** @description Validation Error */
