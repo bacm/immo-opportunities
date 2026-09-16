@@ -210,9 +210,9 @@ dérivée du graphe de dépendances.
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
-| [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
+| [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**62/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, G6, G7.
+**63/91 terminés.** Prêts à démarrer : A6, BUG-02, BUG-13, G6, G7.
 
 ### Verrous humains
 
@@ -222,7 +222,6 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 - **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
 - **H3** — revue humaine · preuve attendue : `docs/data/entretiens-professionnels-35.md`
 - **H4** — décision humaine · preuve attendue : `docs/decisions/avis-juridique-donnees-2026.md`
-- **H8** — décision humaine · preuve attendue : `docs/decisions/ADR-017-carte-communale-barometre.md`
 
 ### Lots menables de front
 

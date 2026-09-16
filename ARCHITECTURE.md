@@ -695,6 +695,7 @@ silence.
 | ADR-014 | SOPS + `age` pour les secrets versionnés | Acceptée | — |
 | ADR-015 | Boucle de développement : contrôle déterministe, recompte adversarial, verrou humain déclaré | Acceptée | [note](docs/decisions/ADR-015-boucle-autonome.md) |
 | ADR-016 | Le produit devient une intelligence de marché (V5), puis un radar de mise en vente (V2) ; la plateforme est gelée | Acceptée ; gel levé par ADR-019 | [note](docs/decisions/ADR-016-intelligence-de-marche-puis-radar.md) |
+| ADR-017 | Pas de carte dans le baromètre avant le verdict de H3 | Acceptée | [note](docs/decisions/ADR-017-carte-communale-barometre.md) |
 | ADR-018 | Dégel restreint de l'Explorer, réduit à l'outil local de vérification des données | Remplacée par ADR-019 | [note](docs/decisions/ADR-018-degel-restreint-explorer.md) |
 | ADR-019 | Le gel de la plateforme est levé ; déploiement, publication de score et fiches DVF restent bornés | Acceptée | [note](docs/decisions/ADR-019-lever-le-gel-de-la-plateforme.md) |
 | ADR-020 | L'unité analysée reste la parcelle, sans regroupement, en attendant E1 | Acceptée | [note](docs/decisions/ADR-020-unite-analysee-parcelle.md) |

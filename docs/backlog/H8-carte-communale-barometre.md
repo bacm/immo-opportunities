@@ -1,6 +1,6 @@
 # H8 — Décider si le baromètre porte une carte par commune
 
-**Version :** V5 · baromètre · **Taille :** S · **État :** À faire
+**Version :** V5 · baromètre · **Taille :** S · **État :** Terminé
 **Nature :** décision humaine · **Preuve :** docs/decisions/ADR-017-carte-communale-barometre.md
 **Dépend de :** H2 · **Bloque :** —
 **Demandé par :** conversation du 16 septembre 2026 — « heat maps de DPE, prix m², etc. »
@@ -65,3 +65,9 @@ sur ce seul point, et sur la maille (§18.4).
 
 Aucun code, aucun amendement de `SPEC.md`. Si la décision est positive, un ticket d'implémentation
 s'ouvre, qui amende §7.4 et §7.5, et §13.4 le cas échéant, avant la première ligne.
+
+## Décision — 17 septembre 2026
+
+[ADR-017](../decisions/ADR-017-carte-communale-barometre.md) : pas de carte dans le baromètre avant
+le verdict de H3, qui doit observer si les professionnels en demandent une sans qu'on la leur
+suggère. Décision prise par l'agent sur délégation du porteur, révisable par lui.
