@@ -118,6 +118,24 @@ Trois réserves de forme et un chiffre hérité, traités à leur tour :
 | R3 — BAR-004 publie une étiquette à effectif nul, BAR-001/002 omet une cellule vide | Les deux traitements sont délibérés et désormais expliqués : l'absence d'une étiquette est une information, une cellule année × type sans vente n'existe pas |
 | Le **0,6 %** de `SPEC.md` §7.3, hérité de `pistes-analyse-marche-35.md` §1.4, ne se reproduit sous aucun filtre | Mesuré ici : 277 parcelles, 1 mutation, **0,4 %**. Même ordre de grandeur, pas le même chiffre. L'exclusion garde sa justification ; le chiffre à citer est celui-ci. **`SPEC.md` porte un chiffre non reproductible — à corriger par [H6](./H6-reecrire-spec.md)** |
 
+## Après la clôture — BR-007 honoré
+
+`SPEC.md` §9.1 exige, par BR-007, une « mention datée en tête du rapport » attestant le passage de
+`recompte-preuve`. Le rapport clos ne la portait pas. Elle y est, et elle ne peut pas mentir : le
+script calcule une **empreinte SHA-256 des huit CSV de mesures**, et la mention « Recompté le … »
+n'apparaît que si `barometre-marche-35/recompte.csv` porte une attestation de cette empreinte
+exacte. Qu'une mesure change, l'empreinte change, l'attestation cesse de s'appliquer, et le
+rapport écrit « Non recompté » de lui-même. Une attestation mal formée arrête la génération.
+
+La troisième passe du recompte, ciblée sur ce qui avait bougé après la deuxième — le 0,4 % des
+DPE d'immeuble, les deux fenêtres de BAR-008, la table des releases — n'a trouvé aucune
+divergence. L'attestation du 16 septembre porte l'empreinte `d08dba5d179c319e`.
+
+Deux ajouts servent H2 : `metadonnees.csv` porte les millésimes, les dates, les supports et
+l'état du recompte, pour que chaque page du document les imprime sans relire la base ; la table
+« Ce qui a été lu » ne liste plus que les releases réellement importées, ce qui en retire
+`DS-02@2026-08-01`, découverte mais jamais chargée.
+
 ## Critères d'acceptation
 
 - `make market-barometer` régénère le rapport à l'identique sur la même base (graine et filtres

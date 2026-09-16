@@ -1,0 +1,24 @@
+key,value
+department,35
+generated_on,2026-09-16
+last_mutation,2025-12-31
+first_deposit,2021-07-01
+last_deposit,2026-09-07
+cohort_year,2024
+sales_first_year,2014
+sales_last_year,2025
+label_from_year,2022
+release_ds01,2026-06-01
+release_ds02,2026-09-05
+release_ds03,2026-02-a
+release_ds06,2019-04-archive + 2026-09-13
+release_ds07,2026-09-14-extract
+support_sales_per_cell,15
+support_repeat_pairs,30
+support_label_sales,30
+support_dpe_cohort_parcels,200
+repeat_max_days,1095
+curve_month_days,30
+fingerprint,d08dba5d179c319ecdd29cf44793cde64416b17d7c6668c85a856bbad0b42176
+recounted_on,2026-09-16
+recount_note,"trois passes en isolement du code, dont une complète de 44 chiffres, aucune divergence de valeur"

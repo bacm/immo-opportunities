@@ -35,6 +35,8 @@ rapport le dit plutôt que de le supposer.
 
 import argparse
 import bisect
+import csv
+import hashlib
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
@@ -904,6 +906,9 @@ RELEASES_SQL = """
 SELECT data_source_id, id, release_key, lifecycle_status, acceptance_status
   FROM meta.dataset_release
  WHERE data_source_id IN ('DS-01', 'DS-02', 'DS-03', 'DS-06', 'DS-07')
+   -- « Ce qui a été lu » : une release découverte mais jamais importée n'a rien fourni.
+   AND EXISTS (
+     SELECT 1 FROM meta.import_run run WHERE run.release_id = dataset_release.id)
  ORDER BY data_source_id, release_key
 """
 
@@ -1015,6 +1020,14 @@ def render(context: dict[str, Any]) -> str:
         f"**Généré le :** {context['generated_on']} · **Mesures :** BAR-001 à BAR-009 de "
         "[`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** "
         "[H1](../backlog/H1-barometre-marche-35-mesures.md)"
+    )
+    add("")
+    add(recount_mention(context["attestation"]))
+    add("")
+    add(
+        f"Empreinte des mesures : `{context['fingerprint'][:16]}` — une attestation de recompte ne "
+        f"vaut que pour cette empreinte, consignée dans `barometre-marche-{department}/"
+        f"{ATTESTATION_FILE}`."
     )
     add("")
     add(
@@ -1487,7 +1500,8 @@ def render(context: dict[str, Any]) -> str:
         "depuis un DPE d'immeuble par un taux de conversion de 0,6 %, sans filtre écrit. Sous les "
         f"filtres de ce rapport, ces premiers DPE des cohortes {context['cohort_years'][0]} à "
         f"{context['cohort_years'][-1]} sont {french(context['excluded_cohort_size'])}, dont "
-        f"{french(context['excluded_cohort_sold'])} ont muté dans les douze mois, soit "
+        f"{french(context['excluded_cohort_sold'])} "
+        f"{'a' if context['excluded_cohort_sold'] <= 1 else 'ont'} muté dans les douze mois, soit "
         f"**{french(context['excluded_cohort_rate'], 1)} %**. Même ordre de grandeur, pas le même "
         "chiffre, et le filtre d'origine reste inconnu. L'exclusion garde sa justification — ce "
         "taux est sans commune mesure avec celui de la cohorte — mais c'est ce chiffre-ci, avec "
@@ -1761,6 +1775,98 @@ CSV_TABLES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 )
 
 
+ATTESTATION_FILE = "recompte.csv"
+ATTESTATION_COLUMNS = ("recounted_on", "fingerprint", "note")
+METADATA_FILE = "metadonnees.csv"
+
+
+def fingerprint_files(paths: Sequence[Path]) -> str:
+    """L'empreinte des mesures publiées, dans un ordre fixe.
+
+    Une attestation de recompte porte cette empreinte : si une mesure change, l'attestation ne
+    s'applique plus, et la mention « recompté » disparaît d'elle-même au lieu de mentir.
+    """
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.name.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def read_attestations(path: Path) -> list[dict[str, str]]:
+    """Les attestations écrites après un recompte. Une ligne incomplète arrête tout.
+
+    Une attestation est ce qui autorise la mention « recompté » : mal formée, elle ne doit ni
+    passer en silence ni être ignorée, sinon la mention dépendrait d'un accident de saisie.
+    """
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for number, row in enumerate(rows, start=2):
+        if any(row.get(column) is None for column in ATTESTATION_COLUMNS) or None in row:
+            raise SystemExit(f"{path}, ligne {number} : attestation mal formée — {row}")
+    return rows
+
+
+def find_attestation(rows: Sequence[dict[str, str]], fingerprint: str) -> dict[str, str] | None:
+    """La dernière attestation écrite pour exactement ces mesures, ou rien."""
+    matching = [row for row in rows if row.get("fingerprint") == fingerprint]
+    return matching[-1] if matching else None
+
+
+def recount_mention(attestation: dict[str, str] | None) -> str:
+    """BR-007 : la mention datée en tête du rapport, ou l'avertissement qui la remplace."""
+    if attestation is None:
+        return (
+            "**Non recompté.** Aucune attestation de `recompte-preuve` ne porte l'empreinte de ces "
+            "mesures : ce rapport ne se publie pas en l'état (BR-007)."
+        )
+    note = attestation.get("note", "").strip()
+    return f"**Recompté le {attestation['recounted_on']}** par `recompte-preuve`" + (
+        f" — {note}." if note else "."
+    )
+
+
+def metadata_rows(context: dict[str, Any]) -> list[dict[str, Any]]:
+    """Ce que H2 doit imprimer sur chaque page : millésimes, dates, supports, recompte."""
+    parameters: Parameters = context["parameters"]
+    attestation = context["attestation"]
+    releases = context["releases"]
+
+    def release_keys(source: str) -> str:
+        return " + ".join(row["release_key"] for row in releases if row["data_source_id"] == source)
+
+    values = {
+        "department": context["department"],
+        "generated_on": context["generated_on"],
+        "last_mutation": context["last_mutation"],
+        "first_deposit": context["first_deposit"],
+        "last_deposit": context["last_deposit"],
+        "cohort_year": context["cohort_year"],
+        "sales_first_year": min(row["year"] for row in context["volumes"]),
+        "sales_last_year": max(row["year"] for row in context["volumes"]),
+        "label_from_year": parameters.label_from_year,
+        "release_ds01": release_keys("DS-01"),
+        "release_ds02": release_keys("DS-02"),
+        "release_ds03": release_keys("DS-03"),
+        "release_ds06": release_keys("DS-06"),
+        "release_ds07": release_keys("DS-07"),
+        "support_sales_per_cell": parameters.sales_per_cell,
+        "support_repeat_pairs": parameters.repeat_pairs,
+        "support_label_sales": parameters.label_sales,
+        "support_dpe_cohort_parcels": parameters.dpe_cohort_parcels,
+        "repeat_max_days": parameters.repeat_max_days,
+        "curve_month_days": parameters.curve_month_days,
+        "fingerprint": context["fingerprint"],
+        "recounted_on": attestation["recounted_on"] if attestation else "",
+        "recount_note": attestation.get("note", "") if attestation else "non recompté",
+    }
+    return [{"key": key, "value": value} for key, value in values.items()]
+
+
 def write_outputs(context: dict[str, Any], root: Path) -> Path:
     department = context["department"]
     directory = root / f"barometre-marche-{department}"
@@ -1781,6 +1887,13 @@ def write_outputs(context: dict[str, Any], root: Path) -> Path:
         ],
         ["epci_code", "commune_code", "commune_name"],
     )
+    context["fingerprint"] = fingerprint_files(
+        [directory / filename for _, filename, _ in CSV_TABLES]
+    )
+    context["attestation"] = find_attestation(
+        read_attestations(directory / ATTESTATION_FILE), context["fingerprint"]
+    )
+    write_csv(directory / METADATA_FILE, metadata_rows(context), ["key", "value"])
     report = root / f"barometre-marche-{department}.md"
     report.write_text(render(context), encoding="utf-8")
     return report

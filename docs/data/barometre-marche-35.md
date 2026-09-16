@@ -2,6 +2,10 @@
 
 **Généré le :** 2026-09-16 · **Mesures :** BAR-001 à BAR-009 de [`SPEC.md`](../../SPEC.md) §13.4 · **Ticket :** [H1](../backlog/H1-barometre-marche-35-mesures.md)
 
+**Recompté le 2026-09-16** par `recompte-preuve` — trois passes en isolement du code, dont une complète de 44 chiffres, aucune divergence de valeur.
+
+Empreinte des mesures : `d08dba5d179c319e` — une attestation de recompte ne vaut que pour cette empreinte, consignée dans `barometre-marche-35/recompte.csv`.
+
 Toutes les mesures sont agrégées. Aucune parcelle, aucune adresse, aucune mutation individuelle n'apparaît dans ce document ni dans les CSV qui l'accompagnent. Régénérer : `make market-barometer DEPARTMENT=35`.
 
 ## Ce qui a été lu, et dans quel état
@@ -9,7 +13,6 @@ Toutes les mesures sont agrégées. Aucune parcelle, aucune adresse, aucune muta
 | Source | Release | Cycle de vie | Acceptation |
 |---|---|---|---|
 | DS-01 | 2026-06-01 | validated | accepted |
-| DS-02 | 2026-08-01 | discovered | pending |
 | DS-02 | 2026-09-05 | discovered | accepted |
 | DS-03 | 2026-02-a | validated | display_only |
 | DS-06 | 2019-04-archive | discovered | pending |
@@ -192,7 +195,7 @@ Commune par commune : `bar-009-couverture.csv`, 353 communes — contre 332 au r
 - Il ne combine aucune mesure en score : l'étiquette et l'âge d'un DPE restent deux lectures indépendantes.
 - Le rattachement d'un DPE à un bâtiment plafonne à ce que mesure BAR-009 ; les diagnostics rattachés à la seule adresse sont hors de toutes les mesures de cohorte.
 - Le taux de conversion encaisse la dilution vente / location : le motif d'un diagnostic n'est pas publié par l'ADEME.
-- **Le « 0,6 % » hérité ne se reproduit pas.** `SPEC.md` §7.3 et `pistes-analyse-marche-35.md` §1.4 justifient l'exclusion des DPE d'appartement générés depuis un DPE d'immeuble par un taux de conversion de 0,6 %, sans filtre écrit. Sous les filtres de ce rapport, ces premiers DPE des cohortes 2021 à 2024 sont 277, dont 1 ont muté dans les douze mois, soit **0,4 %**. Même ordre de grandeur, pas le même chiffre, et le filtre d'origine reste inconnu. L'exclusion garde sa justification — ce taux est sans commune mesure avec celui de la cohorte — mais c'est ce chiffre-ci, avec son effectif et son filtre, qui doit être cité. La réécriture de `SPEC.md` est le ticket H6.
+- **Le « 0,6 % » hérité ne se reproduit pas.** `SPEC.md` §7.3 et `pistes-analyse-marche-35.md` §1.4 justifient l'exclusion des DPE d'appartement générés depuis un DPE d'immeuble par un taux de conversion de 0,6 %, sans filtre écrit. Sous les filtres de ce rapport, ces premiers DPE des cohortes 2021 à 2024 sont 277, dont 1 a muté dans les douze mois, soit **0,4 %**. Même ordre de grandeur, pas le même chiffre, et le filtre d'origine reste inconnu. L'exclusion garde sa justification — ce taux est sans commune mesure avec celui de la cohorte — mais c'est ce chiffre-ci, avec son effectif et son filtre, qui doit être cité. La réécriture de `SPEC.md` est le ticket H6.
 - Les CSV descendent à des effectifs communaux de quelques parcelles. Ce sont des comptes sans attribut, donc rien de nominatif, mais une commune où la cohorte compte une parcelle n'a plus grand-chose d'agrégé : ces lignes portent toutes « support insuffisant » et aucune valeur, et n'ont pas à être publiées telles quelles par H2.
 
 Sources : DVF DGFiP / Etalab, DPE ADEME, cadastre Etalab, BDNB CSTB. Licence Ouverte 2.0.

@@ -537,6 +537,11 @@ def test_the_releases_table_declares_the_building_identity_dataset() -> None:
     assert "'DS-02'" in MODULE.RELEASES_SQL
 
 
+def test_the_releases_table_lists_only_what_was_imported() -> None:
+    """Une release découverte mais jamais importée n'a rien été lu."""
+    assert "meta.import_run" in MODULE.RELEASES_SQL
+
+
 def test_the_strict_conversion_event_requires_a_dwelling_lot() -> None:
     assert "property_type IN ('Maison', 'Appartement')" in MODULE.DWELLING_SALE_DATES_SQL
     assert "property_type" not in MODULE.SALE_DATES_SQL
@@ -545,3 +550,54 @@ def test_the_strict_conversion_event_requires_a_dwelling_lot() -> None:
 def test_the_sales_sql_states_its_closed_filter() -> None:
     assert "mutation_nature = 'Vente'" in MODULE.SALES_SQL
     assert "allocation_method = 'single_property_full_price'" in MODULE.SALES_SQL
+
+
+# --- BR-007 : la mention de recompte ne peut pas mentir ------------------------------------
+
+
+def test_the_fingerprint_changes_when_a_measure_changes(tmp_path: Path) -> None:
+    first = tmp_path / "a.csv"
+    second = tmp_path / "b.csv"
+    first.write_text("scope_type,sales\ndepartement,10\n", encoding="utf-8")
+    second.write_text("scope_type,pairs\ndepartement,3\n", encoding="utf-8")
+    before = MODULE.fingerprint_files([first, second])
+    assert before == MODULE.fingerprint_files([first, second])
+    first.write_text("scope_type,sales\ndepartement,11\n", encoding="utf-8")
+    assert MODULE.fingerprint_files([first, second]) != before
+
+
+def test_an_attestation_applies_only_to_the_measures_it_recounted() -> None:
+    rows = [
+        {"recounted_on": "2026-09-01", "fingerprint": "ancienne", "note": ""},
+        {"recounted_on": "2026-09-16", "fingerprint": "actuelle", "note": "deux passes"},
+    ]
+    assert MODULE.find_attestation(rows, "actuelle")["recounted_on"] == "2026-09-16"
+    assert MODULE.find_attestation(rows, "autre") is None
+
+
+def test_without_attestation_the_report_says_it_must_not_be_published() -> None:
+    mention = MODULE.recount_mention(None)
+    assert "Non recompté" in mention
+    assert "BR-007" in mention
+    dated = MODULE.recount_mention(
+        {"recounted_on": "2026-09-16", "fingerprint": "x", "note": "deux passes"}
+    )
+    assert dated.startswith("**Recompté le 2026-09-16**")
+    assert "deux passes" in dated
+
+
+def test_a_missing_attestation_file_is_no_attestation(tmp_path: Path) -> None:
+    assert MODULE.read_attestations(tmp_path / "recompte.csv") == []
+
+
+def test_a_malformed_attestation_stops_the_run(tmp_path: Path) -> None:
+    """Une empreinte suivie d'un retour chariot coupe la ligne en deux : la note disparaît et
+    une ligne fantôme apparaît. Cela doit arrêter la génération, pas l'autoriser."""
+    path = tmp_path / "recompte.csv"
+    path.write_bytes(b'recounted_on,fingerprint,note\n2026-09-16,abc\r,"deux passes"\n')
+    try:
+        MODULE.read_attestations(path)
+    except SystemExit as stop:
+        assert "mal formée" in str(stop)
+    else:
+        raise AssertionError("une attestation mal formée a été acceptée")
