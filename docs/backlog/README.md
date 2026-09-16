@@ -194,15 +194,15 @@ dérivée du graphe de dépendances.
 | ID | Titre | Version | Dépend de | Taille | État | Disponibilité |
 |---|---|---|---|---|---|---|
 | [H1](./H1-barometre-marche-35-mesures.md) | Baromètre du marché du 35 : les mesures, reproductibles et recomptées | V5 | A7 | L | Terminé | — |
-| [H2](./H2-barometre-document-publiable.md) | Mettre en forme le baromètre : un document publiable par EPCI, hors plateforme | V5 | H1 | M | À faire | **prêt** |
-| [H3](./H3-entretiens-professionnels-barometre.md) | Présenter le baromètre à cinq professionnels, et recueillir ce qu'ils paieraient | V5 | H2 | M | À faire | attend H2 |
+| [H2](./H2-barometre-document-publiable.md) | Mettre en forme le baromètre : un document publiable par EPCI, hors plateforme | V5 | H1 | M | Terminé | — |
+| [H3](./H3-entretiens-professionnels-barometre.md) | Présenter le baromètre à cinq professionnels, et recueillir ce qu'ils paieraient | V5 | H2 | M | À faire | **verrou humain** |
 | [H4](./H4-avis-juridique-donnees.md) | Obtenir un avis juridique écrit sur l'usage des données, préalable au radar | V2 | A7 | S | À faire | **verrou humain** |
 | [H5](./H5-radar-mise-en-vente.md) | Radar de mise en vente : un flux hebdomadaire des DPE fraîchement déposés, par secteur | V2 | H3, H4 | L | À faire | attend H3, H4 |
 | [H6](./H6-reecrire-spec.md) | Réviser toute la documentation de référence autour d'ADR-016 | transverse | A7 | L | Terminé | — |
-| [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | attend H2 |
-| [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | attend H2 |
+| [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | À faire | **prêt** |
+| [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | À faire | **verrou humain** |
 
-**50/84 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H2.
+**51/84 terminés.** Prêts à démarrer : A6, BUG-02, BUG-08, BUG-11, BUG-13, D7, G6, G7, H7.
 
 ### Verrous humains
 
@@ -210,13 +210,15 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 - **D6** — revue humaine · preuve attendue : `docs/data/market-data-manual-review-35.md`
 - **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
+- **H3** — revue humaine · preuve attendue : `docs/data/entretiens-professionnels-35.md`
 - **H4** — décision humaine · preuve attendue : `docs/decisions/avis-juridique-donnees-2026.md`
+- **H8** — décision humaine · preuve attendue : `docs/decisions/ADR-017-carte-communale-barometre.md`
 
 ### Lots menables de front
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, BUG-02, BUG-08, D7, G6, H2
+1. A6, BUG-02, BUG-08, D7, G6, H7
 2. BUG-11, G7
 3. BUG-13
 

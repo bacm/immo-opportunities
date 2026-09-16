@@ -14,6 +14,18 @@
 
 Ne rien charger d'autre sans nécessité démontrée.
 
+## Ce que H2 met entre les mains
+
+Pour chaque professionnel : `document-departement-35.html` et le `document-epci-<SIREN>.html` de
+son territoire, dans `docs/data/barometre-marche-35/`. Chacun s'imprime depuis Chrome sur **une
+feuille A4 recto-verso** — le recto répond aux quatre questions, le verso porte les effectifs et
+les filtres. Les pages EPCI sont titrées par le SIREN et la liste des communes, en capitales, telles
+que le cadastre les écrit : c'est un choix assumé du 16 septembre, à reprendre si le document est
+gardé. Dix-sept EPCI sur dix-huit n'ont pas de marge publiable ; la page le dit avec l'effectif.
+
+Vérifier avant de distribuer que l'en-tête porte « Chiffres recomptés le … ». S'il porte « Non
+recompté — ne pas diffuser », les mesures ont changé depuis le dernier recompte.
+
 ## Ce que ce ticket décide
 
 Si l'intelligence de marché intéresse quelqu'un, à quel prix, et si le radar de mise en vente (V2)

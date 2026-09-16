@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baromètre du marché — Intercommunalité 200038990</title>
+<style>
+@page{size:A4;margin:11mm 12mm}
+:root{color-scheme:light;
+  --page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6f6e69;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.12);--warn-bg:#fdf1dc;--warn:#7a4b00;
+  --series-1:#2a78d6;--series-2:#eb6834;
+  --ordinal-1:#86b6ef;--ordinal-2:#5598e7;--ordinal-3:#2a78d6;--ordinal-4:#1c5cab;
+  --good:#006300}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+  --page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--muted:#9a9990;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.12);--warn-bg:#3a2a0c;--warn:#fab219;
+  --series-1:#3987e5;--series-2:#d95926;
+  --ordinal-1:#184f95;--ordinal-2:#256abf;--ordinal-3:#3987e5;--ordinal-4:#6da7ec;
+  --good:#0ca30c}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--muted:#9a9990;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.12);--warn-bg:#3a2a0c;--warn:#fab219;
+  --series-1:#3987e5;--series-2:#d95926;
+  --ordinal-1:#184f95;--ordinal-2:#256abf;--ordinal-3:#3987e5;--ordinal-4:#6da7ec;
+  --good:#0ca30c}
+*{box-sizing:border-box}
+html{background:var(--page)}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:9pt/1.38 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.sheet{width:210mm;min-height:297mm;margin:12px auto;padding:11mm 12mm;background:var(--surface);
+  box-shadow:0 0 0 1px var(--border);display:flex;flex-direction:column}
+header.masthead{border-bottom:1px solid var(--axis);padding-bottom:2.5mm;margin-bottom:3mm}
+.eyebrow{margin:0;color:var(--ink-2);font-size:8pt;letter-spacing:.06em;text-transform:uppercase}
+h1{margin:1mm 0 1mm;font-size:20pt;line-height:1.1;font-weight:650}
+.scope{margin:0;color:var(--ink-2);font-size:8.5pt}
+.meta{margin:1.5mm 0 0;color:var(--muted);font-size:7.8pt}
+.recount{display:inline-block;margin-top:1.5mm;padding:1px 6px;border-radius:3px;font-size:7.8pt;
+  border:1px solid var(--border)}
+.recount.missing{background:var(--warn-bg);color:var(--warn);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm 7mm;flex:1}
+.rubric{display:flex;flex-direction:column;min-width:0}
+.rubric h2{margin:0 0 1.5mm;font-size:11pt;font-weight:650;display:flex;align-items:center;gap:2mm}
+.num{display:inline-grid;place-items:center;width:5mm;height:5mm;border-radius:50%;
+  background:var(--ink);color:var(--surface);font-size:7.5pt}
+.figure{margin:0;font-size:21pt;font-weight:600;line-height:1.1}
+.muted-figure{color:var(--muted)}
+.delta{margin-left:2.5mm;font-size:8.5pt;font-weight:500;color:var(--ink-2)}
+.caption{margin:.8mm 0 2.5mm;color:var(--ink-2);font-size:8pt}
+.secondary{margin:0 0 2mm;font-size:8.3pt;color:var(--ink-2)}
+.secondary b{color:var(--ink)}
+.rubric h3{margin:1mm 0 1mm;font-size:8.2pt;font-weight:600;color:var(--ink)}
+.legend{margin:0 0 1mm;font-size:7.8pt;color:var(--ink-2)}
+.legend-item{margin-right:3.5mm;white-space:nowrap}
+.legend-item i{display:inline-block;width:9px;height:2px;margin-right:3px;vertical-align:middle}
+.source{margin:auto 0 0;padding-top:1.5mm;color:var(--muted);font-size:7.2pt}
+.muted-note{margin:0;color:var(--muted);font-size:7.5pt}
+.effectifs{margin:0 0 2mm;color:var(--ink-2);font-size:8pt}
+.absent{margin:0 0 2mm;padding:1.5mm 2mm;border-left:2px solid var(--axis);color:var(--ink-2);
+  font-size:8pt}
+.absent b{color:var(--ink)}
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+svg .grid{stroke:var(--grid);stroke-width:1}
+svg .axis{stroke:var(--axis);stroke-width:1}
+svg .line{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round;
+  stroke-linecap:round}
+svg .wash{fill:var(--series-1);opacity:.1}
+svg .dot{stroke:var(--surface);stroke-width:2}
+svg .hit{fill:transparent}
+svg .range{stroke:var(--series-1);stroke-width:2;stroke-linecap:round;opacity:.35}
+svg .key{stroke-width:2}
+svg text{font:inherit;font-size:7.6px}
+svg .tick{fill:var(--muted);font-variant-numeric:tabular-nums}
+svg .label{fill:var(--ink);font-weight:600;font-size:8px}
+svg .muted{fill:var(--muted);font-size:7.2px}
+svg .value{fill:var(--ink);font-weight:600;font-size:8px}
+footer.colophon{margin-top:3mm;padding-top:2mm;border-top:1px solid var(--axis);
+  color:var(--muted);font-size:7pt;line-height:1.35}
+footer.colophon p{margin:0 0 .8mm}
+footer.colophon strong{color:var(--ink-2)}
+.annex h2{margin:0 0 2mm;font-size:13pt;font-weight:650}
+.annex h3{margin:3mm 0 1mm;font-size:8.2pt;font-weight:650}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:0 7mm}
+.communes{margin:0 0 1mm;color:var(--ink-2);font-size:7.6pt}
+table{border-collapse:collapse;width:100%;font-size:7.4pt;margin-bottom:1mm}
+th{text-align:left;font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--axis);
+  padding:.6mm 1mm}
+td{border-bottom:1px solid var(--grid);padding:.45mm 1mm;vertical-align:top}
+.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.reason{color:var(--muted);font-size:6.8pt}
+.filters{margin:0;padding-left:4mm;color:var(--ink-2);font-size:7.4pt}
+.filters li{margin-bottom:.8mm}
+@media print{html,body{background:#fff}
+  :root,:root[data-theme="dark"]{color-scheme:light;
+    --page:#fff;--surface:#fff;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6f6e69;--grid:#e1e0d9;
+    --axis:#c3c2b7;--warn-bg:#fdf1dc;--warn:#7a4b00;--series-1:#2a78d6;--series-2:#eb6834;
+    --ordinal-1:#86b6ef;--ordinal-2:#5598e7;--ordinal-3:#2a78d6;--ordinal-4:#1c5cab}
+  .sheet{margin:0;padding:0;width:auto;min-height:0;box-shadow:none;
+    break-after:page;page-break-after:always}
+  .sheet:last-child{break-after:auto;page-break-after:auto}
+  svg .hit{display:none}}
+@media screen and (max-width:820px){.sheet{width:auto;min-height:0;margin:0;padding:16px}
+  .grid,.columns{grid-template-columns:1fr}}
+</style></head><body>
+<article class="sheet">
+<header class="masthead">
+  <p class="eyebrow">Baromètre du marché immobilier · le marché, la marge, l'énergie, le tempo</p>
+  <h1>Intercommunalité 200038990</h1>
+  <p class="scope">17 communes : BLERUAIS, BOISGERVILLY, GAEL, IRODOUER et 13 autres</p>
+  <p class="meta">Ventes 2014–2025 · DPE
+  juil. 2021 – sept. 2026 · cohorte
+  2024, dernière dont les douze mois sont couverts</p>
+  <span class="recount">Chiffres recomptés le 16 sept. 2026</span>
+</header>
+<div class="grid">
+<section class="rubric">
+  <h2><span class="num">1</span>Le marché</h2>
+  <p class="figure">2 042 €/m²</p><p class="caption">prix médian d'une maison en 2025, sur 112 ventes — la moitié entre 1 767 €/m² et 2 376 €/m²</p>
+  <h3>Prix médian au m², ventes de 2014 à 2025</h3>
+  <p class="legend"><span class="legend-item"><i style="background:var(--series-1)"></i>Maisons</span></p>
+  <svg class="chart" viewBox="0 0 330 140" role="img" aria-label="Prix médian au mètre carré par année"><line class="grid" x1="44" x2="260" y1="118.0" y2="118.0"/><text class="tick" x="38" y="121.0" text-anchor="end">1 250</text><line class="grid" x1="44" x2="260" y1="91.0" y2="91.0"/><text class="tick" x="38" y="94.0" text-anchor="end">1 500</text><line class="grid" x1="44" x2="260" y1="64.0" y2="64.0"/><text class="tick" x="38" y="67.0" text-anchor="end">1 750</text><line class="grid" x1="44" x2="260" y1="37.0" y2="37.0"/><text class="tick" x="38" y="40.0" text-anchor="end">2 000</text><line class="grid" x1="44" x2="260" y1="10.0" y2="10.0"/><text class="tick" x="38" y="13.0" text-anchor="end">2 250</text><text class="tick" x="44.0" y="134" text-anchor="middle">2014</text><text class="tick" x="161.8" y="134" text-anchor="middle">2020</text><text class="tick" x="260.0" y="134" text-anchor="middle">2025</text><path class="line" style="stroke:var(--series-1)" d="M44.0,97.2 L63.6,113.7 L83.3,107.4 L102.9,103.5 L122.5,100.7 L142.2,93.8 L161.8,75.7 L181.5,65.4 L201.1,28.9 L220.7,22.4 L240.4,42.4 L260.0,32.5"/><circle class="hit" cx="44.0" cy="97.2" r="7"><title>Maisons 2014 : 1 443 €/m²</title></circle><circle class="hit" cx="63.6" cy="113.7" r="7"><title>Maisons 2015 : 1 290 €/m²</title></circle><circle class="hit" cx="83.3" cy="107.4" r="7"><title>Maisons 2016 : 1 348 €/m²</title></circle><circle class="hit" cx="102.9" cy="103.5" r="7"><title>Maisons 2017 : 1 384 €/m²</title></circle><circle class="hit" cx="122.5" cy="100.7" r="7"><title>Maisons 2018 : 1 410 €/m²</title></circle><circle class="hit" cx="142.2" cy="93.8" r="7"><title>Maisons 2019 : 1 474 €/m²</title></circle><circle class="hit" cx="161.8" cy="75.7" r="7"><title>Maisons 2020 : 1 642 €/m²</title></circle><circle class="hit" cx="181.5" cy="65.4" r="7"><title>Maisons 2021 : 1 737 €/m²</title></circle><circle class="hit" cx="201.1" cy="28.9" r="7"><title>Maisons 2022 : 2 075 €/m²</title></circle><circle class="hit" cx="220.7" cy="22.4" r="7"><title>Maisons 2023 : 2 135 €/m²</title></circle><circle class="hit" cx="240.4" cy="42.4" r="7"><title>Maisons 2024 : 1 950 €/m²</title></circle><circle class="hit" cx="260.0" cy="32.5" r="7"><title>Maisons 2025 : 2 042 €/m²</title></circle><circle class="dot" style="fill:var(--series-1)" cx="260.0" cy="32.5" r="4"/><line class="key" style="stroke:var(--series-1)" x1="268" x2="276" y1="32.5" y2="32.5"/><text class="value" x="280" y="35.5">2 042</text></svg>
+  <p class="muted-note">Appartements : aucune année n'atteint 15 ventes.</p>
+  <p class="source">Ventes simples à prix alloué. Une année sous 15 ventes est un trou dans
+  la courbe, jamais un zéro.</p>
+</section>
+<section class="rubric">
+  <h2><span class="num">2</span>La marge</h2>
+  <p class="absent"><b>Support insuffisant</b> : 21 reventes au total, 30 par tranche requis. La valeur n'est pas publiée, et n'est pas remplacée par celle du département.</p>
+  <p class="effectifs">Reventes par prix d'achat — &lt; 60 % : 2 · 60 % à 80 % : 5 · 80 % à 100 % : 7 · 100 % et plus : 7</p>
+  <p class="source">Même maison, surface inchangée, revendue entre six mois et
+  1 095 jours après l'achat. Gain : rapport des deux prix divisé par l'évolution
+  du prix médian communal ; frais et travaux inconnus, seules les reventes sont vues.</p>
+</section>
+<section class="rubric">
+  <h2><span class="num">3</span>L'énergie</h2>
+  <p class="absent"><b>Étiquette F non publiée</b> : 9 ventes, 30 requises. La valeur n'est pas remplacée par celle du département.</p>
+  <h3>Prix au m² selon l'étiquette DPE, écart au prix de la commune la même année</h3><svg class="chart" viewBox="0 0 330 165" role="img" aria-label="Écart de prix au mètre carré par étiquette énergétique"><line class="grid" x1="70.0" x2="70.0" y1="12" y2="149"/><text class="tick" x="70.0" y="161" text-anchor="middle">−10 %</text><line class="axis" x1="123.5" x2="123.5" y1="12" y2="149"/><text class="tick" x="123.5" y="161" text-anchor="middle">0 %</text><line class="grid" x1="177.0" x2="177.0" y1="12" y2="149"/><text class="tick" x="177.0" y="161" text-anchor="middle">+10 %</text><line class="grid" x1="230.5" x2="230.5" y1="12" y2="149"/><text class="tick" x="230.5" y="161" text-anchor="middle">+20 %</text><line class="grid" x1="284.0" x2="284.0" y1="12" y2="149"/><text class="tick" x="284.0" y="161" text-anchor="middle">+30 %</text><text class="muted" x="123.5" y="9" text-anchor="middle">prix de la commune</text><text class="label" x="0" y="28.5">A</text><text class="muted" x="16" y="28.5">n 9</text><text class="muted" x="290" y="28.5">—</text><text class="label" x="0" y="47.5">B</text><text class="muted" x="16" y="47.5">n 9</text><text class="muted" x="290" y="47.5">—</text><text class="label" x="0" y="66.5">C</text><text class="muted" x="16" y="66.5">n 23</text><text class="muted" x="290" y="66.5">—</text><text class="label" x="0" y="85.5">D</text><text class="muted" x="16" y="85.5">n 40</text><line class="range" x1="80.7" x2="251.9" y1="82.5" y2="82.5"/><circle class="dot" style="fill:var(--series-1)" cx="171.7" cy="82.5" r="4"><title>D : médiane +9 %, de −8 % à +24 % (40 ventes)</title></circle><text class="value" x="290" y="85.5">+9 %</text><text class="label" x="0" y="104.5">E</text><text class="muted" x="16" y="104.5">n 13</text><text class="muted" x="290" y="104.5">—</text><text class="label" x="0" y="123.5">F</text><text class="muted" x="16" y="123.5">n 9</text><text class="muted" x="290" y="123.5">—</text><text class="label" x="0" y="142.5">G</text><text class="muted" x="16" y="142.5">n 8</text><text class="muted" x="290" y="142.5">—</text></svg><p class="muted-note">— : moins de 30 ventes, valeur non publiée.</p>
+  <p class="source">Maisons vendues depuis 2022 avec un DPE déposé dans les deux ans avant
+  l'acte. Point : médiane ; trait : la moitié centrale des ventes. Aucun DPE postérieur à la
+  réforme du 1<sup>er</sup> janvier 2026 n'entre dans la mesure.</p>
+</section>
+<section class="rubric">
+  <h2><span class="num">4</span>Le tempo</h2>
+  <p class="figure">39,5 %</p><p class="caption">des parcelles dont le premier DPE a été déposé en 2024 ont changé de main dans les douze mois — 103 sur 261</p>
+  <p class="secondary"><b>176 jours</b> entre le dépôt et l'acte, en médiane — la moitié entre 142 et 230 jours, sur 103 parcelles vendues</p>
+  <h3>Part des parcelles vendues, mois après mois depuis le dépôt</h3><svg class="chart" viewBox="0 0 330 140" role="img" aria-label="Part cumulée des parcelles vendues après le dépôt du DPE"><line class="grid" x1="34" x2="252" y1="118.0" y2="118.0"/><text class="tick" x="28" y="121.0" text-anchor="end">0 %</text><line class="grid" x1="34" x2="252" y1="91.0" y2="91.0"/><text class="tick" x="28" y="94.0" text-anchor="end">10 %</text><line class="grid" x1="34" x2="252" y1="64.0" y2="64.0"/><text class="tick" x="28" y="67.0" text-anchor="end">20 %</text><line class="grid" x1="34" x2="252" y1="37.0" y2="37.0"/><text class="tick" x="28" y="40.0" text-anchor="end">30 %</text><line class="grid" x1="34" x2="252" y1="10.0" y2="10.0"/><text class="tick" x="28" y="13.0" text-anchor="end">40 %</text><text class="tick" x="34.0" y="134" text-anchor="middle">0</text><text class="tick" x="88.5" y="134" text-anchor="middle">3</text><text class="tick" x="143.0" y="134" text-anchor="middle">6</text><text class="tick" x="197.5" y="134" text-anchor="middle">9</text><text class="tick" x="252.0" y="134" text-anchor="middle">12</text><text class="tick" x="252" y="134" text-anchor="end" dx="40">mois</text><path class="wash" d="M34.0,118.0 L52.2,118.0 L70.3,118.0 L88.5,114.0 L143.0,59.1 L197.5,23.8 L252.0,11.3 L252.0,118.0 L34.0,118.0 Z"/><path class="line" d="M34.0,118.0 L52.2,118.0 L70.3,118.0 L88.5,114.0 L143.0,59.1 L197.5,23.8 L252.0,11.3"/><circle class="hit" cx="52.2" cy="118.0" r="7"><title>1 mois (1 × 30 jours) : 0,0 % vendues</title></circle><circle class="hit" cx="70.3" cy="118.0" r="7"><title>2 mois (2 × 30 jours) : 0,0 % vendues</title></circle><circle class="hit" cx="88.5" cy="114.0" r="7"><title>3 mois (3 × 30 jours) : 1,5 % vendues</title></circle><circle class="hit" cx="143.0" cy="59.1" r="7"><title>6 mois (6 × 30 jours) : 21,8 % vendues</title></circle><circle class="hit" cx="197.5" cy="23.8" r="7"><title>9 mois (9 × 30 jours) : 34,9 % vendues</title></circle><circle class="hit" cx="252.0" cy="11.3" r="7"><title>12 mois (12 × 30 jours) : 39,5 % vendues</title></circle><circle class="dot" style="fill:var(--series-1)" cx="252.0" cy="11.3" r="4"/><text class="value" x="260.0" y="14.3">39,5 %</text></svg>
+  <p class="source">Un DPE est obligatoire pour vendre un logement, mais aussi pour le louer : la
+  mesure encaisse les deux. C'est une fréquence observée sur une cohorte, pas la chance d'un bien
+  donné. Mois de 30 jours : la courbe finit un peu sous le taux à douze mois.</p>
+</section>
+</div>
+<footer class="colophon">
+  <p><strong>Sources</strong> — Demandes de valeurs foncières (DGFiP, publiées par Etalab),
+  mutations 2014 à 2025, releases
+  2019-04-archive + 2026-09-13 ; diagnostics de performance énergétique (ADEME), extrait du
+  1 juil. 2021 au 7 sept. 2026 ; plan cadastral (DGFiP,
+  Etalab) 2026-06-01 ; Référentiel national des bâtiments
+  2026-09-05 ; BDNB (CSTB) 2026-02-a pour le découpage
+  intercommunal. Données publiées sous
+  Licence Ouverte 2.0 ; ce document en reprend l'attribution.</p>
+  <p><strong>Aucune parcelle ni adresse n'est identifiable dans ce document.</strong> Toutes les
+  valeurs sont des agrégats ; chaque taux est donné avec son effectif. Ce sont des fréquences
+  observées sur le passé, pas la probabilité qu'un bien donné se vende.</p>
+  <p>Mesures générées le 16 sept. 2026, dernière mutation connue au
+  31 déc. 2025. Empreinte <code>d08dba5d179c319e</code>.
+  Détail et filtres : <code>docs/data/barometre-marche-35.md</code>.</p>
+</footer>
+</article>
+<article class="sheet">
+<header class="masthead">
+  <p class="eyebrow">Baromètre du marché immobilier · verso</p>
+  <h1>Intercommunalité 200038990</h1>
+  <p class="scope">17 communes : BLERUAIS, BOISGERVILLY, GAEL, IRODOUER et 13 autres</p>
+  <p class="meta">Ventes 2014–2025 · DPE
+  juil. 2021 – sept. 2026 · cohorte
+  2024, dernière dont les douze mois sont couverts</p>
+  <span class="recount">Chiffres recomptés le 16 sept. 2026</span>
+</header>
+<section class="annex">
+  <h2>Les chiffres, leurs effectifs et leurs filtres</h2>
+  <p class="communes"><b>17 communes</b> — BLERUAIS, BOISGERVILLY, GAEL, IRODOUER, LA CHAPELLE DU LOU DU LAC, LANDUJAN, LE CROUAIS, MEDREAC, MONTAUBAN-DE-BRETAGNE, MUEL, QUEDILLAC, SAINT ONEN LA CHAPELLE, SAINT-MALON-SUR-MEL, SAINT-MAUGAN, SAINT-MEEN-LE-GRAND, SAINT-PERN, SAINT-UNIAC. Rattachement lu dans la BDNB (CSTB), attribut <code>code_epci_insee</code>.</p>
+  <div class="columns">
+    <div>
+      <h3>1 — Ventes et prix médian au m²</h3><table><thead><tr><th class="">Année</th><th class="n">Maisons</th><th class="n">€/m²</th><th class="n">Appart.</th><th class="n">€/m²</th></tr></thead><tbody><tr><td>2014</td><td class="n">86</td><td class="n">1 443</td><td class="n">3</td><td class="n">—</td></tr><tr><td>2015</td><td class="n">112</td><td class="n">1 290</td><td class="n">4</td><td class="n">—</td></tr><tr><td>2016</td><td class="n">113</td><td class="n">1 348</td><td class="n">—</td><td class="n">—</td></tr><tr><td>2017</td><td class="n">149</td><td class="n">1 384</td><td class="n">1</td><td class="n">—</td></tr><tr><td>2018</td><td class="n">137</td><td class="n">1 410</td><td class="n">5</td><td class="n">—</td></tr><tr><td>2019</td><td class="n">144</td><td class="n">1 474</td><td class="n">4</td><td class="n">—</td></tr><tr><td>2020</td><td class="n">188</td><td class="n">1 642</td><td class="n">3</td><td class="n">—</td></tr><tr><td>2021</td><td class="n">189</td><td class="n">1 737</td><td class="n">5</td><td class="n">—</td></tr><tr><td>2022</td><td class="n">129</td><td class="n">2 075</td><td class="n">1</td><td class="n">—</td></tr><tr><td>2023</td><td class="n">98</td><td class="n">2 135</td><td class="n">3</td><td class="n">—</td></tr><tr><td>2024</td><td class="n">93</td><td class="n">1 950</td><td class="n">5</td><td class="n">—</td></tr><tr><td>2025</td><td class="n">112</td><td class="n">2 042</td><td class="n">8</td><td class="n">—</td></tr></tbody></table><p class="muted-note">— : aucune vente exploitable, ou moins de 15 pour le prix.</p>
+      <h3>2 — Gain au-delà du marché, par prix d'entrée</h3><table><thead><tr><th class="">Prix d&#x27;entrée</th><th class="n">Reventes</th><th class="n">Médiane</th><th class="n">Q3</th><th class="n">&gt; +20 %</th><th class="n">Motif</th></tr></thead><tbody><tr><td>&lt; 60 % de la médiane</td><td class="n">2</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>60 % à 80 %</td><td class="n">5</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>80 % à 100 %</td><td class="n">7</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>100 % et plus</td><td class="n">7</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr></tbody></table>
+    </div>
+    <div>
+      <h3>3 — Écart de prix par étiquette</h3><table><thead><tr><th class="">Étiquette</th><th class="n">Ventes</th><th class="n">Q1</th><th class="n">Médiane</th><th class="n">Q3</th><th class="n">Motif</th></tr></thead><tbody><tr><td>A</td><td class="n">9</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>B</td><td class="n">9</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>C</td><td class="n">23</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>D</td><td class="n">40</td><td class="n">−8 %</td><td class="n">+9 %</td><td class="n">+24 %</td><td></td></tr><tr><td>E</td><td class="n">13</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>F</td><td class="n">9</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr><tr><td>G</td><td class="n">8</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="reason">sous le support de 30</td></tr></tbody></table>
+      <h3>4 — Taux de mutation à douze mois</h3><table><thead><tr><th class="">Cohorte</th><th class="n">Parcelles</th><th class="n">Vendues</th><th class="n">Taux</th><th class="n">Motif</th></tr></thead><tbody><tr><td>2021</td><td class="n">111</td><td class="n">59</td><td class="n">—</td><td class="reason">sous le support de 200</td></tr><tr><td>2022</td><td class="n">237</td><td class="n">106</td><td class="n">44,7 %</td><td></td></tr><tr><td>2023</td><td class="n">345</td><td class="n">116</td><td class="n">33,6 %</td><td></td></tr><tr><td>2024</td><td class="n">261</td><td class="n">103</td><td class="n">39,5 %</td><td></td></tr></tbody></table>
+      <table><thead><tr><th class="">Mois</th><th class="n">1</th><th class="n">2</th><th class="n">3</th><th class="n">6</th><th class="n">9</th><th class="n">12</th></tr></thead><tbody><tr><td>Vendues</td><td class="n">0,0 %</td><td class="n">0,0 %</td><td class="n">1,5 %</td><td class="n">21,8 %</td><td class="n">34,9 %</td><td class="n">39,5 %</td></tr></tbody></table>
+      <table><thead><tr><th class="">Délai dépôt → acte</th><th class="n">Parcelles</th><th class="n">Vendues</th><th class="n">Q1</th><th class="n">Médiane</th><th class="n">Q3</th></tr></thead><tbody><tr><td>cohorte 2024</td><td class="n">261</td><td class="n">103</td><td class="n">142 j</td><td class="n">176 j</td><td class="n">230 j</td></tr></tbody></table>
+      
+    </div>
+  </div>
+  <h3>Comment ces chiffres sont construits</h3>
+  <ul class="filters">
+    <li><b>Ventes</b> : mutations de nature « Vente » uniquement — VEFA, terrain à bâtir,
+    échange, adjudication et expropriation écartés ; un seul bien par mutation, pour que le prix
+    lui soit attribuable ; surface et prix renseignés.</li>
+    <li><b>Médiane de référence</b> : prix médian au m² des maisons de la commune l'année de la
+    vente, retenu à partir de 15 ventes. C'est le seul
+    contrôle : ni âge, ni surface, ni modèle.</li>
+    <li><b>Reventes</b> : deux ventes successives de la même maison, à plus de six mois
+    d'écart ; ventes du même jour départagées par prix puis surface croissants.</li>
+    <li><b>Cohorte DPE</b> : premier DPE de chaque parcelle, rattaché par une relation
+    bâtiment ↔ parcelle certaine ; DPE d'appartement issus d'un DPE d'immeuble exclus. Une
+    parcelle « a muté » si une vente — simple, en l'état futur d'achèvement ou de terrain à
+    bâtir, tout type de lot — suit le dépôt ; échange, adjudication et expropriation n'en sont
+    pas.</li>
+    <li><b>Supports</b> : 15 ventes par cellule,
+    30 reventes par tranche, 30 ventes par
+    étiquette, 200 parcelles par cohorte. Ce sont des
+    paramètres déclarés, pas des seuils de sens. En dessous, la valeur est absente et le motif
+    écrit.</li>
+  </ul>
+</section>
+<footer class="colophon">
+  <p><strong>Sources</strong> — Demandes de valeurs foncières (DGFiP, publiées par Etalab),
+  mutations 2014 à 2025, releases
+  2019-04-archive + 2026-09-13 ; diagnostics de performance énergétique (ADEME), extrait du
+  1 juil. 2021 au 7 sept. 2026 ; plan cadastral (DGFiP,
+  Etalab) 2026-06-01 ; Référentiel national des bâtiments
+  2026-09-05 ; BDNB (CSTB) 2026-02-a pour le découpage
+  intercommunal. Données publiées sous
+  Licence Ouverte 2.0 ; ce document en reprend l'attribution.</p>
+  <p><strong>Aucune parcelle ni adresse n'est identifiable dans ce document.</strong> Toutes les
+  valeurs sont des agrégats ; chaque taux est donné avec son effectif. Ce sont des fréquences
+  observées sur le passé, pas la probabilité qu'un bien donné se vende.</p>
+  <p>Mesures générées le 16 sept. 2026, dernière mutation connue au
+  31 déc. 2025. Empreinte <code>d08dba5d179c319e</code>.
+  Détail et filtres : <code>docs/data/barometre-marche-35.md</code>.</p>
+</footer>
+</article>
+</body></html>

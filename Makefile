@@ -203,6 +203,10 @@ exploratory-candidates:
 		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
 		$(if $(LOT_WIDTH),--lot-width $(LOT_WIDTH),)
 
+market-barometer-kit:
+	uv run --package immo-pipelines python pipelines/scripts/market_barometer_kit.py \
+		--department $(or $(DEPARTMENT),35)
+
 field-test-kit:
 	uv run --package immo-pipelines python pipelines/scripts/field_test_kit.py --commune $(COMMUNE)
 

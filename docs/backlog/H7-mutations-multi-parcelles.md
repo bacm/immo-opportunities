@@ -15,6 +15,14 @@
 
 Ne rien charger d'autre sans nécessité démontrée.
 
+## Ce que H1 et H2 imposent à la régénération
+
+Admettre des ventes change les CSV du baromètre, donc leur **empreinte** : la mention « Recompté
+le … » disparaît du rapport et des dix-neuf documents jusqu'à ce qu'un recompte ait lieu et qu'une
+attestation de la nouvelle empreinte soit ajoutée à `docs/data/barometre-marche-35/recompte.csv`.
+C'est voulu. Relancer ensuite `make market-barometer-kit` et vérifier que chaque document imprimé
+tient toujours sur deux pages.
+
 ## Constat
 
 `dvf-quality-35.md` compte **33 973 mutations `multiple_parcels`**, 25,5 % du total, sans prix
