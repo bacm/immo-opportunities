@@ -20,8 +20,17 @@ Le document de H2 est une feuille A4 recto-verso, et **le recto est plein** : le
 imprimées tiennent sur deux pages exactement, à quelques millimètres près. Une carte ne s'ajoute
 pas, elle **remplace** un graphique ou ajoute une page. Les graphiques sont déjà du SVG écrit à la
 main, sans bibliothèque ; la rampe séquentielle bleue de la compétence `dataviz` est celle qu'une
-choroplèthe prendrait. Dix-sept EPCI sur dix-huit n'avaient pas de marge publiable (cinq depuis H7, le 16 septembre 2026) : une carte
-communale de la marge serait presque entièrement « sans support ».
+choroplèthe prendrait. La marge de revente (BAR-003) n'est calculée qu'au département et à
+l'EPCI, jamais à la commune : une carte communale de la marge serait entièrement « sans support ».
+À l'EPCI même, elle est lacunaire — dans `bar-003-plus-value-prix-entree.csv` au 16 septembre 2026,
+après H7, **2 EPCI sur 18** publient les quatre tranches de prix d'entrée, 13 au moins une, 5
+aucune (avant H7 : 1, 6 et 12).
+
+> **Correction consignée.** Cette phrase disait « dix-sept EPCI sur dix-huit n'ont pas de marge
+> publiable », repris de H2. Le chiffre ne valait que pour la marge **complète** (les quatre
+> tranches) ; lu comme « aucune tranche », il était faux dès H2 (douze). La note ajoutée le
+> 16 septembre (« cinq depuis H7 ») mêlait les deux lectures. La conclusion ne change pas : la
+> maille communale n'a pas de marge.
 
 ## Ce qui bloque
 
