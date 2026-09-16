@@ -12,6 +12,15 @@
 - `docs/audit-critique-2026-09-15.md` §3, §7 à §13 (écarts entre documents et réalité)
 - le document à réviser, en entier
 
+## À corriger au passage — relevé par H1
+
+`SPEC.md` §7.3 justifie l'exclusion des DPE d'appartement générés depuis un DPE d'immeuble par
+« 0,6 % de conversion, mesuré ». Le recompte de [H1](./H1-barometre-marche-35-mesures.md)
+n'a retrouvé ce chiffre sous aucun filtre ; hérité de `pistes-analyse-marche-35.md` §1.4, il n'y
+porte aucun filtre écrit. La mesure reproductible est **0,4 % sur 277 parcelles**, cohortes 2021
+à 2024, filtre écrit dans `docs/data/barometre-marche-35.md`. L'exclusion reste justifiée ; c'est
+le chiffre qui change.
+
 ## Ce que ce ticket distingue
 
 **Documentation de référence** : ce qui dit ce que le produit est, ce que le dépôt contient et

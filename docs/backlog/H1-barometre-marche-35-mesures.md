@@ -1,6 +1,6 @@
 # H1 — Baromètre du marché du 35 : les mesures, reproductibles et recomptées
 
-**Version :** V5 · baromètre · **Taille :** L · **État :** À faire
+**Version :** V5 · baromètre · **Taille :** L · **État :** Terminé
 **Nature :** implémentation · **Touche :** pipelines/scripts/market_barometer.py, pipelines/tests/test_market_barometer.py, Makefile, docs/data/barometre-marche-35.md, docs/data/barometre-marche-35/
 **Dépend de :** A7 · **Bloque :** H2
 **Demandé par :** [ADR-016](../decisions/ADR-016-intelligence-de-marche-puis-radar.md)
@@ -61,6 +61,62 @@ Toutes existent déjà sous forme de sondages « non recomptés » dans `pistes-
 - Il n'estime la valeur d'aucun bien non vendu (E7 reste suspendu).
 - Il n'introduit ni modèle hédonique ni pondération : contrôle commune × année seulement, comme
   dans les sondages.
+
+## Ce qui a été produit
+
+`make market-barometer DEPARTMENT=35` écrit `docs/data/barometre-marche-35.md` et huit tableaux
+CSV dans `docs/data/barometre-marche-35/`, plus `epci-communes.csv`. Le calcul est en Python sur
+des lignes lues par cinq requêtes : les mesures se testent sans base, et trente tests couvrent
+chaque mesure, le cas « support insuffisant » et le cas « cohorte non couverte par DVF ».
+
+Deux décisions prises ici, faute d'être tranchées ailleurs :
+
+- **Le découpage EPCI vient de DS-03 BDNB**, seule source du dépôt qui porte `code_epci_insee` —
+  332 communes, chacune rattachée à un et un seul EPCI, 18 EPCI. Il sert de clé géographique,
+  jamais d'attribut classant d'un bien. `SPEC.md` §13.3 ne range pas DS-03 parmi les sources du
+  baromètre parce qu'il raisonne en attributs de bien ; le rattachement territorial n'en est pas
+  un. La provenance est écrite dans le rapport, et le référentiel tient dans un CSV : en changer
+  coûte un fichier.
+- **La médiane de référence commune × année exige le même support que BAR-001**, quinze ventes.
+  Les sondages de `pistes-analyse-marche-35.md` §5.2 utilisaient quinze pour la marge et vingt
+  pour l'étiquette, sans le dire ; un seul paramètre déclaré vaut mieux que deux implicites. Les
+  valeurs par étiquette s'en écartent donc légèrement.
+
+L'écart **14 532 / 9 754** est tranché dans le rapport : sous le filtre écrit, la cohorte 2024
+compte 9 754 parcelles avant l'exclusion des DPE d'immeuble et 9 653 après. Le 14 532 n'est pas
+reproductible et cesse d'être cité ; le taux, lui, se retrouve à 35,5 % contre 35,65 %.
+
+## Ce que le recompte a attrapé
+
+Première passe de `recompte-preuve`, en isolement du code. Vingt-neuf chiffres éprouvés, vingt-deux
+confirmés du premier coup — dont les 96 valeurs de BAR-001/002 à l'unité. Sept divergences, toutes
+corrigées avant de fermer le ticket. C'est ce que `make check` ne pouvait pas voir.
+
+| # | Ce que le recompte a trouvé | Correction |
+|---|---|---|
+| D1 | L'événement « vendue sous douze mois » comptait la VEFA et le terrain à bâtir, que le tableau des filtres déclarait écartés | Le filtre de l'événement est écrit à part, et le rapport publie sa sensibilité : 35,5 % toute mutation, 34,7 % en exigeant un lot de logement |
+| D2 | La somme des EPCI ne bouclait pas avec le département sur BAR-005 à BAR-007, et les CSV portaient 334 communes pour 332 annoncées | **Défaut de fond** : la commune d'une parcelle de cohorte venait du `commune_code` du DPE, que 78 diagnostics déclarent hors du cadastre. Elle vient désormais de la parcelle. Les trois mesures bouclent |
+| D3 | Le funnel DPE perdait 334 unités sans motif entre « rattaché à un bâtiment » et « rattaché à une parcelle » | Ligne ajoutée au tableau des cohortes, avec son motif |
+| D4 | Quatre filtres appliqués mais non écrits, dont un qui renversait une conclusion : le « ratio au m² de 1,00 » de BAR-008 ne tenait qu'à une fenêtre de trois ans jamais déclarée | Les quatre sont écrits. BAR-008 publie **les deux fenêtres** : 205 paires à 1,00 sous trois ans, 743 paires à 1,17 toutes durées |
+| D5 | « paires de ventes répétées » se lisait comme toutes les combinaisons — 10 100 — alors que le chiffre publié comptait les paires consécutives | Formulation corrigée, et l'entonnoir 7 024 → 1 505 est publié avec ses trois motifs d'écartement |
+| D6 | DS-02 absent de la table des sources lues, alors que tout lien DPE ↔ parcelle passe par une identité RNB | Ajouté |
+| D7 | Deux taux à douze mois publiés à quatre lignes d'écart, 35,5 % et 35,1 %, sans rapprochement | Expliqué : mois conventionnels de 30 jours, soit 360 jours contre 365 |
+
+D2 et D4 sont les deux qui comptent : le premier était un défaut de calcul qu'aucun test ne
+pouvait attraper, le second un résultat publiable dont la conclusion dépendait d'un choix tu.
+
+Deuxième passe sur le rapport corrigé : **quarante-quatre chiffres éprouvés, quarante-deux
+confirmés, aucune divergence de valeur**. Les 1 280 lignes communales de BAR-006 et les 4 929
+cellules de BAR-001/002 sont identiques à l'unité à un recompte indépendant, les sommes EPCI
+bouclent avec le département sur les trois mesures de cohorte, et les sept corrections tiennent.
+Trois réserves de forme et un chiffre hérité, traités à leur tour :
+
+| Réserve | Traitement |
+|---|---|
+| R1 — 105 couples (parcelle, date) portent plusieurs ventes le même jour ; la règle de départage décidait des bandes de BAR-003 sans être écrite | La règle — prix croissant, puis surface croissante — est écrite dans le rapport et tenue par un test |
+| R2 — BAR-008 ne publiait aucun filtre, et « toutes durées » signifiait en fait « au-delà de 180 jours » | Filtre écrit, fenêtre renommée pour ce qu'elle est |
+| R3 — BAR-004 publie une étiquette à effectif nul, BAR-001/002 omet une cellule vide | Les deux traitements sont délibérés et désormais expliqués : l'absence d'une étiquette est une information, une cellule année × type sans vente n'existe pas |
+| Le **0,6 %** de `SPEC.md` §7.3, hérité de `pistes-analyse-marche-35.md` §1.4, ne se reproduit sous aucun filtre | Mesuré ici : 277 parcelles, 1 mutation, **0,4 %**. Même ordre de grandeur, pas le même chiffre. L'exclusion garde sa justification ; le chiffre à citer est celui-ci. **`SPEC.md` porte un chiffre non reproductible — à corriger par [H6](./H6-reecrire-spec.md)** |
 
 ## Critères d'acceptation
 

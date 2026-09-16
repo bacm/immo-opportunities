@@ -1,0 +1,77 @@
+scope_type,scope_code,entry_band,pairs,median_excess,q3_excess,share_above_threshold_pct,reason
+departement,35,< 60 % de la médiane,139,1.83,3.0,79.9,
+departement,35,60 % à 80 %,204,1.23,1.44,54.4,
+departement,35,80 % à 100 %,466,1.09,1.21,26.6,
+departement,35,100 % et plus,696,1.01,1.11,11.9,
+epci,200038990,< 60 % de la médiane,2,,,,support insuffisant : 2 < 30
+epci,200038990,60 % à 80 %,5,,,,support insuffisant : 5 < 30
+epci,200038990,80 % à 100 %,7,,,,support insuffisant : 7 < 30
+epci,200038990,100 % et plus,7,,,,support insuffisant : 7 < 30
+epci,200039022,< 60 % de la médiane,14,,,,support insuffisant : 14 < 30
+epci,200039022,60 % à 80 %,14,,,,support insuffisant : 14 < 30
+epci,200039022,80 % à 100 %,31,1.02,1.1,12.9,
+epci,200039022,100 % et plus,51,1.04,1.09,7.8,
+epci,200043990,< 60 % de la médiane,11,,,,support insuffisant : 11 < 30
+epci,200043990,60 % à 80 %,14,,,,support insuffisant : 14 < 30
+epci,200043990,80 % à 100 %,23,,,,support insuffisant : 23 < 30
+epci,200043990,100 % et plus,47,1.01,1.1,12.8,
+epci,200070662,< 60 % de la médiane,2,,,,support insuffisant : 2 < 30
+epci,200070662,60 % à 80 %,4,,,,support insuffisant : 4 < 30
+epci,200070662,80 % à 100 %,9,,,,support insuffisant : 9 < 30
+epci,200070662,100 % et plus,19,,,,support insuffisant : 19 < 30
+epci,200070670,< 60 % de la médiane,4,,,,support insuffisant : 4 < 30
+epci,200070670,60 % à 80 %,3,,,,support insuffisant : 3 < 30
+epci,200070670,80 % à 100 %,5,,,,support insuffisant : 5 < 30
+epci,200070670,100 % et plus,8,,,,support insuffisant : 8 < 30
+epci,200070688,< 60 % de la médiane,3,,,,support insuffisant : 3 < 30
+epci,200070688,60 % à 80 %,1,,,,support insuffisant : 1 < 30
+epci,200070688,80 % à 100 %,2,,,,support insuffisant : 2 < 30
+epci,200070688,100 % et plus,6,,,,support insuffisant : 6 < 30
+epci,200072452,< 60 % de la médiane,6,,,,support insuffisant : 6 < 30
+epci,200072452,60 % à 80 %,5,,,,support insuffisant : 5 < 30
+epci,200072452,80 % à 100 %,23,,,,support insuffisant : 23 < 30
+epci,200072452,100 % et plus,28,,,,support insuffisant : 28 < 30
+epci,243500139,< 60 % de la médiane,45,2.18,3.33,88.9,
+epci,243500139,60 % à 80 %,66,1.21,1.41,50.0,
+epci,243500139,80 % à 100 %,183,1.1,1.21,26.2,
+epci,243500139,100 % et plus,279,1.02,1.12,13.3,
+epci,243500550,< 60 % de la médiane,4,,,,support insuffisant : 4 < 30
+epci,243500550,60 % à 80 %,6,,,,support insuffisant : 6 < 30
+epci,243500550,80 % à 100 %,13,,,,support insuffisant : 13 < 30
+epci,243500550,100 % et plus,17,,,,support insuffisant : 17 < 30
+epci,243500618,< 60 % de la médiane,2,,,,support insuffisant : 2 < 30
+epci,243500618,60 % à 80 %,1,,,,support insuffisant : 1 < 30
+epci,243500618,80 % à 100 %,9,,,,support insuffisant : 9 < 30
+epci,243500618,100 % et plus,13,,,,support insuffisant : 13 < 30
+epci,243500634,< 60 % de la médiane,5,,,,support insuffisant : 5 < 30
+epci,243500634,60 % à 80 %,3,,,,support insuffisant : 3 < 30
+epci,243500634,80 % à 100 %,10,,,,support insuffisant : 10 < 30
+epci,243500634,100 % et plus,12,,,,support insuffisant : 12 < 30
+epci,243500659,< 60 % de la médiane,6,,,,support insuffisant : 6 < 30
+epci,243500659,60 % à 80 %,10,,,,support insuffisant : 10 < 30
+epci,243500659,80 % à 100 %,20,,,,support insuffisant : 20 < 30
+epci,243500659,100 % et plus,19,,,,support insuffisant : 19 < 30
+epci,243500667,< 60 % de la médiane,1,,,,support insuffisant : 1 < 30
+epci,243500667,60 % à 80 %,10,,,,support insuffisant : 10 < 30
+epci,243500667,80 % à 100 %,22,,,,support insuffisant : 22 < 30
+epci,243500667,100 % et plus,33,0.99,1.06,3.0,
+epci,243500725,< 60 % de la médiane,5,,,,support insuffisant : 5 < 30
+epci,243500725,60 % à 80 %,19,,,,support insuffisant : 19 < 30
+epci,243500725,80 % à 100 %,30,1.11,1.29,40.0,
+epci,243500725,100 % et plus,37,1.03,1.11,16.2,
+epci,243500733,< 60 % de la médiane,2,,,,support insuffisant : 2 < 30
+epci,243500733,60 % à 80 %,1,,,,support insuffisant : 1 < 30
+epci,243500733,80 % à 100 %,9,,,,support insuffisant : 9 < 30
+epci,243500733,100 % et plus,16,,,,support insuffisant : 16 < 30
+epci,243500741,< 60 % de la médiane,4,,,,support insuffisant : 4 < 30
+epci,243500741,60 % à 80 %,10,,,,support insuffisant : 10 < 30
+epci,243500741,80 % à 100 %,11,,,,support insuffisant : 11 < 30
+epci,243500741,100 % et plus,15,,,,support insuffisant : 15 < 30
+epci,243500774,< 60 % de la médiane,1,,,,support insuffisant : 1 < 30
+epci,243500774,60 % à 80 %,1,,,,support insuffisant : 1 < 30
+epci,243500774,80 % à 100 %,7,,,,support insuffisant : 7 < 30
+epci,243500774,100 % et plus,10,,,,support insuffisant : 10 < 30
+epci,243500782,< 60 % de la médiane,22,,,,support insuffisant : 22 < 30
+epci,243500782,60 % à 80 %,31,1.23,1.31,58.1,
+epci,243500782,80 % à 100 %,52,1.13,1.32,42.3,
+epci,243500782,100 % et plus,79,1.01,1.15,21.5,

@@ -13,6 +13,23 @@
 
 Ne rien charger d'autre sans nécessité démontrée.
 
+## Ce que H1 a livré, et ce qu'il laisse à trancher
+
+Les CSV de `docs/data/barometre-marche-35/` portent tous les mêmes deux premières colonnes,
+`scope_type` et `scope_code` — `departement`, `epci` ou `commune` — puis l'effectif, la valeur et
+le motif d'absence. Une page EPCI se construit en filtrant sur `scope_type = epci`. Un fichier par
+mesure : `bar-001-002-volumes-prix.csv`, `bar-003-plus-value-prix-entree.csv`,
+`bar-004-etiquette.csv`, `bar-005-delai-dpe-acte.csv`, `bar-006-taux-mutation-12-mois.csv`,
+`bar-007-courbe-conversion.csv`, `bar-008-extension-surface.csv`, `bar-009-couverture.csv`, plus
+`epci-communes.csv` pour le rattachement.
+
+**Les EPCI n'ont pas de nom.** Le rattachement commune → EPCI vient de l'attribut
+`code_epci_insee` de DS-03 BDNB, qui ne porte que le SIREN. Une page titrée « EPCI 243500139 » ne
+tient pas devant un professionnel. Trois issues, à trancher dans ce ticket : titrer par la commune
+la plus peuplée de l'EPCI et lister les autres ; importer un référentiel de noms, ce qui demande
+un contrat de source et donc un ticket à part ; ou publier le SIREN tel quel. Aucune n'est
+choisie ici.
+
 ## Ce que ce ticket produit
 
 `make market-barometer-kit DEPARTMENT=35` génère, depuis les CSV de H1, un document HTML autonome

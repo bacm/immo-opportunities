@@ -214,6 +214,14 @@ biens-en-vente:
 		--commune $(COMMUNE) $(if $(SIZE),--size $(SIZE),) \
 		$(if $(FRESH_MONTHS),--fresh-months $(FRESH_MONTHS),)
 
+market-barometer:
+	docker compose --env-file $(COMPOSE_ENV_FILE) \
+		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
+		-v $(PWD)/docs/data:/workspace/docs/data \
+		dagster-code python pipelines/scripts/market_barometer.py \
+		--department $(or $(DEPARTMENT),35) \
+		$(if $(GENERATED_ON),--generated-on $(GENERATED_ON),)
+
 morphology-features:
 	docker compose --env-file $(COMPOSE_ENV_FILE) \
 		-f compose.yaml -f compose.dev.yaml -f compose.observability.yaml run --rm \
