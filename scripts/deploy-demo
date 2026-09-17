@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Met à jour la démo sur sa machine (A14), une fois l'installation de DEPLOYMENT.md §5 faite.
+#
+#   scripts/deploy-demo SHA
+#
+# Lancé par `.github/workflows/deploy-demo.yml` dans le clone du VPS : place le clone sur SHA,
+# se relance dans cette version, reconstruit la stack démo et vérifie `/health` sur son port
+# local. Refuse une base non restaurée : un `up` la migrerait, et `restore-demo-subset`
+# refuserait ensuite de la restaurer.
+set -euo pipefail
+
+if [[ $# -ne 1 || ! $1 =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Usage: $0 SHA (40 caractères hexadécimaux)" >&2
+  exit 2
+fi
+sha=$1
+project_dir=$(cd "$(dirname "$0")/.." && pwd)
+cd "${project_dir}"
+
+if [[ ${DEPLOY_DEMO_CHECKED_OUT:-} != "${sha}" ]]; then
+  if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+    echo "Le clone ${project_dir} a des modifications suivies : déploiement refusé." >&2
+    exit 1
+  fi
+  git fetch --quiet origin
+  git checkout --quiet --detach "${sha}"
+  # La suite est celle du commit déployé, pas celle du clone avant mise à jour.
+  DEPLOY_DEMO_CHECKED_OUT=${sha} exec "${project_dir}/scripts/deploy-demo" "${sha}"
+fi
+
+compose=(docker compose -f compose.yaml -f compose.demo.yaml)
+"${compose[@]}" up -d --wait postgres
+meta=$("${compose[@]}" exec -T postgres /bin/bash -ec \
+  'export PGPASSWORD="$(cat /run/secrets/postgres_superuser_password)"; exec "$@"' -- \
+  psql -X -At -U postgres -d immo -c "SELECT to_regnamespace('meta') IS NOT NULL")
+if [[ ${meta} != t ]]; then
+  echo "La base immo n'est pas restaurée : suivre DEPLOYMENT.md §5, étape 3, avant tout déploiement." >&2
+  exit 1
+fi
+
+GIT_SHA=${sha} "${compose[@]}" up -d --build --remove-orphans
+address=$("${compose[@]}" port caddy 8080)
+curl --fail --silent --show-error --retry 24 --retry-delay 5 --retry-all-errors \
+  "http://${address}/health" | grep -qx ok
+echo "Démo à jour : ${sha}"

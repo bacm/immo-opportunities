@@ -85,6 +85,7 @@ dérivée du graphe de dépendances.
 | [A11](./A11-decision-selon-ce-que-le-choix-engage.md) | Une décision se reconnaît à ce que le choix engage, pas au silence de `SPEC.md` | transverse | A10 | S | Terminé | — |
 | [A12](./A12-lever-le-gel-de-la-plateforme.md) | Lever le gel de la plateforme | transverse | C4 | M | Terminé | — |
 | [A13](./A13-demo-mesuree-sur-le-vps.md) | Déployer la démo sur le VPS du porteur, et y mesurer ce que le poste ne dit pas | transverse | A6 | S | À faire | **verrou humain** |
+| [A14](./A14-deploiement-manuel-de-la-demo.md) | Mettre à jour la démo du VPS depuis GitHub Actions, sur lancement manuel | transverse | A6 | S | Terminé | — |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
@@ -218,7 +219,7 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**70/97 terminés.** Prêts à démarrer : BUG-21, BUG-22, G6.
+**71/98 terminés.** Prêts à démarrer : BUG-21, BUG-22, G6.
 
 ### Verrous humains
 

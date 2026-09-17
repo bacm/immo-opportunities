@@ -83,6 +83,16 @@ proxy. Mesures et contenu : [`docs/data/demo-subset-35.md`](./docs/data/demo-sub
 7. **Compte** : créer l'utilisateur dans le realm `immo` depuis `/auth/admin`, avec les identifiants
    d'administration de `SECRETS_DIR`.
 
+**Mises à jour (A14).** Le workflow `deploy-demo.yml`, lancé à la main seulement (Actions →
+*Deploy demo* → *Run workflow*, sur la branche voulue), se connecte en SSH et lance
+`scripts/deploy-demo <commit>` dans le clone : clone détaché sur ce commit, `up --build`,
+`/health` sur le port local. Il refuse un clone modifié et une base non restaurée. Le clone doit
+déjà contenir `scripts/deploy-demo`. Environnement GitHub `demo` : variables `DEMO_HOST`,
+`DEMO_USER`, `DEMO_SSH_PORT` (défaut 22), `DEMO_DIR` (chemin du clone) ; secrets
+`DEMO_SSH_PRIVATE_KEY` (clé dédiée, sans phrase de passe) et `DEMO_SSH_KNOWN_HOSTS`
+(`ssh-keyscan -p <port> <hôte>`, vérifié). L'utilisateur doit pouvoir lancer `docker` et lire le
+dépôt distant (`git fetch`).
+
 Le workflow `deploy-vps.yml` ne s'exécute sur `push` que si la variable `VPS_HOST` est définie au
 niveau du **dépôt** : une variable d'environnement GitHub n'est pas lisible dans la condition du job.
 

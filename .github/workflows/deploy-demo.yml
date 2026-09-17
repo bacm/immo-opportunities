@@ -1,0 +1,59 @@
+name: Deploy demo
+
+# Met à jour la démo de cinq communes sur le VPS (A14). Lancement manuel seulement : la version
+# déployée est le commit de la référence choisie. L'installation initiale reste celle de
+# DEPLOYMENT.md §5 ; `scripts/deploy-demo` refuse une base non restaurée.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy demo
+    runs-on: ubuntu-24.04
+    environment: demo
+    timeout-minutes: 30
+    env:
+      DEMO_HOST: ${{ vars.DEMO_HOST }}
+      DEMO_USER: ${{ vars.DEMO_USER }}
+      DEMO_SSH_PORT: ${{ vars.DEMO_SSH_PORT || '22' }}
+      DEMO_DIR: ${{ vars.DEMO_DIR }}
+
+    steps:
+      - name: Install ephemeral SSH credentials
+        env:
+          DEMO_SSH_PRIVATE_KEY: ${{ secrets.DEMO_SSH_PRIVATE_KEY }}
+          DEMO_SSH_KNOWN_HOSTS: ${{ secrets.DEMO_SSH_KNOWN_HOSTS }}
+        run: |
+          missing=()
+          for name in DEMO_HOST DEMO_USER DEMO_DIR DEMO_SSH_PRIVATE_KEY DEMO_SSH_KNOWN_HOSTS; do
+            [[ -n ${!name} ]] || missing+=("$name")
+          done
+          if ((${#missing[@]} > 0)); then
+            echo "Réglages absents de l'environnement demo : ${missing[*]}" >&2
+            exit 2
+          fi
+          [[ $DEMO_SSH_PORT =~ ^[0-9]+$ ]] || { echo "DEMO_SSH_PORT invalide" >&2; exit 2; }
+          install -m 0700 -d "$RUNNER_TEMP/demo-ssh"
+          install -m 0600 /dev/null "$RUNNER_TEMP/demo-ssh/id"
+          install -m 0600 /dev/null "$RUNNER_TEMP/demo-ssh/known_hosts"
+          printf '%s\n' "$DEMO_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/demo-ssh/id"
+          printf '%s\n' "$DEMO_SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/demo-ssh/known_hosts"
+
+      - name: Update the demo on the VPS
+        run: |
+          ssh -i "$RUNNER_TEMP/demo-ssh/id" -p "$DEMO_SSH_PORT" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/demo-ssh/known_hosts" \
+            "$DEMO_USER@$DEMO_HOST" \
+            "cd $(printf '%q' "$DEMO_DIR") && scripts/deploy-demo $GITHUB_SHA"
+
+      - name: Remove ephemeral SSH credentials
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/demo-ssh"
