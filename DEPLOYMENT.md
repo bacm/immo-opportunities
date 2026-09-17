@@ -60,7 +60,33 @@ fichier `secrets/production.sops.yaml` chiffré doit être commité ; la clé pr
 Activer l'approbation obligatoire sur l'environnement `production`. Ne pas copier l'exemple
 d'inventaire tel quel : il ouvre SSH à `0.0.0.0/0`.
 
-## 5. Dimensionnement estimé
+## 5. Démo sur une machine existante (A6)
+
+Hors de la chaîne Ansible, qui suppose une machine vierge et dédiée : cinq communes restaurées,
+sans Dagster, MinIO ni Redis, sur une machine qui sert déjà d'autres conteneurs derrière son propre
+proxy. Mesures et contenu : [`docs/data/demo-subset-35.md`](./docs/data/demo-subset-35.md).
+
+1. **Poste** : `scripts/export-demo-subset --output /tmp/demo-35`, puis copier le dossier
+   (`immo-demo.sql.gz`, `manifest.json`) sur la machine.
+2. **Machine** : cloner le dépôt ; `scripts/init-dev-secrets` puis déplacer les secrets hors du
+   dépôt (`SECRETS_DIR`, `0600`) ; un `.env` avec `SITE_ADDRESS=https://<sous-domaine>`,
+   `ENVIRONMENT=production`, `OIDC_ENABLED=true` et, si 8080 est pris, `DEMO_HTTP_PORT`.
+3. `docker compose -f compose.yaml -f compose.demo.yaml up -d postgres-bootstrap`, puis
+   `IMMO_COMPOSE_FILES="compose.yaml compose.demo.yaml" scripts/restore-demo-subset /chemin/demo-35`
+   — **avant** le premier `up` complet : la restauration refuse une base déjà migrée.
+4. `docker compose -f compose.yaml -f compose.demo.yaml up -d --build`.
+5. **Proxy de la machine** : le sous-domaine renvoie vers `127.0.0.1:${DEMO_HTTP_PORT:-8080}`.
+6. **Cloudflare** : sous-domaine proxifié ; application Access sur ce seul sous-domaine, politique
+   limitée aux adresses autorisées ; l'origine refuse ce qui ne vient pas de Cloudflare (pare-feu
+   limité aux plages Cloudflare, ou tunnel). Sans cela, l'Explorer, l'API et les tuiles sont
+   publics — et SPEC §11.3 interdit toute fiche de mutations devant un tiers avant H4.
+7. **Compte** : créer l'utilisateur dans le realm `immo` depuis `/auth/admin`, avec les identifiants
+   d'administration de `SECRETS_DIR`.
+
+Le workflow `deploy-vps.yml` ne s'exécute sur `push` que si la variable `VPS_HOST` est définie au
+niveau du **dépôt** : une variable d'environnement GitHub n'est pas lisible dans la condition du job.
+
+## 6. Dimensionnement estimé
 
 Audit §10.6, grilles non revérifiées, ± 25 % : 25 à 45 €/mois pour le 35 avec une pile
 dégraissée sur 4 vCPU / 8 Go ; 49 à 113 € avec la pile actuelle sur 8 vCPU / 16 Go ; 300 à

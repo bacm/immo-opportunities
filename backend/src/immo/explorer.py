@@ -213,14 +213,6 @@ def list_property_units_in_viewport(
         """
         WITH bounds AS (
             SELECT ST_Transform(ST_MakeEnvelope(:west, :south, :east, :north, 4326), 2154) AS geom
-        ), coverage AS (
-            SELECT EXISTS (
-                SELECT 1 FROM reference.area, bounds
-                 WHERE area.department_code IN ('22', '29', '35', '56')
-                   AND area.area_type = 'commune'
-                   AND area.geom && bounds.geom
-                   AND ST_Intersects(area.geom, bounds.geom)
-            ) AS is_covered
         ), visible AS MATERIALIZED (
             SELECT parcel.id,
                    parcel.cadastral_id,
@@ -247,10 +239,8 @@ def list_property_units_in_viewport(
                COALESCE(buildings.building_count, 0) AS building_count,
                COALESCE(buildings.building_footprint_m2, 0) AS building_footprint_m2,
                ST_X(ST_Transform(ST_PointOnSurface(visible.geom), 4326)) AS longitude,
-               ST_Y(ST_Transform(ST_PointOnSurface(visible.geom), 4326)) AS latitude,
-               coverage.is_covered
+               ST_Y(ST_Transform(ST_PointOnSurface(visible.geom), 4326)) AS latitude
           FROM visible
-          CROSS JOIN coverage
           LEFT JOIN reference.area AS area
             ON area.area_type = 'commune' AND area.code = visible.commune_code
           LEFT JOIN LATERAL (
@@ -267,6 +257,8 @@ def list_property_units_in_viewport(
          ORDER BY visible.distance, visible.cadastral_id
         """
     )
+    # Une fenêtre est couverte si une commune **dont le cadastre est importé** la coupe : une
+    # commune bretonne sans parcelle n'est pas un territoire vide, c'est un territoire absent.
     coverage_statement = text(
         """
         SELECT EXISTS (
@@ -277,6 +269,11 @@ def list_property_units_in_viewport(
                AND ST_Intersects(
                    geom,
                    ST_Transform(ST_MakeEnvelope(:west, :south, :east, :north, 4326), 2154)
+               )
+               AND EXISTS (
+                   SELECT 1 FROM reference.parcel
+                    WHERE parcel.department_code = area.department_code
+                      AND parcel.commune_code = area.code
                )
         )
         """
@@ -290,10 +287,10 @@ def list_property_units_in_viewport(
     }
     with get_engine().connect() as connection:
         rows = list(connection.execute(statement, parameters).mappings())
-        if rows:
-            covered = bool(rows[0]["is_covered"])
-        else:
-            covered = bool(connection.execute(coverage_statement, parameters).scalar_one())
+        # Une parcelle visible suffit à prouver la couverture.
+        covered = bool(rows) or bool(
+            connection.execute(coverage_statement, parameters).scalar_one()
+        )
 
     partial = len(rows) > limit
     return {

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Restaure l'export de `scripts/export-demo-subset` dans une base vide (A6).
+#
+#   scripts/restore-demo-subset DIR [DATABASE]
+#
+# Vérifie le SHA-256 du manifeste, refuse une base qui contient déjà le schéma de l'application,
+# puis charge le fichier en une seule transaction : les clés étrangères, recréées à la fin,
+# échouent si le sous-ensemble n'est pas cohérent. Aucun recalcul : la démo restaure, elle
+# n'importe pas. Les rôles viennent de `config/postgres/init/10-init-databases.sh`.
+set -euo pipefail
+
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "Usage: $0 DIR [DATABASE]" >&2
+  exit 2
+fi
+export_dir=$1
+database=${2:-immo}
+manifest="${export_dir}/manifest.json"
+[[ -f ${manifest} ]] || { echo "Manifeste absent : ${manifest}" >&2; exit 2; }
+dump="${export_dir}/$(jq -r .file "${manifest}")"
+expected=$(jq -r .sha256 "${manifest}")
+
+if command -v sha256sum >/dev/null; then
+  actual=$(sha256sum "${dump}" | cut -d' ' -f1)
+else
+  actual=$(shasum -a 256 "${dump}" | cut -d' ' -f1)
+fi
+if [[ ${actual} != "${expected}" ]]; then
+  echo "Empreinte inattendue pour ${dump} : ${actual}, manifeste ${expected}" >&2
+  exit 1
+fi
+
+project_dir=${IMMO_PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
+compose=(docker compose --project-directory "${project_dir}")
+for file in ${IMMO_COMPOSE_FILES:-compose.yaml}; do
+  compose+=(-f "${project_dir}/${file}")
+done
+in_postgres=("${compose[@]}" exec -T postgres /bin/bash -ec
+  'export PGPASSWORD="$(cat /run/secrets/postgres_superuser_password)"; exec "$@"' --)
+psql=("${in_postgres[@]}" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d "${database}")
+
+if [[ $("${psql[@]}" -At -c "SELECT to_regnamespace('meta') IS NOT NULL") == t ]]; then
+  echo "La base ${database} contient déjà le schéma meta : restauration refusée." >&2
+  exit 1
+fi
+
+started_at=$(date +%s)
+gzip -dc "${dump}" | "${psql[@]}" --single-transaction >/dev/null
+"${in_postgres[@]}" vacuumdb -U postgres -d "${database}" --analyze-only --quiet
+echo "Restauré dans ${database} en $(($(date +%s) - started_at)) s"
+"${psql[@]}" -At -c "SELECT pg_size_pretty(pg_database_size(current_database()))"

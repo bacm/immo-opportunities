@@ -1,0 +1,109 @@
+# Démo sur petite machine (A6) : cinq communes restaurées, rien n'est importé.
+#
+#   docker compose -f compose.yaml -f compose.demo.yaml up -d
+#
+# Sans Dagster, MinIO ni Redis : la démo restaure un export (`scripts/restore-demo-subset`) et
+# le backend ne les appelle pas. Ils restent déclarés, derrière le profil `ingestion`.
+# Aucun port public : Caddy écoute sur 127.0.0.1, un proxy de la machine hôte le publie, et
+# l'accès se protège en amont (Cloudflare Access) — l'Explorer, l'API et les tuiles répondent
+# sans authentification. Réglé pour tenir, avec la machine, dans 4 Go.
+#
+# `.env` : SITE_ADDRESS, l'URL publique (https://…), et DEMO_HTTP_PORT si 8080 est pris.
+
+x-ingestion-only: &ingestion-only
+  profiles: [ingestion]
+
+services:
+  postgres:
+    # La base restaurée pèse quelques Go : le cache du système fait l'essentiel, PostgreSQL
+    # garde un cache modeste. Voir docs/operations/postgresql-tuning.md.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=384MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - max_parallel_workers_per_gather=1
+      - -c
+      - max_connections=40
+    shm_size: 256mb
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+  keycloak:
+    command:
+      - |
+        export KC_DB_PASSWORD="$$(cat /run/secrets/keycloak_db_password)"
+        export KC_BOOTSTRAP_ADMIN_USERNAME="$$(cat /run/secrets/keycloak_admin_user)"
+        export KC_BOOTSTRAP_ADMIN_PASSWORD="$$(cat /run/secrets/keycloak_admin_password)"
+        exec /opt/keycloak/bin/kc.sh start --import-realm --http-enabled=true --http-port=8080 --health-enabled=true
+    environment:
+      KC_HOSTNAME: ${SITE_ADDRESS:?SITE_ADDRESS is required for the demo}/auth
+      KC_HOSTNAME_STRICT: "true"
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25
+    deploy:
+      resources:
+        limits:
+          memory: 900M
+
+  migrate:
+    environment:
+      IMMO_ENVIRONMENT: production
+
+  api:
+    environment:
+      IMMO_ENVIRONMENT: production
+      IMMO_DOCS_ENABLED: "false"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  martin:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  web:
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  caddy:
+    environment:
+      SITE_ADDRESS: http://:8080
+    ports:
+      - "127.0.0.1:${DEMO_HTTP_PORT:-8080}:8080"
+    depends_on: !override
+      keycloak:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      martin:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  redis: *ingestion-only
+  minio: *ingestion-only
+  minio-init: *ingestion-only
+  dagster-code: *ingestion-only
+  dagster-webserver: *ingestion-only
+  dagster-daemon: *ingestion-only

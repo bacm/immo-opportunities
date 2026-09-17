@@ -1,8 +1,8 @@
 # A6 — Démo déployable : un sous-ensemble de communes sur une petite machine
 
-**Version :** transverse · **Taille :** L · **État :** À faire
-**Touche :** scripts/export-demo-subset, compose.demo.yaml, docs/data/demo-subset-35.md, .github/workflows/deploy-vps.yml, infra/ansible/playbooks/deploy.yml, DEPLOYMENT.md
-**Dépend de :** — · **Bloque :** —
+**Version :** transverse · **Taille :** L · **État :** Terminé
+**Touche :** scripts/export-demo-subset, scripts/restore-demo-subset, scripts/check-compose-config, scripts/tests/test_demo_subset.py, scripts/tests/conftest.py, compose.demo.yaml, backend/src/immo/spatial.py, backend/src/immo/explorer.py, backend/tests/test_demo_coverage.py, docs/data/demo-subset-35.md, .github/workflows/deploy-vps.yml, DEPLOYMENT.md
+**Dépend de :** — · **Bloque :** A13
 **Demandé par :** conversation du 15 septembre 2026
 
 ## Contexte à charger
@@ -32,6 +32,67 @@ Mesures du 15 septembre 2026 sur la base locale :
 | `tiles` | 1,7 Go | 6 % |
 
 Plus 1,9 Go de MinIO (archives pincées) et ~180 Mo d'observabilité.
+
+## Choix retenus — 17 septembre 2026
+
+Pris par l'agent avec le porteur, en conversation.
+
+- **Machine cible** : le VPS Hetzner existant du porteur, 2 vCPU / 4 Go / 80 Go, qui sert déjà
+  d'autres conteneurs derrière un Caddy et Cloudflare. Le palier 4 Go est **mesuré**, pas
+  supposé ; s'il ne tient pas, le porteur agrandit la machine (« Rescale », CPU et RAM seuls,
+  réversible).
+- **Aucun port public pour la stack démo** : son Caddy écoute sur `127.0.0.1` ; le Caddy du
+  porteur y renvoie un sous-domaine proxifié par Cloudflare.
+- **Protection par Cloudflare Access**, réglée hors dépôt par le porteur, sur ce seul sous-domaine,
+  avec l'origine fermée à tout ce qui ne vient pas de Cloudflare. Motif : l'Explorer, les tuiles et
+  les mutations par parcelle répondent sans authentification, et SPEC §11.3 interdit de montrer
+  une fiche de mutations à un tiers avant H4. Un `basic_auth` Caddy était l'alternative ; il
+  entre en conflit avec le jeton Keycloak, qui passe par le même en-tête.
+- **Pas d'Ansible sur cette machine** : `bootstrap` réécrit UFW, SSH et le noyau d'une machine
+  qu'il croit vierge, et `deploy` hérite des six bloqueurs de `DEPLOYMENT.md` §2. La démo se
+  déploie par un runbook court dans `DEPLOYMENT.md` ; `infra/ansible/` n'est pas touché, et
+  la mesure sur la machine (étape 4) reste au porteur, qui seul y a accès.
+- **Format de l'export** : un fichier SQL au format *plain* de `pg_dump` — sections `pre-data`
+  et `post-data` de `pg_dump`, entre elles un `COPY` par table, lignes triées par clé primaire,
+  puis les valeurs de séquence ; compressé par `gzip -n`, accompagné d'un manifeste SHA-256.
+  Les clés étrangères sont en `post-data` : leur création à la restauration **prouve** la
+  cohérence du sous-ensemble. Lecture dans une seule transaction `REPEATABLE READ`.
+- **Une règle par table, sans exception silencieuse** : copie entière, filtre, ou schéma seul.
+  Une table de la base sans règle fait échouer l'export.
+- **Schéma seul** pour `app`, `audit` et `meta.matching_review_*` : comptes, organisations et
+  identités de relecteurs n'ont rien à faire sur une démo.
+- **Parent absent** : si la clé étrangère est `ON DELETE SET NULL`, la référence est exportée
+  nulle, comme le schéma le prévoit quand le parent disparaît, et le nombre de références
+  nullifiées est publié dans la preuve ; sinon la ligne est écartée, et comptée.
+- **Couverture honnête** (critère « zone non couverte ») : le pointeur actif DS-01 ne couvre une
+  commune que si elle a des parcelles, règle que la docstring de `commune_coverage` pose déjà
+  pour les autres sources ; la fenêtre de carte n'est couverte que si une commune **ayant des
+  parcelles** la coupe. Le second point corrige aussi la base complète, qui déclare aujourd'hui
+  couverts les Côtes-d'Armor, le Finistère et le Morbihan.
+- **`reference.area` entière** : les communes absentes restent nommées et situées, et la
+  couverture les dit non couvertes.
+- **Frontières, décidé après le recomptage** : un objet des cinq communes montre, sur la base
+  complète, des bâtiments, bâtiments cadastraux, ventes et DPE d'autres communes. L'export les
+  ajoute, sans jamais ajouter une parcelle d'une autre commune, qui ferait passer sa commune pour
+  couverte. Sans cela, une parcelle de Rennes montrait 0 DPE contre 99.
+- **Chargeur des tests de scripts** : `scripts/tests/conftest.py` inscrit le module dans
+  `sys.modules`, sans quoi `dataclass` échoue sur un script chargé par son chemin.
+
+## Résultat — 17 septembre 2026
+
+Preuve : [`docs/data/demo-subset-35.md`](../data/demo-subset-35.md), recomptée.
+
+- Export des cinq communes : 281 Mo compressés, empreinte stable d'un export à l'autre ; base
+  restaurée de 2,70 Gio en 69 s, clés étrangères recréées sans orphelin.
+- Stack démo sous 3,3 Gio de limites, 0,8 à 1,2 Gio consommés ; p95 des tuiles de Rennes à froid
+  entre 2 et 104 ms selon le zoom, **sur le poste**.
+- API démo identique à la base complète sur 72 parcelles tirées ou en bordure ; hors des cinq
+  communes, `not_covered` et `outside_coverage`.
+- `deploy-vps.yml` : job sauté sur `push` sans `VPS_HOST`.
+- **Non fait ici** : l'étape 4 sur la machine cible, que seul le porteur peut exécuter → [A13](./A13-demo-mesuree-sur-le-vps.md).
+- Défauts antérieurs trouvés par le recomptage : ordre variable des lots d'une vente →
+  [BUG-21](./BUG-21-ordre-des-lots-non-deterministe.md) ; liste vide pour une parcelle inconnue →
+  [BUG-22](./BUG-22-parcelle-absente-liste-vide.md).
 
 ## Ce qui rend le découpage abordable
 

@@ -84,11 +84,12 @@ dérivée du graphe de dépendances.
 | [A10](./A10-spec-sans-etat-ni-historique.md) | `SPEC.md` ne porte ni état réel, ni résultat mesuré, ni décision : une règle de propriété et son application | transverse | A9 | M | Terminé | — |
 | [A11](./A11-decision-selon-ce-que-le-choix-engage.md) | Une décision se reconnaît à ce que le choix engage, pas au silence de `SPEC.md` | transverse | A10 | S | Terminé | — |
 | [A12](./A12-lever-le-gel-de-la-plateforme.md) | Lever le gel de la plateforme | transverse | C4 | M | Terminé | — |
+| [A13](./A13-demo-mesuree-sur-le-vps.md) | Déployer la démo sur le VPS du porteur, et y mesurer ce que le poste ne dit pas | transverse | A6 | S | À faire | **verrou humain** |
 | [A2](./A2-readme-versions-conforme.md) | Une seule version « En cours » dans le suivi | transverse | — | S | Terminé | — |
 | [A3](./A3-boucle-autonome-verrous.md) | Verrous humains et invariants de la boucle de développement | transverse | — | M | Terminé | — |
 | [A4](./A4-decisions-hors-architecture.md) | Les décisions sortent d'ARCHITECTURE.md, qui reste un document de référence | transverse | — | S | Terminé | — |
 | [A5](./A5-toute-modification-passe-par-un-ticket.md) | Toute modification du code passe par un ticket | transverse | — | S | Terminé | — |
-| [A6](./A6-demo-sous-ensemble-vps.md) | Démo déployable : un sous-ensemble de communes sur une petite machine | transverse | — | L | À faire | **prêt** |
+| [A6](./A6-demo-sous-ensemble-vps.md) | Démo déployable : un sous-ensemble de communes sur une petite machine | transverse | — | L | Terminé | — |
 | [A7](./A7-ouvrir-la-serie-h.md) | Ouvrir la série H dans les outils du backlog, et aligner les documents de pilotage sur ADR-016 | transverse | — | S | Terminé | — |
 | [A8](./A8-condenser-claude-md.md) | Condenser `CLAUDE.md` sans perdre une consigne | transverse | — | S | Terminé | — |
 | [A9](./A9-claude-md-routage.md) | `CLAUDE.md` devient un document de routage et de méthode, sans état ni décision | transverse | A8 | S | Terminé | — |
@@ -128,6 +129,8 @@ dérivée du graphe de dépendances.
 | [BUG-18](./BUG-18-surface-des-terrains-multi-cultures.md) | Un terrain à plusieurs natures de culture est prié sur la surface d'une seule | dette transverse | H7 | S | Terminé | — |
 | [BUG-19](./BUG-19-imports-restants-hors-dagster.md) | BDNB et BD TOPO s'importent encore par script, hors du graphe d'assets | dette transverse | BUG-02 | M | Terminé | — |
 | [BUG-20](./BUG-20-imports-multi-assets-hors-dagster.md) | DVF, DPE, GPU, Géorisques et INSEE s'importent encore par script | dette transverse | BUG-19 | L | Terminé | — |
+| [BUG-21](./BUG-21-ordre-des-lots-non-deterministe.md) | Les lots d'une même vente reviennent dans un ordre variable | dette transverse | — | S | À faire | **prêt** |
+| [BUG-22](./BUG-22-parcelle-absente-liste-vide.md) | Les mutations et les DPE d'une parcelle inconnue rendent une liste vide | dette transverse | — | S | À faire | **prêt** |
 
 ### C — v0.4 Carte réelle
 
@@ -215,12 +218,13 @@ dérivée du graphe de dépendances.
 | [H7](./H7-mutations-multi-parcelles.md) | Rendre un prix aux ventes bâties sur plusieurs parcelles, si le profil le justifie | V5 | H2 | M | Terminé | — |
 | [H8](./H8-carte-communale-barometre.md) | Décider si le baromètre porte une carte par commune | V5 | H2 | S | Terminé | — |
 
-**69/94 terminés.** Prêts à démarrer : A6, G6.
+**70/97 terminés.** Prêts à démarrer : BUG-21, BUG-22, G6.
 
 ### Verrous humains
 
 Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur verdict porte sur l'exactitude dans le monde réel ou sur un arbitrage produit. Une boucle de développement s'y arrête et rend la main.
 
+- **A13** — revue humaine · preuve attendue : `docs/data/demo-subset-35-vps.md`
 - **D6** — revue humaine · preuve attendue : `docs/data/market-data-manual-review-35.md`
 - **E9** — revue humaine · preuve attendue : `docs/data/field-test-results-35.md`
 - **H3** — revue humaine · preuve attendue : `docs/data/entretiens-professionnels-35.md`
@@ -230,7 +234,8 @@ Ces tickets ne dépendent plus de rien et ne sont pourtant pas à prendre : leur
 
 Dérivé des chemins déclarés par `**Touche :**`. Deux tickets d'un même lot n'écrivent pas dans les mêmes fichiers ; un ticket sans `Touche` déclaré est supposé entrer en conflit avec tout le monde.
 
-1. A6, G6
+1. BUG-21, G6
+2. BUG-22
 
 <!-- END:tickets -->
 

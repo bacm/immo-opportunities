@@ -34,5 +34,21 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "Development and production Compose configurations are valid."
+# Démo (A6) : aucun port hors de 127.0.0.1, aucun service d'import démarré par défaut.
+demo_rendered="$(SITE_ADDRESS=https://demo.example.invalid docker compose --env-file "$env_file" \
+  -f compose.yaml -f compose.demo.yaml config --format json)"
+public_ports="$(jq -r '.services[] | .ports[]? | select(.host_ip != "127.0.0.1") | .published' \
+  <<<"$demo_rendered")"
+if [[ -n $public_ports ]]; then
+  echo "The demo Compose configuration publishes ports outside 127.0.0.1: ${public_ports}" >&2
+  exit 1
+fi
+demo_ingestion="$(jq -r '.services | keys[] | select(test("^(dagster|minio|redis)"))' \
+  <<<"$demo_rendered")"
+if [[ -n $demo_ingestion ]]; then
+  echo "The demo Compose configuration starts ingestion services: ${demo_ingestion}" >&2
+  exit 1
+fi
+
+echo "Development, production and demo Compose configurations are valid."
 echo "PostgreSQL tuning is declared for every measured setting."

@@ -217,7 +217,12 @@ def commune_coverage(commune_code: str) -> dict[str, Any] | None:
     statement = text(
         """
         WITH commune AS (
-            SELECT code, name, department_code
+            SELECT code, name, department_code,
+                   EXISTS (
+                       SELECT 1 FROM reference.parcel
+                        WHERE parcel.department_code = area.department_code
+                          AND parcel.commune_code = area.code
+                   ) AS has_parcels
               FROM reference.area
              WHERE area_type = 'commune' AND code = :commune_code
         ), source AS (
@@ -226,7 +231,7 @@ def commune_coverage(commune_code: str) -> dict[str, Any] | None:
              WHERE data_source.id = ANY(:source_ids)
         )
         SELECT commune.code AS commune_code, commune.name AS commune_name,
-               commune.department_code, source.id AS data_source_id,
+               commune.department_code, commune.has_parcels, source.id AS data_source_id,
                source.name AS source_name,
                active.release_id,
                release.acceptance_status,
@@ -263,10 +268,13 @@ def commune_coverage(commune_code: str) -> dict[str, Any] | None:
     sources: list[dict[str, Any]] = []
     for row in rows:
         # DS-01 ne produit aucune metrique d'appariement : c'est le referentiel contre lequel
-        # les autres s'apparient. Son pointeur actif suffit donc a le declarer couvrant.
+        # les autres s'apparient. Ses donnees locales se lisent donc dans ses parcelles.
         record_count = int(row["record_count"])
         has_release = row["release_id"] is not None
-        covered = has_release and (record_count > 0 or row["data_source_id"] == "DS-01")
+        has_local_data = (
+            bool(row["has_parcels"]) if row["data_source_id"] == "DS-01" else record_count > 0
+        )
+        covered = has_release and has_local_data
         sources.append(
             {
                 "data_source_id": str(row["data_source_id"]),

@@ -27,6 +27,9 @@ concurrency:
 jobs:
   deploy:
     name: Deploy ${{ inputs.environment || 'production' }}
+    # Sans cible configurée, un push ne déploie rien : le job est sauté, pas rouge (A6). Un
+    # lancement manuel échoue toujours, et dit ce qui manque.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.VPS_HOST != '' }}
     runs-on: ubuntu-24.04
     environment: ${{ inputs.environment || 'production' }}
     timeout-minutes: 30

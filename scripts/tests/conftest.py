@@ -2,6 +2,7 @@
 
 import importlib.machinery
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -15,6 +16,8 @@ def load(name: str) -> ModuleType:
     spec = importlib.util.spec_from_loader(loader.name, loader)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
+    # `dataclass` retrouve son module par `sys.modules`.
+    sys.modules[loader.name] = module
     loader.exec_module(module)
     return module
 
@@ -42,3 +45,8 @@ def doc_budget() -> ModuleType:
 @pytest.fixture(scope="session")
 def commit_ticket() -> ModuleType:
     return load("check-commit-ticket")
+
+
+@pytest.fixture(scope="session")
+def demo() -> ModuleType:
+    return load("export-demo-subset")

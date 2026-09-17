@@ -1,0 +1,576 @@
+#!/usr/bin/env python3
+"""Exporte la base `immo` restreinte à quelques communes, pour la démo sur petite machine (A6).
+
+    scripts/export-demo-subset --output DIR [--commune 35238 ...]
+
+Produit `DIR/immo-demo.sql.gz`, au format plain de pg_dump : la section pre-data de pg_dump, un
+COPY par table trié par clé primaire, les valeurs de séquence, puis la section post-data. Les
+clés étrangères sont en post-data : les recréer à la restauration prouve la cohérence du
+sous-ensemble. `DIR/manifest.json` porte les communes, le SHA-256, les lignes par table recomptées
+dans le fichier produit, et ce qui a été ajouté ou coupé aux frontières des communes.
+
+Chaque table de la base a une règle — copie entière, filtre ou schéma seul. Une table sans règle,
+ou une règle sans table, fait échouer l'export : une table ajoutée ne part jamais sur la démo par
+défaut, et la liste reste exacte.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import gzip
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+# Stratification de B4 et D6 : urbain, littoral, périurbain, ville moyenne, rural.
+DEFAULT_COMMUNES = ("35238", "35288", "35047", "35360", "35211")
+
+COMMUNE = "t.commune_code IN (SELECT code FROM k_commune)"
+IN_EXTENT = (
+    "t.document_id IN (SELECT id FROM k_urban_document)"
+    " AND t.geom && (SELECT geom FROM k_extent)"
+    " AND ST_Intersects(t.geom, (SELECT geom FROM k_extent))"
+)
+IN_ENTITY = "(t.entity_type, t.entity_id) IN (SELECT entity_type, entity_id FROM k_entity)"
+COMMUNE_SCOPE = "t.scope_type = 'commune' AND t.scope_code IN (SELECT code FROM k_commune)"
+
+
+@dataclass(frozen=True)
+class Rule:
+    """`full` : toutes les lignes ; `schema` : aucune ; sinon les lignes de `t` qui vérifient
+    `where`. `nullify` associe une colonne à l'ensemble de clés hors duquel elle devient NULL —
+    ce que fait le schéma (`ON DELETE SET NULL`) quand le parent disparaît. `require` reprend la
+    contrainte CHECK que la nullification peut violer : la ligne qui y échoue est écartée."""
+
+    mode: str
+    where: str = ""
+    nullify: tuple[tuple[str, str], ...] = ()
+    require: str = ""
+
+
+FULL = Rule("full")
+SCHEMA = Rule("schema")
+
+
+def keep(where: str, *nullify: tuple[str, str]) -> Rule:
+    return Rule("filter", where, nullify)
+
+
+def ids(keyset: str, column: str = "id") -> str:
+    return f"t.{column} IN (SELECT id FROM {keyset})"
+
+
+def optional(keyset: str, column: str) -> str:
+    return f"(t.{column} IS NULL OR t.{column} IN (SELECT id FROM {keyset}))"
+
+
+RULES: dict[str, Rule] = {
+    "public.alembic_version": FULL,
+    # Comptes, organisations, notes et journal d'accès : rien de cela ne part sur une démo.
+    **{
+        f"app.{name}": SCHEMA
+        for name in (
+            "app_user",
+            "candidate_review",
+            "candidate_review_outcome",
+            "candidate_scenario",
+            "candidate_state",
+            "candidate_status_history",
+            "note",
+            "organization",
+            "organization_membership",
+            "pilot_reviewer_identity",
+            "saved_search",
+        )
+    },
+    "audit.sensitive_access_event": SCHEMA,
+    "feature.feature_definition": FULL,
+    "feature.feature_value": keep(
+        "(t.property_unit_id IS NOT NULL OR t.building_id IS NOT NULL"
+        " OR t.physical_building_id IS NOT NULL)"
+        f" AND {optional('k_property_unit', 'property_unit_id')}"
+        f" AND {optional('k_building', 'building_id')}"
+        f" AND {optional('k_physical_building', 'physical_building_id')}"
+    ),
+    "market.comparable_selection": keep(
+        f"{ids('k_property_unit', 'property_unit_id')}"
+        f" AND {optional('k_building', 'building_id')}"
+        f" AND {ids('k_transaction_property', 'transaction_property_id')}"
+    ),
+    "market.market_area": FULL,
+    "market.market_metric": FULL,
+    "meta.active_dataset_release": FULL,
+    "meta.active_regional_release": FULL,
+    "meta.attribute_quarantine": keep(IN_ENTITY),
+    # Un contrôle de département décrit un territoire que la démo ne contient pas.
+    "meta.data_quality_check": keep(COMMUNE_SCOPE),
+    "meta.data_source": FULL,
+    "meta.dataset_coverage_metric": keep(COMMUNE),
+    "meta.dataset_release": FULL,
+    "meta.entity_match": keep(ids("k_match")),
+    "meta.entity_match_metric": keep(COMMUNE),
+    "meta.entity_match_review": keep(ids("k_match", "match_id")),
+    "meta.entity_observation_link": keep(ids("k_link")),
+    "meta.entity_source_identifier": keep(IN_ENTITY),
+    "meta.entity_source_observation": keep(ids("k_observation")),
+    "meta.geometry_quarantine": FULL,
+    "meta.import_run": FULL,
+    # Identités et verdicts des relecteurs de B4.
+    **{
+        f"meta.matching_review_{name}": SCHEMA
+        for name in ("abandonment", "case", "recall", "sample", "verdict")
+    },
+    "meta.publication_event": FULL,
+    "meta.raw_asset": FULL,
+    "meta.regional_release_bundle": FULL,
+    "meta.regional_release_event": FULL,
+    "meta.regional_release_member": FULL,
+    "meta.territory_coverage_snapshot": keep(COMMUNE_SCOPE),
+    "meta.transformation_run": FULL,
+    # `energy_assessment_target` : un DPE porte une adresse ou un bâtiment.
+    "observation.energy_assessment": Rule(
+        "filter",
+        ids("k_energy_assessment"),
+        (("address_id", "k_address"), ("building_id", "k_building"), ("match_id", "k_match")),
+        require="address_id IS NOT NULL OR building_id IS NOT NULL",
+    ),
+    "observation.risk_observation": keep(COMMUNE),
+    "observation.road_segment": keep(
+        "t.commune_code_left IN (SELECT code FROM k_commune)"
+        " OR t.commune_code_right IN (SELECT code FROM k_commune)"
+    ),
+    "observation.territorial_indicator": keep(COMMUNE),
+    "observation.transaction": keep(ids("k_transaction")),
+    "observation.transaction_property": keep(
+        ids("k_transaction_property"), ("parcel_id", "k_parcel"), ("building_id", "k_building")
+    ),
+    "observation.urban_constraint": keep(IN_EXTENT),
+    "observation.urban_document": keep(ids("k_urban_document")),
+    "observation.urban_zone": keep(IN_EXTENT),
+    "reference.address": keep(ids("k_address")),
+    # Les 332 communes restent nommées et situées ; la couverture dit lesquelles sont absentes.
+    "reference.administrative_area": FULL,
+    "reference.area": FULL,
+    "reference.building": keep(ids("k_building")),
+    "reference.building_parcel": keep(
+        f"{ids('k_building', 'building_id')} AND {ids('k_parcel', 'parcel_id')}"
+        f" AND {optional('k_match', 'match_id')}"
+    ),
+    "reference.cadastral_building": keep(ids("k_cadastral_building", "source_feature_id")),
+    "reference.cadastral_parcel": keep(COMMUNE),
+    "reference.parcel": keep(ids("k_parcel")),
+    "reference.physical_building": keep(ids("k_physical_building")),
+    "reference.physical_building_member": keep(ids("k_physical_building", "physical_building_id")),
+    "reference.property_unit": keep(ids("k_property_unit")),
+    "reference.property_unit_member": keep(
+        f"{ids('k_property_unit', 'property_unit_id')} AND {optional('k_match', 'match_id')}"
+    ),
+    # Définitions de score : configuration. Snapshots, backtests : hors périmètre de la démo.
+    **{
+        f"scoring.{name}": FULL
+        for name in (
+            "active_score_definition",
+            "estimate_scenario",
+            "score_definition",
+            "score_definition_component",
+            "score_definition_feature",
+            "score_definition_publication_event",
+            "score_eligibility_rule",
+            "segment_definition",
+            "strategy",
+        )
+    },
+    **{
+        f"scoring.{name}": SCHEMA
+        for name in (
+            "ablation_result",
+            "backtest_metric",
+            "backtest_run",
+            "opportunity_publication_event",
+            "opportunity_snapshot",
+            "published_opportunity",
+            "score_component",
+            "score_evidence",
+        )
+    },
+    "tiles.building_render_v1": keep(ids("k_cadastral_building", "source_feature_id")),
+    "tiles.parcel_render_v1": keep(COMMUNE),
+}
+
+# Ensembles de clés, lus dans la même transaction que les données. Un appariement n'est gardé
+# que si ses deux côtés le sont : l'API ne le montre que si elle trouve les deux identifiants.
+KEYSETS = """
+CREATE TEMP TABLE k_commune (code text PRIMARY KEY);
+INSERT INTO k_commune SELECT unnest(string_to_array(:'communes', ','));
+CREATE TEMP TABLE k_extent AS
+SELECT ST_Union(geom) AS geom FROM reference.area
+ WHERE area_type = 'commune' AND code IN (SELECT code FROM k_commune);
+CREATE TEMP TABLE k_parcel AS
+SELECT id FROM reference.parcel WHERE commune_code IN (SELECT code FROM k_commune);
+-- Un bâtiment voisin posé sur une parcelle retenue est retenu : sans lui, la parcelle perd ses
+-- DPE rattachés par bâtiment. La parcelle voisine d'un bâtiment retenu ne l'est pas : elle
+-- ferait passer sa commune pour couverte.
+CREATE TEMP TABLE k_building AS
+SELECT id FROM reference.building WHERE commune_code IN (SELECT code FROM k_commune)
+UNION
+SELECT building_id FROM reference.building_parcel WHERE parcel_id IN (SELECT id FROM k_parcel);
+ALTER TABLE k_building ADD PRIMARY KEY (id);
+-- Un bâtiment cadastral qui chevauche la limite communale reste lié aux parcelles retenues.
+CREATE TEMP TABLE k_cadastral_building AS
+SELECT source_feature_id AS id FROM reference.cadastral_building
+ WHERE commune_code IN (SELECT code FROM k_commune)
+UNION
+SELECT building.source_feature_id FROM reference.cadastral_building AS building, k_extent
+ WHERE building.geom && k_extent.geom AND ST_Intersects(building.geom, k_extent.geom);
+ALTER TABLE k_cadastral_building ADD PRIMARY KEY (id);
+CREATE TEMP TABLE k_address AS
+SELECT id FROM reference.address WHERE commune_code IN (SELECT code FROM k_commune);
+ALTER TABLE k_address ADD PRIMARY KEY (id);
+CREATE TEMP TABLE k_property_unit AS
+SELECT id FROM reference.property_unit WHERE commune_code IN (SELECT code FROM k_commune);
+CREATE TEMP TABLE k_physical_building AS
+SELECT id FROM reference.physical_building WHERE commune_code IN (SELECT code FROM k_commune);
+-- Une vente rattachée à une autre commune mais portant un lot retenu est retenue.
+CREATE TEMP TABLE k_transaction AS
+SELECT id FROM observation.transaction WHERE commune_code IN (SELECT code FROM k_commune)
+UNION
+SELECT transaction_id FROM observation.transaction_property
+ WHERE parcel_id IN (SELECT id FROM k_parcel) OR building_id IN (SELECT id FROM k_building);
+CREATE TEMP TABLE k_transaction_property AS
+SELECT id FROM observation.transaction_property
+ WHERE transaction_id IN (SELECT id FROM k_transaction);
+-- De même, un DPE d'une autre commune rattaché à un bâtiment ou une adresse retenus.
+CREATE TEMP TABLE k_energy_assessment AS
+SELECT id FROM observation.energy_assessment
+ WHERE commune_code IN (SELECT code FROM k_commune)
+    OR building_id IN (SELECT id FROM k_building)
+    OR address_id IN (SELECT id FROM k_address);
+CREATE TEMP TABLE k_urban_document AS
+SELECT id FROM observation.urban_document
+ WHERE commune_codes ?| (SELECT array_agg(code) FROM k_commune);
+CREATE TEMP TABLE k_entity AS
+          SELECT 'parcel' AS entity_type, id AS entity_id FROM k_parcel
+UNION ALL SELECT 'building', id FROM k_building
+UNION ALL SELECT 'address', id FROM k_address
+UNION ALL SELECT 'energy_assessment', id FROM k_energy_assessment
+UNION ALL SELECT 'area', id FROM reference.area;
+ALTER TABLE k_entity ADD PRIMARY KEY (entity_type, entity_id);
+ANALYZE k_entity;
+CREATE TEMP TABLE k_match AS
+SELECT matched.id FROM meta.entity_match AS matched
+ WHERE (matched.left_entity_type, matched.left_entity_id)
+       IN (SELECT entity_type, entity_id FROM k_entity)
+   AND (matched.right_entity_type, matched.right_entity_id)
+       IN (SELECT entity_type, entity_id FROM k_entity);
+CREATE TEMP TABLE k_link AS
+SELECT link.id, link.observation_id FROM meta.entity_observation_link AS link
+ WHERE (link.entity_type, link.entity_id) IN (SELECT entity_type, entity_id FROM k_entity);
+-- Une observation restée sans entité n'a que sa géométrie pour la situer.
+CREATE TEMP TABLE k_observation AS
+SELECT observation.id FROM meta.entity_source_observation AS observation
+ WHERE (observation.entity_type, observation.entity_id)
+       IN (SELECT entity_type, entity_id FROM k_entity)
+UNION
+SELECT observation_id FROM k_link
+UNION
+SELECT observation.id FROM meta.entity_source_observation AS observation, k_extent
+ WHERE observation.entity_id IS NULL
+   AND observation.geometry && k_extent.geom
+   AND ST_Intersects(observation.geometry, k_extent.geom);
+"""
+
+KEYSET_NAMES = (
+    "k_parcel",
+    "k_property_unit",
+    "k_physical_building",
+    "k_transaction",
+    "k_transaction_property",
+    "k_energy_assessment",
+    "k_urban_document",
+    "k_match",
+    "k_link",
+    "k_observation",
+)
+
+# Ce qui est ajouté ou coupé aux frontières.
+BORDER_STATS = """
+SELECT 'ajoutees|reference.building|' || count(*) FROM k_building
+ WHERE id NOT IN (SELECT id FROM reference.building
+                   WHERE commune_code IN (SELECT code FROM k_commune));
+SELECT 'ajoutees|reference.cadastral_building|' || count(*) FROM k_cadastral_building
+ WHERE id NOT IN (SELECT source_feature_id FROM reference.cadastral_building
+                   WHERE commune_code IN (SELECT code FROM k_commune));
+SELECT 'ajoutees|observation.transaction|' || count(*) FROM observation.transaction
+ WHERE id IN (SELECT id FROM k_transaction)
+   AND commune_code NOT IN (SELECT code FROM k_commune);
+SELECT 'ajoutees|observation.energy_assessment|' || count(*) FROM observation.energy_assessment
+ WHERE id IN (SELECT id FROM k_energy_assessment)
+   AND commune_code NOT IN (SELECT code FROM k_commune);
+SELECT 'ecartees|reference.building_parcel|' || count(*) FROM reference.building_parcel AS t
+ WHERE (t.building_id IN (SELECT id FROM k_building) OR t.parcel_id IN (SELECT id FROM k_parcel))
+   AND NOT (t.building_id IN (SELECT id FROM k_building)
+            AND t.parcel_id IN (SELECT id FROM k_parcel)
+            AND (t.match_id IS NULL OR t.match_id IN (SELECT id FROM k_match)));
+SELECT 'ecartees|reference.property_unit_member|' || count(*)
+  FROM reference.property_unit_member AS t
+ WHERE t.property_unit_id IN (SELECT id FROM k_property_unit)
+   AND t.match_id IS NOT NULL AND t.match_id NOT IN (SELECT id FROM k_match);
+SELECT 'ecartees|meta.entity_match|' || count(*) FROM meta.entity_match AS matched
+ WHERE ((matched.left_entity_type, matched.left_entity_id)
+        IN (SELECT entity_type, entity_id FROM k_entity)
+     OR (matched.right_entity_type, matched.right_entity_id)
+        IN (SELECT entity_type, entity_id FROM k_entity))
+   AND matched.id NOT IN (SELECT id FROM k_match);
+"""
+
+# Tables de la base, hors extensions : nom|colonnes copiables|tri.
+CATALOG = """
+SELECT format('%I.%I', n.nspname, c.relname),
+       (SELECT string_agg(format('%I', a.attname), ', ' ORDER BY a.attnum)
+          FROM pg_attribute AS a
+         WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+           AND a.attgenerated = ''),
+       COALESCE((SELECT string_agg(format('t.%I', a.attname), ', ' ORDER BY k.ordinality)
+                   FROM pg_constraint AS p
+                  CROSS JOIN LATERAL unnest(p.conkey) WITH ORDINALITY AS k(attnum, ordinality)
+                   JOIN pg_attribute AS a ON a.attrelid = c.oid AND a.attnum = k.attnum
+                  WHERE p.conrelid = c.oid AND p.contype = 'p'), 't::text')
+  FROM pg_class AS c
+  JOIN pg_namespace AS n ON n.oid = c.relnamespace
+ WHERE c.relkind IN ('r', 'p') AND NOT c.relispartition
+   AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+   AND n.nspname NOT LIKE 'pg_toast%'
+   AND NOT EXISTS (SELECT 1 FROM pg_depend AS d
+                    WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid
+                      AND d.deptype = 'e')
+ ORDER BY 1;
+"""
+
+SEQUENCES = """
+SELECT format('SELECT pg_catalog.setval(%L, %s, %s);',
+              format('%I.%I', schemaname, sequencename),
+              COALESCE(last_value, 1),
+              CASE WHEN last_value IS NULL THEN 'false' ELSE 'true' END)
+  FROM pg_sequences
+ WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+ ORDER BY 1;
+"""
+
+COMMUNE_CODE = re.compile(r"^[0-9][0-9AB][0-9]{3}$")
+COPY_HEADER = re.compile(rb"^COPY (\S+) \(.*\) FROM stdin;$")
+
+
+@dataclass(frozen=True)
+class Table:
+    name: str
+    columns: str
+    order: str
+
+
+def parse_catalog(output: str) -> list[Table]:
+    return [Table(*line.split("|")) for line in output.splitlines() if line]
+
+
+def check_rules(tables: list[Table], rules: dict[str, Rule] = RULES) -> list[str]:
+    """Écarts entre la base et les règles ; vide si chaque table a exactement une règle."""
+    names = {table.name for table in tables}
+    return [f"table sans règle : {name}" for name in sorted(names - rules.keys())] + [
+        f"règle sans table : {name}" for name in sorted(rules.keys() - names)
+    ]
+
+
+def data_script(tables: list[Table], communes: list[str], rules: dict[str, Rule] = RULES) -> str:
+    """Script psql qui écrit sur sa sortie les COPY et les séquences, et sur l'erreur standard
+    ce qui a été coupé aux frontières."""
+    lines = [
+        f"\\set communes '{','.join(communes)}'",
+        "BEGIN ISOLATION LEVEL REPEATABLE READ;",
+        "SET LOCAL work_mem = '256MB';",
+        KEYSETS,
+        *(f"ALTER TABLE {name} ADD PRIMARY KEY (id); ANALYZE {name};" for name in KEYSET_NAMES),
+        "\\pset format unaligned",
+        "\\pset tuples_only on",
+        "\\o /dev/stderr",
+        BORDER_STATS,
+        "\\o",
+        # Les clés étrangères n'existent qu'en post-data ; ceci neutralise les déclencheurs.
+        "\\qecho SET session_replication_role = replica;",
+    ]
+    for table in tables:
+        rule = rules[table.name]
+        if rule.mode == "schema":
+            continue
+        source, where = f"{table.name} AS t", rule.where or "true"
+        if rule.nullify:
+            staged = "demo_" + table.name.replace(".", "_")
+            lines.append(f"CREATE TEMP TABLE {staged} AS SELECT t.* FROM {source} WHERE {where};")
+            lines.append("\\o /dev/stderr")
+            for column, keyset in rule.nullify:
+                lines.append(
+                    f"WITH nulled AS (UPDATE {staged} SET {column} = NULL"
+                    f" WHERE {column} IS NOT NULL AND {column} NOT IN (SELECT id FROM {keyset})"
+                    " RETURNING 1)"
+                    f" SELECT 'nullifiees|{table.name}.{column}|' || count(*) FROM nulled;"
+                )
+            if rule.require:
+                lines.append(
+                    f"WITH dropped AS (DELETE FROM {staged} WHERE NOT ({rule.require})"
+                    f" RETURNING 1) SELECT 'ecartees|{table.name}|' || count(*) FROM dropped;"
+                )
+            lines.append("\\o")
+            source, where = f"{staged} AS t", "true"
+        lines += [
+            "\\qecho",
+            f"\\qecho 'COPY {table.name} ({table.columns}) FROM stdin;'",
+            f"COPY (SELECT {table.columns} FROM {source} WHERE {where}"
+            f" ORDER BY {table.order}) TO STDOUT;",
+            "\\qecho '\\\\.'",
+        ]
+    lines += [
+        "\\qecho",
+        "\\qecho SET session_replication_role = origin;",
+        SEQUENCES,
+        "COMMIT;",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def count_rows(dump: Path) -> dict[str, int]:
+    """Lignes par table, recomptées dans le fichier produit, pas dans la base."""
+    counts: dict[str, int] = {}
+    table: str | None = None
+    with gzip.open(dump, "rb") as stream:
+        for line in stream:
+            if table is None:
+                match = COPY_HEADER.match(line.rstrip(b"\n"))
+                if match:
+                    table = match.group(1).decode()
+                    counts[table] = 0
+            elif line == b"\\.\n":
+                table = None
+            else:
+                counts[table] += 1
+    return counts
+
+
+def parse_border(stats: str) -> list[dict[str, object]]:
+    border = []
+    for line in stats.splitlines():
+        parts = line.split("|")
+        if len(parts) == 3 and parts[0] in {"ajoutees", "nullifiees", "ecartees"}:
+            border.append({"kind": parts[0], "target": parts[1], "count": int(parts[2])})
+    return border
+
+
+def compose_command() -> list[str]:
+    project_dir = os.environ.get("IMMO_PROJECT_DIR", str(Path(__file__).resolve().parents[1]))
+    command = ["docker", "compose", "--project-directory", project_dir]
+    for file in os.environ.get("IMMO_COMPOSE_FILES", "compose.yaml").split():
+        command += ["-f", str(Path(project_dir) / file)]
+    return command + [
+        "exec",
+        "-T",
+        "postgres",
+        "/bin/bash",
+        "-ec",
+        'export PGPASSWORD="$(cat /run/secrets/postgres_superuser_password)"; exec "$@"',
+        "--",
+    ]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--commune", action="append", dest="communes")
+    args = parser.parse_args()
+    communes = sorted(set(args.communes or DEFAULT_COMMUNES))
+    invalid = [code for code in communes if not COMMUNE_CODE.match(code)]
+    if invalid:
+        parser.error(f"code commune invalide : {', '.join(invalid)}")
+
+    in_postgres = compose_command()
+    psql = in_postgres + ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d"]
+    pg_dump = in_postgres + ["pg_dump", "-U", "postgres", "-d", "immo"]
+
+    catalog = subprocess.run(
+        psql + ["immo", "-At", "-F|"], input=CATALOG, text=True, capture_output=True, check=True
+    )
+    tables = parse_catalog(catalog.stdout)
+    gaps = check_rules(tables)
+    if gaps:
+        print("Règles d'export démo à mettre à jour dans", __file__, file=sys.stderr)
+        print("\n".join(f"  {gap}" for gap in gaps), file=sys.stderr)
+        return 1
+
+    args.output.mkdir(parents=True, exist_ok=True)
+    dump = args.output / "immo-demo.sql.gz"
+    partial = dump.with_suffix(".tmp")
+    started = time.monotonic()
+    stats = ""
+    # `mtime=0` et aucun nom de fichier : même contenu, même empreinte.
+    with (
+        open(partial, "wb") as raw,
+        gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as out,
+    ):
+        for command, script in (
+            (pg_dump + ["--section=pre-data"], None),
+            (psql + ["immo"], data_script(tables, communes)),
+            (pg_dump + ["--section=post-data"], None),
+        ):
+            with tempfile.TemporaryFile() as errors:
+                process = subprocess.Popen(
+                    command,
+                    stdin=subprocess.PIPE if script else subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=errors,
+                )
+                assert process.stdout is not None
+                if script:
+                    assert process.stdin is not None
+                    process.stdin.write(script.encode())
+                    process.stdin.close()
+                shutil.copyfileobj(process.stdout, out, 1 << 20)
+                status = process.wait()
+                errors.seek(0)
+                error = errors.read().decode()
+            if status != 0:
+                partial.unlink(missing_ok=True)
+                print(error, file=sys.stderr)
+                return 1
+            if script:
+                stats = error
+    partial.replace(dump)
+
+    digest = hashlib.sha256()
+    with open(dump, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(chunk)
+    manifest = {
+        "file": dump.name,
+        "sha256": digest.hexdigest(),
+        "bytes": dump.stat().st_size,
+        "exported_at": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "duration_s": round(time.monotonic() - started),
+        "communes": communes,
+        "schema_only": sorted(name for name, rule in RULES.items() if rule.mode == "schema"),
+        "rows": count_rows(dump),
+        "border": parse_border(stats),
+    }
+    (args.output / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"{dump} {manifest['sha256']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
